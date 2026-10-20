@@ -1,45 +1,29 @@
-# [Project name]
+# AYOUB AI
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+AYOUB AI is a bilingual business-assistant platform for maintaining product and policy knowledge, configuring customer-service agents, and testing grounded answers.
 
-## Run & Operate
+## Run and operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+Install dependencies with `pnpm install --frozen-lockfile`, then start the full development app with `pnpm run dev`. The command starts the Vite web app on port 5173 and the Express API on port 5000. Vite proxies same-origin `/api` requests to the internal API port; only the web port is exposed by the Replit configuration.
 
-## Stack
+Before starting the API, add these values to Replit Secrets: `DATABASE_URL` for PostgreSQL, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, and `VITE_CLERK_PUBLISHABLE_KEY` for real sign-in, and `OPENAI_API_KEY` for agent test responses. `OPENAI_MODEL` and `VITE_CLERK_PROXY_URL` are optional. Without Clerk keys, the public homepage and health endpoint still work, sign-in shows a setup message, and protected API requests are rejected with 401. Without the OpenAI key, AI test responses return an explicit unavailable error rather than a simulated answer.
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+Run `pnpm run typecheck` to check all packages, `pnpm run build` to build the workspace, and `pnpm --filter @workspace/db run push` only when intentionally applying the Drizzle schema to a development database. The API package can be checked independently with `pnpm --filter @workspace/api-server run typecheck`.
 
-## Where things live
+## Current product capabilities
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+The app includes a public bilingual landing page, Clerk-gated workspace access, a data-backed dashboard, agent CRUD and configuration, product and FAQ management, business-profile policies, channel-status cards, and an authenticated AI test conversation with saved test history and source references. Product management supports category/availability filters, CSV template download, CSV export, and CSV import with row validation and a report. Imports accept up to 500 rows and 2 MB per file; use `|` between aliases in a cell. Potential name, alias, or SKU duplicates are skipped and reported.
 
-## Architecture decisions
+Channel cards are status-only and report `not_configured`; live WhatsApp, Instagram, and Messenger connections are not implemented yet. The product does not yet have a customer conversation inbox, a public website chat widget, or document upload and retrieval. Do not describe these as operational integrations.
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+## Project map and notes
 
-## Product
+- `artifacts/ayoub-ai/src/App.tsx`: React pages, navigation, workspace flow, and product import/export actions.
+- `artifacts/ayoub-ai/src/lib/product-csv.ts`: CSV parser, validation, template, and exporter.
+- `artifacts/ayoub-ai/vite.config.ts`: Vite port/base-path validation and development proxy to the API.
+- `artifacts/api-server/src/routes`: Express endpoints; workspace authorization is checked server-side.
+- `artifacts/api-server/src/lib/ai.ts`: server-side answer retrieval and response safeguards.
+- `lib/api-spec/openapi.yaml`: source of truth for API contracts; regenerate clients with `pnpm --filter @workspace/api-spec run codegen` after contract changes.
+- `lib/db/src/schema/ayoub.ts`: Drizzle database schema; monetary product prices use PostgreSQL `numeric` and are carried as decimal strings.
 
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+Keep secrets in Replit Secrets or a local ignored `.env` file, never in source control. Database schema push is for development; do not use it as a production migration strategy.

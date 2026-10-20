@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState, createContext, useContext, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useRef, createContext, useContext, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ClerkProvider, SignIn, SignUp, Show, useAuth, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import {
   Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bot, Building2, Check,
-  ChevronRight, CircleHelp, Code2, FileText, Globe2, Languages, LayoutDashboard, LifeBuoy, LoaderCircle,
+  ChevronRight, CircleHelp, Code2, Download, FileText, Globe2, Languages, LayoutDashboard, LifeBuoy, LoaderCircle,
   LogOut, Menu, MessageCircle, MessageSquareText, Package, Plus, Save, Search, Settings2, ShieldCheck,
-  SlidersHorizontal, Sparkles, Store, Trash2, Wifi, X
+  SlidersHorizontal, Sparkles, Store, Trash2, Upload, Wifi, X
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation, useRoute } from 'wouter';
 import {
@@ -23,14 +23,17 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { exportProductsCsv, parseProductCsv, PRODUCT_CSV_TEMPLATE } from '@/lib/product-csv';
 import './index.css';
 
 const queryClient = new QueryClient();
-const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const configuredClerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const clerkPubKey = configuredClerkPubKey
+  ? publishableKeyFromHost(window.location.hostname, configuredClerkPubKey)
+  : undefined;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 function stripBase(path: string) { return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path; }
-if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
 
 const clerkAppearance = {
   theme: shadcn,
@@ -125,10 +128,6 @@ function SiteBrand({ inverse = false }: { inverse?: boolean }) {
 }
 function HomePage() {
   const { lang } = useLang();
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const auth = useAuth();
-  useEffect(() => { if (auth.isLoaded) setIsSignedIn(auth.isSignedIn); }, [auth.isLoaded, auth.isSignedIn]);
-  if (isSignedIn) return <Redirect to="/dashboard" />;
   return <main className="public-home">
     <nav className="public-nav"><SiteBrand /><div className="topbar-right"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav>
     <section className="public-hero">
@@ -221,6 +220,16 @@ function DashboardPage() {
 }
 function QuickLink({ href, icon, title, detail }: { href: string; icon: ReactNode; title: string; detail: string }) { return <Link className="quick-link" href={href}><span className="quick-icon">{icon}</span><span className="quick-copy"><strong>{title}</strong><span>{detail}</span></span><ChevronRight /></Link>; }
 function statusLabel(status: string) { return status.replaceAll('_', ' '); }
+function downloadCsv(filename: string, contents: string) {
+  const url = URL.createObjectURL(new Blob([contents], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 function AgentCard({ agent }: { agent: Agent }) {
   return <article className="panel agent-card" data-testid={`card-agent-${agent.id}`}><div className="agent-card-top"><div className="agent-symbol"><Bot /></div><span className={`pill ${agent.status === 'active' ? 'active' : 'muted'}`}>{agent.status}</span></div><h3>{agent.name}</h3><p>{agent.description || 'A customer-service agent grounded in your business knowledge.'}</p><div className="agent-card-foot"><span className="cell-secondary">{agent.language} · {agent.tone}</span><Link href={`/agents/${agent.id}`} className="icon-button" aria-label={`Configure ${agent.name}`}><ArrowUpRight size={14} /></Link></div></article>;
 }
@@ -236,7 +245,7 @@ function AgentsPage() {
 }
 const emptyAgent = { name: '', description: '', language: 'Arabic and English', tone: 'Helpful and concise', greeting: 'Hello. How can I help you today?', fallback: 'I do not have enough information to answer that confidently. Let me connect you with our team.', instructions: '' };
 function AgentFormPage({ editing = false }: { editing?: boolean }) {
-  const params = useRoute<{ agentId: string }>(editing ? '/agents/:agentId/edit' : '/agents/new')[0];
+  const [, params] = useRoute<{ agentId: string }>(editing ? '/agents/:agentId/edit' : '/agents/new');
   const id = Number(params?.agentId);
   const { headers } = useWorkspace();
   const { setLocation } = { setLocation: useLocation()[1] };
@@ -271,8 +280,8 @@ function AgentFormPage({ editing = false }: { editing?: boolean }) {
   </main>;
 }
 function AgentDetailsPage() {
-  const params = useRoute<{ agentId: string }>('/agents/:agentId');
-  const id = Number(params[0]?.agentId);
+  const [, params] = useRoute<{ agentId: string }>('/agents/:agentId');
+  const id = Number(params?.agentId);
   const [location, setLocation] = useLocation();
   const { headers } = useWorkspace();
   const query = useGetAgent(id, { ...headers, query: { queryKey: getGetAgentQueryKey(id), enabled: !!headers && Number.isFinite(id) } });
@@ -293,8 +302,8 @@ function AgentDetailsPage() {
 }
 function InfoBlock({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) { return <div className={`field ${wide ? 'full' : ''}`}><label>{label}</label><div className="panel" style={{ padding: 13, fontSize: 12, lineHeight: 1.65 }}>{value}</div></div>; }
 function AgentTestPage() {
-  const params = useRoute<{ agentId: string }>('/agents/:agentId/test');
-  const id = Number(params[0]?.agentId);
+  const [, params] = useRoute<{ agentId: string }>('/agents/:agentId/test');
+  const id = Number(params?.agentId);
   const { headers } = useWorkspace();
   const agentQuery = useGetAgent(id, { ...headers, query: { queryKey: getGetAgentQueryKey(id), enabled: !!headers } });
   const send = useSendAgentTestMessage({ request: headers });
@@ -328,8 +337,15 @@ function Modal({ title, description, onClose, children }: ModalProps) { return <
 function ProductsPage() {
   const { headers } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [availability, setAvailability] = useState<'in_stock' | 'out_of_stock' | 'unknown' | ''>('');
   const [modal, setModal] = useState<Product | 'new' | null>(null);
-  const query = useListProducts({ search: search || undefined }, { ...headers, query: { queryKey: getListProductsQueryKey({ search: search || undefined }), enabled: !!headers } });
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; errors: string[] } | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const productFilters = { search: search || undefined, category: category || undefined, availability: availability || undefined };
+  const catalogQuery = useListProducts({}, { ...headers, query: { queryKey: getListProductsQueryKey(), enabled: !!headers } });
+  const query = useListProducts(productFilters, { ...headers, query: { queryKey: getListProductsQueryKey(productFilters), enabled: !!headers } });
   const qc = useQueryClient();
   const create = useCreateProduct({ request: headers }); const update = useUpdateProduct({ request: headers }); const remove = useDeleteProduct({ request: headers });
   const save = (input: ProductInputValue, existing?: Product) => {
@@ -338,8 +354,47 @@ function ProductsPage() {
     if (existing) update.mutate({ productId: existing.id, data: clean }, { onSuccess: done }); else create.mutate({ data: clean }, { onSuccess: done });
   };
   const deleteProduct = (product: Product) => { if (window.confirm(`Delete ${product.nameEnglish || product.nameArabic || 'this product'}?`)) remove.mutate({ productId: product.id }, { onSuccess: async () => { await Promise.all([qc.invalidateQueries({ queryKey: getListProductsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); } }); };
-  return <main className="page"><PageTitle eyebrow="KNOWLEDGE BASE / CATALOG" title="Products" description="Give your agent exact product names, prices, and availability." action={<button className="btn" onClick={() => setModal('new')} data-testid="button-add-product"><Plus size={15} />Add product</button>} />
-    <div className="toolbar"><div className="searchbox"><Search /><input placeholder="Search product names, categories…" data-testid="input-search-products" value={search} onChange={(e) => setSearch(e.target.value)} /></div><div className="pill"><Package size={12} />{query.data?.length ?? '—'} products</div></div>
+  const importCsv = async (file: File) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      if (file.size > 2 * 1024 * 1024) throw new Error('CSV files must be 2 MB or smaller.');
+      const parsed = parseProductCsv(await file.text());
+      const errors = [...parsed.errors];
+      const normalize = (value: string) => value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+      const keysFor = (product: { nameArabic?: string | null; nameEnglish?: string | null; aliases?: string[]; sku?: string | null }) => [
+        ...[product.nameArabic, product.nameEnglish, ...(product.aliases ?? [])].filter((value): value is string => Boolean(value?.trim())).map((value) => `name:${normalize(value)}`),
+        ...(product.sku?.trim() ? [`sku:${normalize(product.sku)}`] : []),
+      ];
+      const existingKeys = new Set((catalogQuery.data ?? []).flatMap((product) => keysFor(product)));
+      let imported = 0;
+      for (const { rowNumber, product } of parsed.products) {
+        const keys = keysFor(product);
+        if (keys.some((key) => existingKeys.has(key))) {
+          errors.push(`Row ${rowNumber}: a product with the same name, alias, or SKU already exists; skipped.`);
+          continue;
+        }
+        try {
+          await create.mutateAsync({ data: product });
+          imported += 1;
+          keys.forEach((key) => existingKeys.add(key));
+        } catch {
+          errors.push(`Row ${rowNumber}: the product could not be saved. Check the row and try again.`);
+        }
+      }
+      if (imported > 0) await Promise.all([qc.invalidateQueries({ queryKey: getListProductsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]);
+      setImportResult({ imported, errors });
+    } catch (error) {
+      setImportResult({ imported: 0, errors: [error instanceof Error ? error.message : 'The CSV file could not be read.'] });
+    } finally {
+      setImporting(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  };
+  return <main className="page"><PageTitle eyebrow="KNOWLEDGE BASE / CATALOG" title="Products" description="Give your agent exact product names, prices, and availability." action={<div className="flex gap-2 flex-wrap"><button className="btn secondary" onClick={() => downloadCsv('ayoub-products.csv', exportProductsCsv(catalogQuery.data ?? []))} disabled={catalogQuery.isLoading || !catalogQuery.data?.length}><Download size={15} />Export CSV</button><button className="btn secondary" onClick={() => fileInput.current?.click()} disabled={importing || catalogQuery.isLoading || catalogQuery.isError} title={catalogQuery.isError ? 'Load the catalog before importing.' : undefined}><Upload size={15} />{importing ? 'Importing…' : 'Import CSV'}</button><button className="btn" onClick={() => setModal('new')} data-testid="button-add-product"><Plus size={15} />Add product</button></div>} />
+    <div className="toolbar"><div className="searchbox"><Search /><input placeholder="Search product names, categories…" data-testid="input-search-products" value={search} onChange={(e) => setSearch(e.target.value)} /></div><select className="btn secondary small" aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All categories</option>{[...new Set((catalogQuery.data ?? []).map((product) => product.category).filter((value): value is string => Boolean(value)))].sort().map((value) => <option key={value} value={value}>{value}</option>)}</select><select className="btn secondary small" aria-label="Filter by availability" value={availability} onChange={(e) => setAvailability(e.target.value as typeof availability)}><option value="">All availability</option><option value="in_stock">In stock</option><option value="out_of_stock">Out of stock</option><option value="unknown">Unknown</option></select><div className="flex gap-2 items-center flex-wrap"><button className="btn secondary small" onClick={() => downloadCsv('ayoub-products-template.csv', PRODUCT_CSV_TEMPLATE)}><FileText size={13} />CSV template</button><div className="pill"><Package size={12} />{query.data?.length ?? '—'} products</div></div></div>
+    <input ref={fileInput} type="file" accept=".csv,text/csv" className="sr-only" aria-label="Choose a product CSV file" onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void importCsv(file); }} />
+    {importResult && <section className="panel form-card mb-4" role="status"><strong>{importResult.imported} product{importResult.imported === 1 ? '' : 's'} imported.</strong>{importResult.errors.length > 0 ? <><p className="page-desc">{importResult.errors.length} row or file issue{importResult.errors.length === 1 ? '' : 's'} need attention.</p><ul className="page-desc" style={{ paddingInlineStart: 20 }}>{importResult.errors.slice(0, 20).map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul>{importResult.errors.length > 20 && <p className="page-desc">Showing the first 20 issues.</p>}</> : <p className="page-desc">All product rows were saved successfully.</p>}<button className="btn secondary small" onClick={() => setImportResult(null)}>Dismiss</button></section>}
     <section className="panel">{query.isLoading ? <LoadingTable /> : query.isError ? <ErrorState title="Products unavailable" detail="Your product catalog could not be loaded." retry={() => void query.refetch()} /> : query.data?.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Availability</th><th aria-label="Actions" /></tr></thead><tbody>{query.data.map((p) => <tr key={p.id} data-testid={`row-product-${p.id}`}><td><div className="cell-primary">{p.nameEnglish || p.nameArabic || 'Unnamed product'}</div><div className="cell-secondary">{p.nameArabic && p.nameEnglish ? p.nameArabic : (p.sku ? `SKU ${p.sku}` : p.aliases.join(', '))}</div></td><td>{p.category || '—'}</td><td>{p.price ? `${p.currency} ${p.price}` : '—'}</td><td><span className={`pill ${p.availability === 'in_stock' ? 'active' : 'muted'}`}>{statusLabel(p.availability)}</span></td><td><div className="row-actions"><button className="icon-button" onClick={() => setModal(p)} aria-label={`Edit ${p.nameEnglish || 'product'}`}><SlidersHorizontal size={14} /></button><button className="icon-button" onClick={() => deleteProduct(p)} aria-label={`Delete ${p.nameEnglish || 'product'}`}><Trash2 size={14} /></button></div></td></tr>)}</tbody></table></div> : <EmptyState title={search ? 'No products match' : 'Your catalog is empty'} detail={search ? 'Try another search term.' : 'Add the products customers ask about. Your agent will only use saved details.'} action={!search && <button className="btn small" onClick={() => setModal('new')}><Plus size={14} />Add product</button>} />}</section>
     {modal && <ProductModal product={modal === 'new' ? undefined : modal} saving={create.isPending || update.isPending} onClose={() => setModal(null)} onSave={save} />}
   </main>;
@@ -394,7 +449,19 @@ function BusinessPage() {
   const query = useGetBusinessProfile({ ...headers, query: { queryKey: getGetBusinessProfileQueryKey(), enabled: !!headers } });
   const save = useSaveBusinessProfile({ request: headers });
   const qc = useQueryClient();
-  const initial = useMemo(() => Object.fromEntries(profileFields.map((field) => [field.key, query.data?.[field.key] ?? ''])) as BusinessProfileInput, [query.data]);
+  const initial = useMemo<BusinessProfileInput>(() => ({
+    introduction: query.data?.introduction ?? '',
+    branches: query.data?.branches ?? '',
+    contactInfo: query.data?.contactInfo ?? '',
+    workingHours: query.data?.workingHours ?? '',
+    deliveryPolicy: query.data?.deliveryPolicy ?? '',
+    paymentMethods: query.data?.paymentMethods ?? '',
+    returnPolicy: query.data?.returnPolicy ?? '',
+    exchangePolicy: query.data?.exchangePolicy ?? '',
+    warrantyPolicy: query.data?.warrantyPolicy ?? '',
+    promotions: query.data?.promotions ?? '',
+    terms: query.data?.terms ?? '',
+  }), [query.data]);
   const [form, setForm] = useState<BusinessProfileInput>(initial);
   const [initialized, setInitialized] = useState(false);
   useEffect(() => { if (query.data && !initialized) { setForm(initial); setInitialized(true); } }, [query.data, initial, initialized]);
@@ -428,6 +495,19 @@ function RootRoute() {
   return <><Show when="signed-out"><HomePage /></Show><Show when="signed-in"><Redirect to="/dashboard" /></Show></>;
 }
 function ProtectedRoute({ children }: { children: ReactNode }) { return <Protected>{children}</Protected>; }
+function AuthSetupPage() {
+  const { lang } = useLang();
+  return <main className="public-home"><nav className="public-nav"><SiteBrand /><LanguageButton /></nav><section className="public-section"><div className="panel form-card" style={{ maxWidth: 620, margin: '40px auto' }}><div className="eyebrow">AYOUB AI / ACCOUNT SETUP</div><h1>{tr(lang, 'Account access is not configured yet', 'لم يتم إعداد الدخول إلى الحساب بعد')}</h1><p className="page-desc">{tr(lang, 'The public site is available, but sign-up and sign-in need the project owner to configure Clerk keys for the frontend and API. No demo account or simulated authentication is being used.', 'الموقع العام متاح، لكن التسجيل وتسجيل الدخول يحتاجان إلى إعداد مفاتيح Clerk للواجهة والخادم. لن نستخدم حسابًا تجريبيًا أو دخولًا وهميًا.')}</p><Link className="btn secondary small" href="/">{tr(lang, 'Back to home', 'العودة إلى الرئيسية')} <ArrowLeft size={14} /></Link></div></section></main>;
+}
+function PublicPreviewRouter() {
+  const [location] = useLocation();
+  return <ErrorBoundary resetKey={location}><Switch>
+    <Route path="/" component={HomePage} />
+    <Route path="/sign-in/*?" component={AuthSetupPage} />
+    <Route path="/sign-up/*?" component={AuthSetupPage} />
+    <Route component={NotFound} />
+  </Switch></ErrorBoundary>;
+}
 function Router() {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}><Switch>
@@ -449,6 +529,9 @@ function Router() {
   </Switch></ErrorBoundary>;
 }
 function App() {
+  if (!clerkPubKey) {
+    return <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><PublicPreviewRouter /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider>;
+  }
   return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} routerPush={(to) => { window.history.pushState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }} routerReplace={(to) => { window.history.replaceState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }}>
     <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider>
   </ClerkProvider>;

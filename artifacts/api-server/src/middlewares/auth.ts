@@ -16,7 +16,10 @@ export function requireAuth(
   res: Response,
   next: NextFunction,
 ): void {
-  const userId = getAuth(req).userId;
+  const userId =
+    process.env.CLERK_SECRET_KEY && process.env.CLERK_PUBLISHABLE_KEY
+      ? getAuth(req).userId
+      : null;
   if (!userId) {
     res.status(401).json({ error: "Sign in to continue." });
     return;

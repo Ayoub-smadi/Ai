@@ -1,4 +1,12 @@
 modules = ["nodejs-24"]
+run = "pnpm run dev"
+
+[[ports]]
+localPort = 5173
+externalPort = 80
+
+[[ports]]
+localPort = 5000
 
 [deployment]
 router = "application"
