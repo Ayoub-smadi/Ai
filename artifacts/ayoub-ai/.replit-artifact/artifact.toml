@@ -26,3 +26,4 @@ to = "/index.html"
 [services.env]
 PORT = "26020"
 BASE_PATH = "/"
+API_BASE_URL = "http://127.0.0.1:8080"
