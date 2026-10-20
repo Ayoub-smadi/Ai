@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AYOUB AI Business Assistant"
+description = "A bilingual business assistant platform where teams create AI agents, manage product and business knowledge, and test grounded customer-service responses before connecting external channels."
+version = "1.0.0"
+id = "artifacts/ayoub-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26020
+
+[services.development]
+run = "pnpm --filter @workspace/ayoub-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ayoub-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ayoub-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26020"
+BASE_PATH = "/"

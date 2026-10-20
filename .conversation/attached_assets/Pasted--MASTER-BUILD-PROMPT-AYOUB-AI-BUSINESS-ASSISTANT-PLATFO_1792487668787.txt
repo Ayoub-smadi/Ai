@@ -1,0 +1,1034 @@
+# MASTER BUILD PROMPT — AYOUB AI BUSINESS ASSISTANT PLATFORM
+
+Act as a senior full-stack software engineer, SaaS architect, AI engineer, database engineer, UI/UX designer, and QA engineer.
+
+Build a complete, production-oriented SaaS web application named:
+
+**AYOUB AI Business Assistant Platform**
+
+Brand abbreviation: **AYOUB AI**
+
+The platform allows businesses to create their own AI customer service agents, train them using business information and product catalogs, test their answers, and connect them to communication channels such as WhatsApp Business, Instagram Messaging, and Facebook Messenger.
+
+The application must be a real, working full-stack product, not a static mockup, landing-page-only project, or simulated chatbot.
+
+Your priority is correctness, security, maintainability, reliable AI responses, and a polished user experience.
+
+Do not stop after generating a plan or a visual prototype. Inspect the project, implement the features, run the application, test the workflows, and fix the errors you discover.
+
+If an external service requires credentials, account approval, or permissions, implement the integration correctly and show a clear configuration state instead of pretending that it works.
+
+---
+
+# 1. NON-NEGOTIABLE BRAND IDENTITY
+
+## Brand name
+
+Primary logo wordmark:
+
+AYOUB
+
+Full product name:
+
+AYOUB AI Business Assistant Platform
+
+Compact product name:
+
+AYOUB AI
+
+## Strict color palette
+
+Use only the following two brand colors:
+
+- Primary navy: #020618
+- White: #FFFFFF
+
+Do not introduce purple, green, orange, bright blue, yellow, colored gradients, or any other brand colors.
+
+You may use opacity variations of navy and white for borders, subtle backgrounds, hover states, and disabled controls. Maintain sufficient text contrast.
+
+Use monochromatic icons, borders, typography, and status indicators.
+
+Avoid colored success, warning, and error badges. Communicate statuses using text, monochrome symbols, borders, and the approved palette.
+
+## Logo design
+
+Create a distinctive, professional logo for AYOUB.
+
+Design a custom geometric monogram inspired by the letter A or the initials AY, paired with a carefully styled AYOUB wordmark.
+
+The logo should be modern, minimal, recognizable, and appropriate for an AI technology company.
+
+Do not use a generic robot icon as the main logo.
+
+Create the logo as a reusable React component or a local SVG asset. It must work on both navy and white backgrounds and remain legible at small sizes.
+
+Use the same brand identity throughout the landing page, navigation, authentication, dashboard, chat interface, settings, and favicon.
+
+Do not use placeholder logos in the finished product.
+
+---
+
+# 2. REQUIRED TECHNOLOGY ARCHITECTURE
+
+First inspect the existing project and preserve any working implementation.
+
+If starting from scratch, use:
+
+- Frontend: React + TypeScript + Vite.
+- UI: Tailwind CSS and shadcn/ui where compatible.
+- Backend: Node.js + Express + TypeScript.
+- Database: PostgreSQL.
+- Recommended database provider: Neon.
+- ORM: Drizzle ORM.
+- Input validation: Zod.
+- AI provider: OpenAI API through a server-side integration.
+- Authentication: secure sessions or a well-maintained authentication library.
+- Testing: Vitest and React Testing Library, plus API integration tests.
+- Browser testing: Playwright when supported by the environment.
+
+Keep the frontend, backend, database schema, and AI service logically separated.
+
+Use strict TypeScript settings and avoid using `any` unless absolutely necessary and documented.
+
+Use stable, mutually compatible package versions. Do not install unnecessary packages or replace a working project architecture without a clear reason.
+
+If the existing platform has different supported technologies, adapt the implementation to its environment while preserving the same functional requirements.
+
+---
+
+# 3. APPLICATION STRUCTURE
+
+Build the following pages:
+
+1. Public landing page.
+2. Sign-up page.
+3. Login page.
+4. Password recovery page.
+5. Protected main dashboard.
+6. AI agents list.
+7. Create-agent workflow.
+8. Agent configuration page.
+9. Knowledge and training center.
+10. Products and prices manager.
+11. FAQ management.
+12. Live AI testing chat.
+13. Customer conversation inbox.
+14. Channel integrations.
+15. Business profile and policies.
+16. Team and workspace settings.
+17. Usage and subscription management.
+18. Account settings.
+19. Useful loading, empty, and error states.
+20. A proper not-found page.
+
+Every visible navigation item must lead to a real page or a clearly explained feature that is not yet enabled.
+
+Every interactive button must perform its advertised action. Remove dead links and decorative controls that falsely suggest functionality.
+
+---
+
+# 4. PUBLIC LANDING PAGE
+
+Create a professional landing page introducing AYOUB AI.
+
+Include:
+
+- Custom logo and navigation.
+- Hero section explaining the product.
+- Main call to action: Create Your AI Assistant.
+- A secondary action to explore features.
+- A visual preview of the AI testing chat.
+- Explanation of the training workflow.
+- Product catalog and knowledge management features.
+- Supported communication channels.
+- Security and privacy information.
+- Pricing section prepared for future plans.
+- FAQ section.
+- Footer with contact and legal links.
+
+Use the navy-and-white brand identity exclusively.
+
+Do not display fabricated customer testimonials, fake company logos, invented usage numbers, or unsupported performance claims.
+
+The main call to action must navigate to registration or the appropriate authenticated workflow.
+
+---
+
+# 5. AUTHENTICATION AND WORKSPACES
+
+Implement a secure user authentication system.
+
+Required functionality:
+
+- Register with email and password.
+- Log in and log out.
+- Password reset flow.
+- Protected application routes.
+- Session expiration and secure session handling.
+- User profile management.
+- Business workspace creation.
+- Workspace membership and role management.
+- Server-side authorization on all protected endpoints.
+
+Hash passwords using a recognized password-hashing algorithm if password authentication is implemented directly.
+
+Use secure cookies and appropriate CSRF protections for the chosen authentication architecture.
+
+Never trust workspace IDs, user IDs, or permissions supplied by the frontend without validating them on the server.
+
+A user must only be able to access data belonging to a workspace they are authorized to access.
+
+Provide useful authentication error messages without exposing secrets or sensitive implementation details.
+
+---
+
+# 6. MAIN DASHBOARD
+
+Create a useful dashboard showing real database-backed information:
+
+- Number of agents.
+- Number of active agents.
+- Number of connected channels.
+- Total conversations.
+- Messages processed by AI.
+- Conversations requiring human assistance.
+- Recent activity.
+- Recent conversations.
+- Agent status and usage.
+
+Include clear actions to:
+
+- Create an AI agent.
+- Add a product.
+- Add training information.
+- Test an agent.
+- Connect a channel.
+- Open the conversation inbox.
+
+Do not use hardcoded numbers as real analytics.
+
+When no data exists, show a helpful onboarding state instead of misleading statistics.
+
+---
+
+# 7. AI AGENT CREATION AND CONFIGURATION
+
+Users must be able to create multiple independent AI agents.
+
+Each agent should have:
+
+- Agent name.
+- Associated business.
+- Description.
+- Logo or avatar.
+- Supported languages.
+- Default language.
+- Tone of voice.
+- Personality instructions.
+- Greeting message.
+- Fallback message.
+- Human handoff instructions.
+- Custom system instructions.
+- Knowledge sources.
+- Connected channels.
+- Activation status.
+- Creation and modification timestamps.
+
+Support statuses such as draft, active, and paused.
+
+Implement create, read, update, and delete operations with proper authorization.
+
+Require confirmation before permanently deleting an agent and explain which associated data will be affected.
+
+Save all configuration changes to PostgreSQL and retrieve the saved values after a refresh.
+
+The AI runtime must use the correct saved configuration for each agent.
+
+---
+
+# 8. KNOWLEDGE AND TRAINING CENTER
+
+This is the core feature of AYOUB AI.
+
+Create a training center that enables business owners to teach their agents using structured information and natural-language instructions.
+
+The training center must include the following sections.
+
+## A. Product catalog
+
+Each product should support:
+
+- Arabic name.
+- English name.
+- Alternative names and spelling variations.
+- Description.
+- Category.
+- Price.
+- Currency.
+- Unit of measurement.
+- Package size.
+- Availability status.
+- Optional stock quantity.
+- Product SKU.
+- Optional image URL.
+- Additional notes.
+- Created and updated timestamps.
+
+Provide:
+
+- Add product.
+- Edit product.
+- Delete product.
+- Search products.
+- Filter by category and availability.
+- Pagination when appropriate.
+- Duplicate detection where practical.
+- CSV import with validation and an error report.
+- Export functionality where appropriate.
+
+Use numeric database types suitable for monetary values. Never use floating-point arithmetic for authoritative price calculations.
+
+Allow different currencies and clearly preserve currency and unit information.
+
+Example training record:
+
+Arabic name: بيت موس مضغوط
+
+English name: Compressed Peat Moss
+
+Package size: 20 liters
+
+Price: 2.00
+
+Currency: JOD
+
+Availability: In stock
+
+This is example data for development and testing only. Never present it as a real business product unless a workspace owner adds and saves it.
+
+## B. FAQs and approved answers
+
+Allow owners to create and manage:
+
+- Question.
+- Approved answer.
+- Alternative question phrasings.
+- Language.
+- Category.
+- Enabled or disabled status.
+
+Example:
+
+Question: What are your delivery fees?
+
+Answer: Use the delivery policies saved by the business owner.
+
+Allow search, editing, deletion, and categorization.
+
+## C. Business information
+
+Support structured records for:
+
+- Business introduction.
+- Branches.
+- Addresses.
+- Contact information.
+- Working hours.
+- Delivery fees and service areas.
+- Payment methods.
+- Return policies.
+- Exchange policies.
+- Warranty conditions.
+- Promotions.
+- Frequently asked questions.
+- Terms and conditions.
+
+Do not assume all businesses have the same policies.
+
+## D. General instructions
+
+Provide a large editor where users can write instructions in their own words.
+
+Example:
+
+"You are the official customer service assistant for our business. Speak in friendly Jordanian Arabic when the customer uses Arabic. Keep responses concise and professional. Use saved products, prices, and business policies. Never invent a price, product, availability status, discount, or policy. If information is missing, ask a clarifying question or offer to connect the customer to a human representative."
+
+The owner must be able to save, edit, and preview these instructions.
+
+Changes must persist and take effect in subsequent conversations.
+
+## E. File-based knowledge
+
+Allow supported document uploads such as:
+
+- PDF.
+- TXT.
+- CSV.
+- DOCX.
+
+Implement safe file validation, size limits, text extraction, processing states, useful error messages, document deletion, and reprocessing.
+
+Do not execute uploaded files or trust embedded instructions as privileged system commands.
+
+Store extracted text and source metadata in the database.
+
+For larger collections, implement retrieval-augmented generation using PostgreSQL full-text search and optional vector search with pgvector if the environment supports it.
+
+The application must retrieve relevant knowledge rather than placing every document into every AI prompt.
+
+Do not report a document as successfully indexed until processing and storage have actually succeeded.
+
+---
+
+# 9. AI RETRIEVAL AND ANSWER GENERATION
+
+Implement a real backend AI service.
+
+Use a modular architecture with separate responsibilities for:
+
+- Loading the agent configuration.
+- Retrieving business knowledge.
+- Resolving product matches.
+- Building the AI prompt.
+- Calling the AI provider.
+- Validating the result.
+- Saving messages.
+- Returning the answer.
+
+Before answering a customer, retrieve relevant information from the current workspace's saved records.
+
+Prioritize exact structured database records for price, currency, package size, availability, and stock information.
+
+Use semantic or full-text retrieval for FAQs, documents, and general business information.
+
+Do not let a language model invent authoritative database facts.
+
+For questions involving exact product prices, retrieve the current product record and use those values in the answer.
+
+If multiple products match, ask a clarifying question.
+
+If a product has no saved price, say that the price needs confirmation.
+
+If availability is unknown, do not claim the product is in stock.
+
+If the information is not present, clearly say that the information is unavailable and offer human assistance according to the owner's configuration.
+
+When practical, use structured response validation for factual product answers. If the generated answer contradicts the retrieved facts, regenerate or return a safe fallback.
+
+Never expose internal prompts, private integration credentials, database secrets, or other workspaces' information.
+
+Treat customer messages, uploaded documents, and retrieved text as untrusted input. They must not override security policies or grant access to privileged tools.
+
+Keep the AI model configurable through server-side environment variables.
+
+Implement request timeouts, bounded retries, provider error handling, and useful logging without logging secrets or unnecessary personal information.
+
+---
+
+# 10. LIVE AI TESTING CHAT
+
+Build a real chat interface inspired by a modern AI assistant desktop application.
+
+The interface should include:
+
+- Agent name and status.
+- Agent logo.
+- Conversation history.
+- Message input.
+- Send button.
+- Suggested test questions.
+- New conversation action.
+- Clear conversation confirmation.
+- Loading indicator.
+- Error handling.
+- Optional retrieved-source details for the business owner.
+
+The user must be able to test the actual agent before activating it.
+
+Required test scenario:
+
+1. Create an agent.
+2. Add a product named "بيت موس مضغوط" with a package size of 20 liters and a price of 2 JOD.
+3. Save the product.
+4. Open the testing chat.
+5. Ask: "عندكم بيت موس؟"
+6. The backend retrieves the saved product.
+7. The AI answers using the correct product name, size, and price.
+8. Change the saved price to another value.
+9. Ask again and verify that the updated price is used.
+
+The example price must come from the database and must not be hardcoded in the chatbot.
+
+Also test an unknown product, a missing price, an ambiguous product, and a question unrelated to the business.
+
+Keep test conversations clearly separated from real customer conversations unless the owner explicitly chooses to retain a test record.
+
+Never simulate a successful AI response when the provider call fails.
+
+---
+
+# 11. CHAT WIDGET FOR BUSINESS WEBSITES
+
+Provide an embeddable website chat widget for businesses that want customers to contact their AI agent directly from their website.
+
+Include:
+
+- A configurable launcher.
+- A chat window.
+- Agent greeting.
+- Message history.
+- Loading and error states.
+- Mobile responsiveness.
+- Basic branding options limited to the approved platform palette by default, with business-level customization available only if intentionally supported as a product feature.
+
+Create a secure backend endpoint for widget messages.
+
+Use an appropriate public widget identifier and server-side ownership validation. Never expose an AI provider API key.
+
+Apply rate limiting, origin restrictions where appropriate, and abuse prevention.
+
+Document how to embed the widget on an external website.
+
+Do not rely on a frontend-only implementation.
+
+---
+
+# 12. WHATSAPP BUSINESS INTEGRATION
+
+Implement an integration architecture for the official WhatsApp Business Platform Cloud API.
+
+Support the configuration required by the current official API, including applicable:
+
+- Business account information.
+- Phone number ID.
+- Access token.
+- Webhook verification.
+- Webhook subscriptions.
+- Inbound message processing.
+- Outbound message sending.
+- Message status events.
+- Error reporting.
+
+Use environment variables or a secure server-side secrets system where appropriate.
+
+The exact required identifiers depend on the Meta setup. Do not request irrelevant credentials or assume a connection exists before it has been verified.
+
+Implement a webhook endpoint that:
+
+1. Verifies the webhook according to the official protocol.
+2. Validates incoming event structure.
+3. Identifies the correct business workspace and agent.
+4. Prevents duplicate processing.
+5. Loads the correct conversation.
+6. Runs the same knowledge retrieval and AI service used by the test chat.
+7. Sends a reply using the official API.
+8. Stores the event and message status.
+9. Handles failures and retries safely.
+
+Respect official messaging policies, applicable customer service windows, templates, rate limits, and permissions.
+
+Never send messages from a business account without the appropriate authorization.
+
+If credentials are missing, show the integration as Not Connected and provide clear setup instructions.
+
+Do not fake incoming messages or successful outbound delivery.
+
+---
+
+# 13. INSTAGRAM AND FACEBOOK MESSENGER
+
+Create separate integrations for Instagram Messaging and Facebook Messenger using official Meta APIs and supported account types.
+
+Implement the necessary architecture for:
+
+- Authorized account connection.
+- Required permissions.
+- Page or professional account identification.
+- Webhook subscriptions.
+- Incoming message events.
+- Outbound replies.
+- Token validation and expiration handling.
+- Delivery errors.
+- Duplicate-event protection.
+- Secure association with the correct workspace and agent.
+
+Follow the current official API requirements. Do not assume that Instagram personal accounts support the same capabilities as eligible professional accounts.
+
+Where account authorization or platform review is required, display the actual setup requirements and connection status.
+
+Never claim an integration is connected until the credentials and supported API calls have been validated.
+
+All channels must use the same business knowledge and core AI response service.
+
+---
+
+# 14. UNIFIED CUSTOMER CONVERSATION INBOX
+
+Create a unified inbox for conversations from supported channels.
+
+Each conversation should include:
+
+- Customer identifier or available display name.
+- Channel.
+- Assigned agent.
+- Last message.
+- Timestamp.
+- Conversation status.
+- AI or human handling mode.
+- Full authorized conversation history.
+
+Provide filters for:
+
+- All conversations.
+- Open.
+- Resolved.
+- Awaiting human assistance.
+- Individual channels.
+- Assigned team member, if applicable.
+
+Allow authorized staff to:
+
+- Open conversations.
+- Send manual replies through a connected supported channel.
+- Pause AI replies for a conversation.
+- Resume AI replies.
+- Assign a conversation.
+- Mark it resolved.
+- Transfer it to a human representative.
+
+Prevent the AI from replying while a conversation is explicitly in human-handling mode.
+
+Implement clear status transitions and prevent duplicate or conflicting replies where practical.
+
+---
+
+# 15. HUMAN HANDOFF
+
+Allow each agent to define when it should escalate to a human.
+
+Possible escalation conditions:
+
+- The customer requests a human.
+- Required information is missing.
+- Product information is ambiguous.
+- The AI cannot safely answer.
+- A business-specific escalation rule is triggered.
+
+When escalation occurs:
+
+1. Save the triggering conversation.
+2. Mark it as requiring human assistance.
+3. Notify the appropriate inbox or configured notification mechanism.
+4. Stop automated replies when human takeover is active.
+5. Display a clear customer-facing message.
+
+Do not claim that an employee was notified unless the notification operation succeeded.
+
+---
+
+# 16. CHANNEL MANAGEMENT AND ACTIVATION
+
+Create a channel management page containing cards for:
+
+- Website chat.
+- WhatsApp Business.
+- Instagram Messaging.
+- Facebook Messenger.
+
+Each card must display the real state:
+
+- Not configured.
+- Configuration required.
+- Connected.
+- Error.
+- Disconnected.
+
+Provide setup instructions, connection testing, and safe disconnection.
+
+Implement an agent activation workflow that validates:
+
+- Agent configuration.
+- Saved knowledge.
+- AI provider configuration.
+- Channel-specific credentials.
+- Required webhook configuration.
+- Appropriate permissions.
+
+Allow website chat to operate independently of external messaging integrations.
+
+Pausing or deactivating an agent must prevent new automated responses according to the configured policy.
+
+---
+
+# 17. DATABASE DESIGN
+
+Create migrations and relational tables appropriate for:
+
+- users
+- workspaces
+- workspace_members
+- business_profiles
+- agents
+- agent_instructions
+- products
+- product_categories
+- knowledge_entries
+- knowledge_documents
+- document_chunks
+- channel_integrations
+- conversations
+- messages
+- webhook_events
+- agent_test_sessions
+- human_handoffs
+- audit_logs
+- usage_records
+- subscriptions
+
+Adapt the schema when justified, but preserve all required functionality.
+
+Use foreign keys, indexes, constraints, timestamps, and appropriate deletion behavior.
+
+Use database transactions for operations that must succeed or fail together.
+
+Store prices in a precise numeric type.
+
+Enforce workspace ownership and authorization in backend queries.
+
+Never rely exclusively on frontend filtering to protect business data.
+
+Store sensitive integration secrets using a secure server-side mechanism. Where secrets are stored in the database, encrypt them at rest using an appropriate managed encryption approach and keep encryption keys outside the database.
+
+Never include secrets in API responses, browser logs, or error messages.
+
+---
+
+# 18. SECURITY AND PRIVACY
+
+Implement security as part of the architecture, not as a final cosmetic step.
+
+Required protections:
+
+- Authentication and authorization.
+- Tenant isolation.
+- Input validation.
+- Parameterized database queries.
+- Rate limiting.
+- Secure cookie settings.
+- CSRF protection where applicable.
+- XSS prevention.
+- Safe file upload processing.
+- File size and type limits.
+- Webhook signature or verification checks according to the official protocol.
+- Duplicate event protection.
+- Secret redaction in logs.
+- Secure error handling.
+- Appropriate CORS and origin policies.
+- Protection against unauthorized channel use.
+- Protection against prompt injection.
+- Access controls for conversation history and uploaded documents.
+
+Minimize the collection of personal information.
+
+Do not expose customer conversations publicly.
+
+Do not log full credentials or sensitive tokens.
+
+Provide clear business-level data deletion behavior and handle related records according to the documented retention policy.
+
+---
+
+# 19. SUBSCRIPTION AND USAGE ARCHITECTURE
+
+Prepare the platform for a monthly subscription business.
+
+Design the application to support future plans such as:
+
+- Free trial.
+- Basic.
+- Pro.
+- Business.
+
+Prepare for limits on:
+
+- Number of agents.
+- AI messages.
+- Connected channels.
+- Knowledge storage.
+- Team members.
+
+Track real usage in the database.
+
+Display usage totals and limits only when they are based on real recorded data or explicitly configured plan limits.
+
+Implement billing only through a real, supported payment provider if its credentials and setup are available.
+
+Verify billing webhooks before changing subscription state.
+
+If billing is not configured, display a clear Not Configured or Coming Soon state. Never simulate a successful payment.
+
+---
+
+# 20. INTERNATIONALIZATION AND ACCESSIBILITY
+
+Support Arabic and English across the entire application.
+
+Arabic requirements:
+
+- Correct RTL layout.
+- Appropriate Arabic typography.
+- Correct alignment and icon positioning.
+- Natural Arabic labels.
+- Support for Arabic product names and descriptions.
+- Accurate currency and measurement formatting.
+- Mixed Arabic and English text without layout breakage.
+
+English requirements:
+
+- Complete LTR layout.
+- Consistent navigation.
+- Clear English labels and validation messages.
+
+Persist the selected language.
+
+Implement keyboard accessibility, visible focus states, semantic HTML, form labels, and accessible dialogs.
+
+Maintain sufficient contrast using only the two approved colors.
+
+---
+
+# 21. ERROR HANDLING AND OBSERVABILITY
+
+Implement consistent error handling across the frontend and backend.
+
+Provide:
+
+- Clear form validation.
+- Useful loading states.
+- Empty states.
+- Retry options when appropriate.
+- Network failure messages.
+- Database error handling.
+- AI provider failure handling.
+- File processing errors.
+- Channel connection errors.
+- Webhook processing logs.
+- Request identifiers for troubleshooting.
+
+Never swallow errors silently.
+
+Never show raw stack traces, private database details, API tokens, or secrets to users.
+
+Use structured server logs and avoid storing unnecessary personal information.
+
+If a service is unavailable, show a truthful state and preserve data that has already been saved successfully.
+
+---
+
+# 22. ENVIRONMENT CONFIGURATION
+
+Provide a complete `.env.example` with placeholders for the required configuration.
+
+Include only variables relevant to the selected architecture, such as:
+
+DATABASE_URL=
+SESSION_SECRET=
+OPENAI_API_KEY=
+OPENAI_MODEL=
+META_APP_SECRET=
+META_WEBHOOK_VERIFY_TOKEN=
+META_ACCESS_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_BUSINESS_ACCOUNT_ID=
+PUBLIC_APP_URL=
+
+Add any additional variables required by the actual implementation.
+
+Never put real secrets in source code.
+
+Never commit a populated `.env` file.
+
+Validate required configuration at server startup. Distinguish required variables from optional channel-specific settings.
+
+If an optional integration is not configured, the core application must still run.
+
+Document the required setup steps for the database, AI provider, public webhook URL, and Meta application.
+
+---
+
+# 23. REQUIRED TESTING
+
+Create automated tests for critical business behavior.
+
+## Unit tests
+
+Test:
+
+- Product validation.
+- Price and currency handling.
+- Knowledge retrieval.
+- FAQ matching.
+- Agent configuration.
+- Fallback behavior.
+- Conversation state transitions.
+- Channel routing.
+- Webhook deduplication.
+
+## API integration tests
+
+Test:
+
+- Authentication.
+- Authorization.
+- Workspace isolation.
+- Product creation and updates.
+- Knowledge creation and retrieval.
+- Conversation persistence.
+- Agent configuration persistence.
+- Invalid requests.
+- Missing environment configuration.
+- Provider failures.
+
+## End-to-end tests
+
+Where the environment supports browser automation, test:
+
+1. Register a user.
+2. Create a workspace.
+3. Create an AI agent.
+4. Add a product.
+5. Save and refresh.
+6. Open the testing chat.
+7. Ask about the product.
+8. Verify that the answer uses the stored price.
+9. Change the price.
+10. Ask again and verify the updated value.
+11. Ask about a nonexistent product.
+12. Verify that the AI does not invent a product or price.
+13. Attempt unauthorized access to another workspace.
+14. Verify that the request is denied.
+15. Open channel settings and verify that unconfigured channels are not marked connected.
+
+Do not require real OpenAI or Meta credentials for ordinary automated tests. Use controlled mocks in tests, while ensuring that production code performs actual service calls.
+
+Add separate integration tests that can run when real credentials are provided.
+
+---
+
+# 24. BUILD, TYPE CHECKING, AND DEPLOYMENT
+
+Create and maintain reliable scripts for:
+
+- Development server.
+- Production build.
+- Type checking.
+- Linting.
+- Unit tests.
+- API tests.
+- Database migrations.
+
+Use scripts appropriate to the actual project.
+
+Before declaring the application complete:
+
+1. Install and resolve dependencies.
+2. Run the production build.
+3. Run TypeScript checks.
+4. Run linting if configured.
+5. Run automated tests.
+6. Fix every reproducible build or test failure caused by the implementation.
+7. Check browser console errors.
+8. Check server logs.
+9. Verify database connectivity.
+10. Verify the core workflows end to end.
+11. Check mobile responsiveness.
+12. Confirm that secrets are not exposed in frontend bundles.
+13. Confirm that no major page or button is a nonfunctional placeholder.
+
+Do not claim that a test passed unless it actually ran and passed.
+
+If a check cannot be performed because of missing credentials, unavailable infrastructure, or environment limitations, report the exact limitation and the remaining verification steps.
+
+---
+
+# 25. IMPLEMENTATION STRATEGY
+
+Work in these milestones.
+
+Milestone 1:
+Set up the project, brand system, authentication, database, workspaces, and dashboard.
+
+Milestone 2:
+Implement agent creation, product catalog, FAQs, business information, and training persistence.
+
+Milestone 3:
+Implement real AI calls, knowledge retrieval, factual product answers, and the testing chat.
+
+Milestone 4:
+Implement the unified inbox, website chat widget, and human handoff.
+
+Milestone 5:
+Implement official WhatsApp, Instagram, and Facebook integrations with correct configuration and webhook handling.
+
+Milestone 6:
+Implement usage tracking, subscription architecture, settings, security hardening, and internationalization.
+
+Milestone 7:
+Run the complete test suite, fix defects, and prepare deployment documentation.
+
+Do not stop at the end of a milestone merely to report progress if there is sufficient context and capacity to continue implementing the requested application.
+
+Keep the application runnable at every milestone.
+
+Do not rewrite working modules unnecessarily. Avoid duplicated business logic. Reuse shared components and services.
+
+---
+
+# 26. DEFINITION OF DONE
+
+The application is ready for its first usable release only when:
+
+- A user can register and log in.
+- A user can create a business workspace.
+- A user can create and configure an AI agent.
+- Product and FAQ information can be created, edited, deleted, and persisted.
+- Saved information survives a page refresh and a new login.
+- The AI testing chat calls the actual backend AI service when configured.
+- Answers about products use current database values.
+- Missing information is handled safely.
+- Agent instructions are applied.
+- Workspace data is isolated.
+- Errors are displayed honestly.
+- The brand uses #020618 and white only.
+- Arabic RTL and English LTR work.
+- Core tests pass.
+- Production builds successfully.
+- External integrations accurately reflect their actual connection status.
+- Setup instructions explain all remaining external requirements.
+
+## FINAL EXECUTION INSTRUCTIONS
+
+Start by inspecting the existing project and identifying its framework, dependencies, current implementation, and any existing errors.
+
+Then implement the application in the most reliable sequence.
+
+Prioritize a working, tested core product over superficial feature breadth.
+
+Use real database operations, real server-side AI integration, proper authentication, and maintainable code.
+
+Do not fabricate functionality, successful connections, analytics, test results, or payment states.
+
+Do not leave broken imports, missing components, unimplemented routes, dead buttons, inconsistent schemas, or unhandled failures.
+
+When finished, provide a concise implementation report listing:
+
+- Features implemented.
+- Database and environment setup completed.
+- Build and test commands executed.
+- Tests that passed and failed.
+- Known limitations.
+- External credentials or approvals still required.
+- Exact steps to run and deploy the application.
+
+Begin implementation now.
