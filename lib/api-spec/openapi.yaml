@@ -10,6 +10,20 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: workspaces
+    description: Business workspaces
+  - name: agents
+    description: AI agent configuration
+  - name: products
+    description: Workspace product catalog
+  - name: knowledge
+    description: FAQs, business profile, and training information
+  - name: testing
+    description: Test conversations with configured agents
+  - name: dashboard
+    description: Workspace overview and usage
+  - name: channels
+    description: Channel setup state
 paths:
   /healthz:
     get:
@@ -24,7 +38,389 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /workspaces:
+    get:
+      operationId: listWorkspaces
+      tags: [workspaces]
+      summary: List workspaces available to the signed-in user
+      responses:
+        "200":
+          description: Workspaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workspace"
+    post:
+      operationId: createWorkspace
+      tags: [workspaces]
+      summary: Create a business workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceInput"
+      responses:
+        "201":
+          description: Created workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get real workspace totals and recent activity
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /agents:
+    get:
+      operationId: listAgents
+      tags: [agents]
+      summary: List workspace agents
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Agent list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Agent"
+    post:
+      operationId: createAgent
+      tags: [agents]
+      summary: Create an AI agent
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentInput"
+      responses:
+        "201":
+          description: Created agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+  /agents/{agentId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: getAgent
+      tags: [agents]
+      summary: Get one agent
+      responses:
+        "200":
+          description: Agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+    patch:
+      operationId: updateAgent
+      tags: [agents]
+      summary: Update agent settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentUpdate"
+      responses:
+        "200":
+          description: Updated agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+    delete:
+      operationId: deleteAgent
+      tags: [agents]
+      summary: Delete agent and its test data
+      responses:
+        "204":
+          description: Deleted
+  /agents/{agentId}/activation:
+    post:
+      operationId: setAgentActivation
+      tags: [agents]
+      summary: Activate, pause, or return an agent to draft
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivationInput"
+      responses:
+        "200":
+          description: Updated agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: Search workspace products
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: availability
+          in: query
+          schema:
+            type: string
+            enum: [in_stock, out_of_stock, unknown]
+      responses:
+        "200":
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Add a product
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+  /products/{productId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      responses:
+        "204":
+          description: Deleted
+  /faqs:
+    get:
+      operationId: listFaqs
+      tags: [knowledge]
+      summary: List approved FAQ answers
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: FAQ list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Faq"
+    post:
+      operationId: createFaq
+      tags: [knowledge]
+      summary: Add an approved FAQ answer
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaqInput"
+      responses:
+        "201":
+          description: Created FAQ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Faq"
+  /faqs/{faqId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - name: faqId
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      operationId: updateFaq
+      tags: [knowledge]
+      summary: Update an FAQ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaqUpdate"
+      responses:
+        "200":
+          description: Updated FAQ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Faq"
+    delete:
+      operationId: deleteFaq
+      tags: [knowledge]
+      summary: Delete an FAQ
+      responses:
+        "204":
+          description: Deleted
+  /business-profile:
+    get:
+      operationId: getBusinessProfile
+      tags: [knowledge]
+      summary: Get business details and policies
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+    put:
+      operationId: saveBusinessProfile
+      tags: [knowledge]
+      summary: Save business details and policies
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessProfileInput"
+      responses:
+        "200":
+          description: Saved business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+  /agents/{agentId}/test-messages:
+    post:
+      operationId: sendAgentTestMessage
+      tags: [testing]
+      summary: Send a test message and receive a grounded AI answer
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestMessageInput"
+      responses:
+        "200":
+          description: AI response and retrieved sources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestMessageResult"
+        "503":
+          description: AI provider is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /channels:
+    get:
+      operationId: listChannels
+      tags: [channels]
+      summary: Return actual connection states for workspace channels
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Channel states
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Channel"
 components:
+  parameters:
+    WorkspaceId:
+      name: X-Workspace-Id
+      in: header
+      required: true
+      schema:
+        type: integer
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +429,228 @@ components:
           type: string
       required:
         - status
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    Workspace:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, createdAt]
+    WorkspaceInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+      required: [name]
+    Agent:
+      type: object
+      properties:
+        id: { type: integer }
+        workspaceId: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        status: { type: string, enum: [draft, active, paused] }
+        language: { type: string }
+        tone: { type: string }
+        greeting: { type: string }
+        fallback: { type: string }
+        instructions: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, workspaceId, name, description, status, language, tone, greeting, fallback, instructions, createdAt, updatedAt]
+    AgentInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string }
+        language: { type: string }
+        tone: { type: string }
+        greeting: { type: string }
+        fallback: { type: string }
+        instructions: { type: string }
+      required: [name, language, tone, greeting, fallback, instructions]
+    AgentUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: ["string", "null"] }
+        language: { type: string }
+        tone: { type: string }
+        greeting: { type: string }
+        fallback: { type: string }
+        instructions: { type: string }
+    ActivationInput:
+      type: object
+      properties:
+        status: { type: string, enum: [draft, active, paused] }
+      required: [status]
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        workspaceId: { type: integer }
+        nameArabic: { type: ["string", "null"] }
+        nameEnglish: { type: ["string", "null"] }
+        aliases: { type: array, items: { type: string } }
+        description: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        price: { type: ["string", "null"], description: Decimal string to preserve exact price }
+        currency: { type: string }
+        unit: { type: ["string", "null"] }
+        packageSize: { type: ["string", "null"] }
+        availability: { type: string, enum: [in_stock, out_of_stock, unknown] }
+        stockQuantity: { type: ["integer", "null"] }
+        sku: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, workspaceId, nameArabic, nameEnglish, aliases, description, category, price, currency, unit, packageSize, availability, stockQuantity, sku, notes, createdAt, updatedAt]
+    ProductInput:
+      type: object
+      properties:
+        nameArabic: { type: string }
+        nameEnglish: { type: string }
+        aliases: { type: array, items: { type: string } }
+        description: { type: string }
+        category: { type: string }
+        price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,4})?$" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        unit: { type: string }
+        packageSize: { type: string }
+        availability: { type: string, enum: [in_stock, out_of_stock, unknown] }
+        stockQuantity: { type: integer, minimum: 0 }
+        sku: { type: string }
+        notes: { type: string }
+      required: [currency, availability]
+    ProductUpdate:
+      type: object
+      properties:
+        nameArabic: { type: ["string", "null"] }
+        nameEnglish: { type: ["string", "null"] }
+        aliases: { type: array, items: { type: string } }
+        description: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        price: { type: ["string", "null"], pattern: "^[0-9]+(\\.[0-9]{1,4})?$" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        unit: { type: ["string", "null"] }
+        packageSize: { type: ["string", "null"] }
+        availability: { type: string, enum: [in_stock, out_of_stock, unknown] }
+        stockQuantity: { type: ["integer", "null"], minimum: 0 }
+        sku: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+    Faq:
+      type: object
+      properties:
+        id: { type: integer }
+        workspaceId: { type: integer }
+        question: { type: string }
+        answer: { type: string }
+        alternatives: { type: array, items: { type: string } }
+        language: { type: string }
+        category: { type: ["string", "null"] }
+        enabled: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+      required: [id, workspaceId, question, answer, alternatives, language, category, enabled, updatedAt]
+    FaqInput:
+      type: object
+      properties:
+        question: { type: string, minLength: 1 }
+        answer: { type: string, minLength: 1 }
+        alternatives: { type: array, items: { type: string } }
+        language: { type: string }
+        category: { type: string }
+        enabled: { type: boolean }
+      required: [question, answer, language, enabled]
+    FaqUpdate:
+      type: object
+      properties:
+        question: { type: string, minLength: 1 }
+        answer: { type: string, minLength: 1 }
+        alternatives: { type: array, items: { type: string } }
+        language: { type: string }
+        category: { type: ["string", "null"] }
+        enabled: { type: boolean }
+    BusinessProfile:
+      type: object
+      properties:
+        workspaceId: { type: integer }
+        introduction: { type: string }
+        branches: { type: string }
+        contactInfo: { type: string }
+        workingHours: { type: string }
+        deliveryPolicy: { type: string }
+        paymentMethods: { type: string }
+        returnPolicy: { type: string }
+        exchangePolicy: { type: string }
+        warrantyPolicy: { type: string }
+        promotions: { type: string }
+        terms: { type: string }
+        updatedAt: { type: ["string", "null"], format: date-time }
+      required: [workspaceId, introduction, branches, contactInfo, workingHours, deliveryPolicy, paymentMethods, returnPolicy, exchangePolicy, warrantyPolicy, promotions, terms, updatedAt]
+    BusinessProfileInput:
+      type: object
+      properties:
+        introduction: { type: string }
+        branches: { type: string }
+        contactInfo: { type: string }
+        workingHours: { type: string }
+        deliveryPolicy: { type: string }
+        paymentMethods: { type: string }
+        returnPolicy: { type: string }
+        exchangePolicy: { type: string }
+        warrantyPolicy: { type: string }
+        promotions: { type: string }
+        terms: { type: string }
+      required: [introduction, branches, contactInfo, workingHours, deliveryPolicy, paymentMethods, returnPolicy, exchangePolicy, warrantyPolicy, promotions, terms]
+    Dashboard:
+      type: object
+      properties:
+        agents: { type: integer }
+        activeAgents: { type: integer }
+        products: { type: integer }
+        faqs: { type: integer }
+        testSessions: { type: integer }
+        aiMessages: { type: integer }
+        channels: { type: integer }
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/Activity"
+      required: [agents, activeAgents, products, faqs, testSessions, aiMessages, channels, recentActivity]
+    Activity:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, title, detail, createdAt]
+    TestMessageInput:
+      type: object
+      properties:
+        content: { type: string, minLength: 1, maxLength: 4000 }
+        conversationId: { type: ["string", "null"] }
+      required: [content]
+    TestMessageResult:
+      type: object
+      properties:
+        conversationId: { type: string }
+        userMessage: { type: string }
+        assistantMessage: { type: string }
+        sources: { type: array, items: { type: string } }
+        handoff: { type: boolean }
+      required: [conversationId, userMessage, assistantMessage, sources, handoff]
+    Channel:
+      type: object
+      properties:
+        id: { type: string, enum: [website, whatsapp, instagram, messenger] }
+        name: { type: string }
+        status: { type: string, enum: [not_configured, configuration_required, connected, error, disconnected] }
+        detail: { type: string }
+      required: [id, name, status, detail]
 

@@ -1,62 +1,457 @@
-import { type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useMemo, useState, createContext, useContext, type FormEvent, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { ClerkProvider, SignIn, SignUp, Show, useAuth, useUser } from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
+import {
+  Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bot, Building2, Check,
+  ChevronRight, CircleHelp, Code2, FileText, Globe2, Languages, LayoutDashboard, LifeBuoy, LoaderCircle,
+  LogOut, Menu, MessageCircle, MessageSquareText, Package, Plus, Save, Search, Settings2, ShieldCheck,
+  SlidersHorizontal, Sparkles, Store, Trash2, Wifi, X
+} from 'lucide-react';
+import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation, useRoute } from 'wouter';
+import {
+  useCreateAgent, useCreateFaq, useCreateProduct, useCreateWorkspace, useDeleteAgent, useDeleteFaq,
+  useDeleteProduct, useGetAgent, useGetBusinessProfile, useGetDashboard, useListAgents, useListChannels,
+  useListFaqs, useListProducts, useListWorkspaces, useSaveBusinessProfile, useSendAgentTestMessage,
+  useSetAgentActivation, useUpdateAgent, useUpdateFaq, useUpdateProduct,
+  getGetAgentQueryKey, getGetBusinessProfileQueryKey, getGetDashboardQueryKey, getListAgentsQueryKey,
+  getListChannelsQueryKey, getListFaqsQueryKey, getListProductsQueryKey, getListWorkspacesQueryKey
+} from '@workspace/api-client-react';
+import type { Agent, BusinessProfileInput, Faq, Product } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import {
-  Route,
-  Switch,
-  useLocation,
-  Router as WouterRouter,
-} from 'wouter';
+import './index.css';
 
 const queryClient = new QueryClient();
+const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+function stripBase(path: string) { return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path; }
+if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
 
-function Home() {
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Replit Agent is building...
-        </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Your app will appear here once it's ready.
-        </p>
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: '#020618', colorForeground: '#020618', colorMutedForeground: 'rgba(2, 6, 24, .58)',
+    colorBackground: '#FFFFFF', colorInput: '#FFFFFF', colorInputForeground: '#020618',
+    colorDanger: '#020618', colorNeutral: '#020618', fontFamily: "'DM Sans', 'Noto Sans Arabic', sans-serif",
+  },
+  elements: {
+    cardBox: 'w-[440px] max-w-full !bg-white border border-[#020618]/15 rounded-2xl shadow-none',
+    card: '!bg-transparent shadow-none',
+    footer: '!bg-transparent',
+    headerTitle: 'text-[#020618] tracking-[-.04em]',
+    headerSubtitle: 'text-[#020618]/60',
+    socialButtonsBlockButtonText: 'text-[#020618]',
+    formFieldLabel: 'text-[#020618]',
+    formFieldInput: 'text-[#020618] border-[#020618]/20 focus:border-[#020618]',
+    footerActionLink: 'text-[#020618] font-semibold',
+    footerActionText: 'text-[#020618]/65',
+    dividerText: 'text-[#020618]/55',
+    formButtonPrimary: 'bg-[#020618] text-white hover:bg-[#020618]/90',
+  },
+};
+
+type Lang = 'en' | 'ar';
+const LanguageContext = createContext<{ lang: Lang; setLang: (lang: Lang) => void }>({ lang: 'en', setLang: () => undefined });
+function LanguageProvider({ children }: { children: ReactNode }) {
+  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('ayoub-language') as Lang) || 'en');
+  useEffect(() => { localStorage.setItem('ayoub-language', lang); document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; }, [lang]);
+  return <LanguageContext.Provider value={{ lang, setLang }}>{children}</LanguageContext.Provider>;
+}
+function useLang() { return useContext(LanguageContext); }
+function tr(lang: Lang, en: string, ar: string) { return lang === 'ar' ? ar : en; }
+type WorkspaceCtx = { id: number | null; workspace: { id: number; name: string } | null; workspaces: { id: number; name: string; createdAt: string }[]; headers: { headers: { 'X-Workspace-Id': string } } | undefined; select: (id: number) => void };
+const WorkspaceContext = createContext<WorkspaceCtx>({ id: null, workspace: null, workspaces: [], headers: undefined, select: () => undefined });
+function useWorkspace() { return useContext(WorkspaceContext); }
+function WorkspaceProvider({ children }: { children: ReactNode }) {
+  const workspacesQuery = useListWorkspaces({ query: { queryKey: getListWorkspacesQueryKey() } });
+  const createWorkspace = useCreateWorkspace();
+  const [selected, setSelected] = useState<number | null>(() => {
+    const id = Number(localStorage.getItem('ayoub-workspace'));
+    return Number.isFinite(id) && id > 0 ? id : null;
+  });
+  const workspaces = workspacesQuery.data ?? [];
+  const workspace = workspaces.find((item) => item.id === selected) ?? workspaces[0] ?? null;
+  useEffect(() => {
+    if (workspace && workspace.id !== selected) setSelected(workspace.id);
+  }, [workspace, selected]);
+  useEffect(() => { if (workspace) localStorage.setItem('ayoub-workspace', String(workspace.id)); }, [workspace]);
+  const headers = workspace ? { headers: { 'X-Workspace-Id': String(workspace.id) } } : undefined;
+  if (workspacesQuery.isLoading) return <LoadingScreen label="Loading your workspace" />;
+  if (workspacesQuery.isError) return <ErrorState title="Workspace unavailable" detail="We couldn't load your workspace. Check your connection and try again." retry={() => void workspacesQuery.refetch()} />;
+  if (!workspace) return <CreateWorkspaceScreen busy={createWorkspace.isPending} onCreate={(name) => createWorkspace.mutate({ data: { name } }, { onSuccess: async (newWorkspace) => { await queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey() }); setSelected(newWorkspace.id); } })} />;
+  return <WorkspaceContext.Provider value={{ id: workspace.id, workspace, workspaces, headers, select: setSelected }}>{children}</WorkspaceContext.Provider>;
+}
+function CreateWorkspaceScreen({ busy, onCreate }: { busy: boolean; onCreate: (name: string) => void }) {
+  const [name, setName] = useState('');
+  const { lang } = useLang();
+  return <div className="min-h-[100dvh] grid place-items-center p-5"><div className="panel form-card w-full max-w-lg">
+    <div className="eyebrow">AYOUB AI / FIRST SETUP</div><h1>{tr(lang, 'Create your workspace', 'أنشئ مساحة عملك')}</h1>
+    <p className="page-desc mb-6">{tr(lang, 'A workspace keeps your business knowledge and agents together.', 'تجمع مساحة العمل معلومات نشاطك التجاري ووكلاءك في مكان واحد.')}</p>
+    <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) onCreate(name.trim()); }} className="field">
+      <label htmlFor="workspace-name">{tr(lang, 'Business or workspace name', 'اسم النشاط التجاري أو مساحة العمل')}</label>
+      <input id="workspace-name" data-testid="input-workspace-name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} placeholder="e.g. Layali Home" />
+      <button className="btn mt-3" disabled={busy || !name.trim()} data-testid="button-create-workspace">{busy ? 'Creating…' : 'Create workspace'} <ArrowRight size={15} /></button>
+    </form>
+  </div></div>;
+}
+function LoadingScreen({ label = 'Loading workspace' }: { label?: string }) {
+  return <div className="min-h-[100dvh] grid place-items-center p-5"><div className="w-full max-w-md grid gap-3" aria-label={label}>
+    <div className="skeleton h-8 w-1/2" /><div className="skeleton h-3 w-4/5" /><div className="skeleton-card mt-5"><div className="skeleton w-2/5" /><div className="skeleton h-20" /><div className="skeleton w-3/5" /></div>
+  </div></div>;
+}
+function ErrorState({ title, detail, retry }: { title: string; detail: string; retry?: () => void }) {
+  return <div className="error-state panel"><div className="empty-mark"><Wifi size={18} /></div><h3>{title}</h3><p>{detail}</p>{retry && <button className="btn secondary small" onClick={retry} data-testid="button-retry">Try again</button>}</div>;
+}
+function EmptyState({ title, detail, action }: { title: string; detail: string; action?: ReactNode }) {
+  return <div className="empty-state"><div className="empty-mark"><Sparkles /></div><h3>{title}</h3><p>{detail}</p>{action}</div>;
+}
+function LanguageButton() {
+  const { lang, setLang } = useLang();
+  return <button className="lang-toggle" data-testid="button-language" onClick={() => setLang(lang === 'en' ? 'ar' : 'en')} aria-label="Switch language"><Languages size={14} /> {lang === 'en' ? 'العربية' : 'English'}</button>;
+}
+function SiteBrand({ inverse = false }: { inverse?: boolean }) {
+  return <Link href="/" className="brand" style={inverse ? { color: '#fff', padding: 0 } : undefined}><span className="brand-mark">A.</span><span className="brand-name">AYOUB AI</span></Link>;
+}
+function HomePage() {
+  const { lang } = useLang();
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const auth = useAuth();
+  useEffect(() => { if (auth.isLoaded) setIsSignedIn(auth.isSignedIn); }, [auth.isLoaded, auth.isSignedIn]);
+  if (isSignedIn) return <Redirect to="/dashboard" />;
+  return <main className="public-home">
+    <nav className="public-nav"><SiteBrand /><div className="topbar-right"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav>
+    <section className="public-hero">
+      <div className="hero-copy reveal"><div className="eyebrow">{tr(lang, 'CUSTOMER SERVICE, GROUNDED', 'خدمة عملاء تستند إلى معلوماتك')}</div>
+        <h1>{lang === 'ar' ? <>خدمة عملاء<br />تعرف عملك.</> : <>Customer care<br />that knows<br />your business.</>}</h1>
+        <p>{tr(lang, 'Build a bilingual AI agent that answers from your real products, policies, and approved answers. Nothing made up. Just better conversations.', 'أنشئ وكيلاً ذكياً ثنائي اللغة يجيب بالاعتماد على منتجاتك وسياساتك وإجاباتك المعتمدة. معلومات موثوقة، ومحادثات أفضل.')}</p>
+        <div className="hero-actions"><Link href="/sign-up" className="btn">{tr(lang, 'Build your first agent', 'أنشئ وكيلك الأول')} <ArrowRight size={15} /></Link><a href="#how-it-works" className="btn secondary">{tr(lang, 'See how it works', 'كيف يعمل')} <ArrowDownLeft size={14} /></a></div>
+        <div className="hero-note">{tr(lang, 'BUILT FOR THE DETAILS THAT MATTER', 'مصمم للتفاصيل المهمة')}</div>
       </div>
-    </div>
-  );
+      <div className="hero-art reveal"><div className="art-grid" /><div className="orbit" /><div className="orbit two" /><div className="orbit three" />
+        <div className="orbit-node one"><Package /><span>Product facts</span></div><div className="orbit-node two"><ShieldCheck /><span>Approved policies</span></div>
+        <div className="orbit-node three"><MessageSquareText /><span>Grounded replies</span></div><div className="core-mark">A.</div><div className="art-label">KNOWLEDGE → CONVERSATION</div>
+      </div>
+    </section>
+    <section className="public-section" id="how-it-works"><div className="public-section-inner">
+      <div className="section-heading"><div><div className="eyebrow">{tr(lang, 'A SIMPLE FOUNDATION', 'بداية واضحة')}</div><h2>{tr(lang, 'Give your agent the right things to know.', 'امنح وكيلك المعرفة التي يحتاجها.')}</h2></div><p>{tr(lang, 'AYOUB AI turns the knowledge your team already has into practical, dependable customer conversations—in Arabic and English.', 'يحوّل AYOUB AI معرفة فريقك إلى محادثات عملية وموثوقة مع العملاء، بالعربية والإنجليزية.')}</p></div>
+      <div className="steps-row"><article className="step"><div className="step-num">01 / KNOWLEDGE</div><h3>{tr(lang, 'Save what is true', 'أضف المعلومات الصحيحة')}</h3><p>{tr(lang, 'Organize product details, approved FAQs, store hours, and business policies in one place.', 'نظّم تفاصيل المنتجات والأسئلة المعتمدة وساعات العمل والسياسات في مكان واحد.')}</p></article>
+        <article className="step"><div className="step-num">02 / AGENT</div><h3>{tr(lang, 'Shape the conversation', 'صمّم أسلوب المحادثة')}</h3><p>{tr(lang, 'Choose a language, tone, greeting, and the boundaries your customer assistant follows.', 'اختر اللغة والنبرة والتحية والحدود التي يتبعها مساعد خدمة العملاء.')}</p></article>
+        <article className="step"><div className="step-num">03 / PROVE IT</div><h3>{tr(lang, 'Test every answer', 'اختبر كل إجابة')}</h3><p>{tr(lang, 'Try real questions and see which saved sources support each response before you go live.', 'جرّب أسئلة حقيقية وتحقق من المصادر التي تدعم كل إجابة قبل التشغيل.')}</p></article></div>
+    </div></section>
+    <section className="quote-band"><div className="quote-content"><div className="quote-glyph">“</div><blockquote>{tr(lang, 'A useful answer is one your customer can trust—and your team can stand behind.', 'الإجابة المفيدة هي ما يثق به عميلك ويستطيع فريقك الاعتماد عليه.')}</blockquote></div></section>
+    <section className="trust-row"><div className="trust-stat"><strong>01</strong><span>{tr(lang, 'source-backed knowledge base', 'قاعدة معرفة موثوقة')}</span></div><div className="trust-stat"><strong>02</strong><span>{tr(lang, 'languages, one workspace', 'لغتان في مساحة واحدة')}</span></div><div className="trust-stat"><strong>100%</strong><span>{tr(lang, 'your business, your boundaries', 'عملك، وحدودك')}</span></div><div className="eyebrow">{tr(lang, 'CLEAR ANSWERS. HUMAN OVERSIGHT.', 'إجابات واضحة. وإشراف بشري.')}</div></section>
+    <section className="cta-section"><div className="eyebrow" style={{ color: '#ffffff75' }}>{tr(lang, 'START WITH WHAT YOU KNOW', 'ابدأ بما تعرفه')}</div><h2>{tr(lang, 'Make every answer feel like yours.', 'اجعل كل إجابة تعبّر عن عملك.')}</h2><p>{tr(lang, 'A practical AI assistant begins with real business knowledge.', 'يبدأ المساعد العملي بمعرفة حقيقية عن عملك.')}</p><Link className="btn" href="/sign-up">{tr(lang, 'Create your workspace', 'أنشئ مساحة عملك')} <ArrowRight size={15} /></Link></section>
+    <footer className="public-footer"><SiteBrand /><span>© {new Date().getFullYear()} AYOUB AI. {tr(lang, 'Built for better service.', 'لخدمة أفضل.')}</span><div className="footer-links"><a href="#how-it-works">{tr(lang, 'How it works', 'كيف يعمل')}</a><Link href="/sign-in">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></footer>
+  </main>;
 }
-
-function Router() {
-  return (
-    // Keep a shared shell (sidebar, navbar) outside the boundary so it
-    // survives a page crash.
-    <RoutedErrorBoundary>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route component={NotFound} />
-      </Switch>
-    </RoutedErrorBoundary>
-  );
+function Protected({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <LoadingScreen label="Checking your session" />;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  return <WorkspaceProvider><AppShell>{children}</AppShell></WorkspaceProvider>;
 }
-
-function RoutedErrorBoundary({ children }: { children: ReactNode }) {
+function AppShell({ children }: { children: ReactNode }) {
+  const { lang } = useLang();
+  const { workspace, workspaces, select } = useWorkspace();
+  const { user } = useUser();
   const [location] = useLocation();
-  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const nav = [
+    { label: tr(lang, 'Overview', 'نظرة عامة'), href: '/dashboard', icon: LayoutDashboard },
+    { label: tr(lang, 'Agents', 'الوكلاء'), href: '/agents', icon: Bot },
+    { label: tr(lang, 'Products', 'المنتجات'), href: '/knowledge/products', icon: Package },
+    { label: tr(lang, 'FAQs', 'الأسئلة الشائعة'), href: '/knowledge/faqs', icon: CircleHelp },
+    { label: tr(lang, 'Business profile', 'ملف النشاط'), href: '/knowledge/business', icon: Store },
+    { label: tr(lang, 'Channels', 'القنوات'), href: '/channels', icon: Globe2 },
+  ];
+  const current = [...nav, { label: tr(lang, 'Settings', 'الإعدادات'), href: '/settings', icon: Settings2 }].find((item) => location.startsWith(item.href))?.label ?? 'Workspace';
+  const initials = user?.firstName?.slice(0, 1) || 'A';
+  return <div className="app-shell">
+    <aside className="sidebar"><SiteBrand inverse />
+      <div className="nav-caption">{tr(lang, 'WORKSPACE', 'مساحة العمل')}</div>{nav.map((item) => <Link key={item.href} href={item.href} className={`nav-link ${location.startsWith(item.href) ? 'active' : ''}`} data-testid={`link-nav-${item.href.replaceAll('/', '-').replace(/^-/, '')}`}><item.icon />{item.label}</Link>)}
+      <div className="nav-caption" style={{ marginTop: 14 }}>{tr(lang, 'PREFERENCES', 'التفضيلات')}</div><Link href="/settings" className={`nav-link ${location.startsWith('/settings') ? 'active' : ''}`} data-testid="link-nav-settings"><Settings2 />{tr(lang, 'Settings', 'الإعدادات')}</Link>
+      <div className="sidebar-bottom"><div className="workspace-chip"><div className="workspace-avatar">{workspace?.name?.slice(0, 1).toUpperCase() || initials}</div><div className="workspace-label"><strong>{workspace?.name}</strong><span>{workspaces.length > 1 ? <select aria-label="Select workspace" value={workspace?.id} onChange={(e) => select(Number(e.target.value))} style={{ background: 'transparent', color: '#ffffffa6', border: 0, fontSize: 10 }}>{workspaces.map((item) => <option style={{ color: '#020618' }} value={item.id} key={item.id}>{item.name}</option>)}</select> : tr(lang, 'Business workspace', 'مساحة عمل تجارية')}</span></div></div>
+        <div className="nav-link" style={{ cursor: 'default' }}><div className="workspace-avatar" style={{ width: 24, height: 24 }}>{initials}</div><span>{user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Account'}</span></div>
+      </div>
+    </aside>
+    {menuOpen && <div className="dialog-backdrop" onClick={() => setMenuOpen(false)}><aside className="sidebar" onClick={(e) => e.stopPropagation()}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}><SiteBrand inverse /><button className="icon-button" onClick={() => setMenuOpen(false)}><X size={16} /></button></div>{nav.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className={`nav-link ${location.startsWith(item.href) ? 'active' : ''}`}><item.icon />{item.label}</Link>)}<Link href="/settings" className="nav-link"><Settings2 />{tr(lang, 'Settings', 'الإعدادات')}</Link></aside></div>}
+    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Menu size={17} /></button><div className="crumb">{workspace?.name} <ChevronRight size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> <strong>{current}</strong></div></div><div className="topbar-right"><LanguageButton /><UserMenu /></div></header>{children}</div>
+  </div>;
 }
-
+function UserMenu() {
+  const { signOut } = useAuth();
+  return <button className="icon-button" title="Sign out" aria-label="Sign out" data-testid="button-sign-out" onClick={() => void signOut({ redirectUrl: '/' })}><LogOut size={15} /></button>;
+}
+function PageTitle({ eyebrow, title, description, action }: { eyebrow: string; title: string; description?: string; action?: ReactNode }) {
+  return <div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{description && <p className="page-desc">{description}</p>}</div>{action}</div>;
+}
+function DashboardPage() {
+  const { headers, workspace } = useWorkspace();
+  const { lang } = useLang();
+  const dashboard = useGetDashboard({ ...headers, query: { queryKey: getGetDashboardQueryKey(), enabled: !!headers } });
+  const agents = useListAgents({ ...headers, query: { queryKey: getListAgentsQueryKey(), enabled: !!headers } });
+  if (dashboard.isLoading || agents.isLoading) return <main className="page"><div className="skeleton h-10 w-1/3 mb-6" /><div className="metrics-grid">{[1, 2, 3, 4].map((n) => <div className="skeleton-card" key={n}><div className="skeleton w-1/2" /><div className="skeleton h-8 w-1/3" /></div>)}</div></main>;
+  if (dashboard.isError) return <main className="page"><PageTitle eyebrow="WORKSPACE" title={tr(lang, 'Your workspace', 'مساحة عملك')} /><ErrorState title="Dashboard unavailable" detail="We couldn't retrieve workspace metrics." retry={() => void dashboard.refetch()} /></main>;
+  const data = dashboard.data!;
+  const metrics = [
+    { label: tr(lang, 'AI agents', 'وكلاء الذكاء الاصطناعي'), value: data.agents, note: `${data.activeAgents} ${tr(lang, 'active', 'نشط')}`, icon: Bot },
+    { label: tr(lang, 'Saved products', 'المنتجات المحفوظة'), value: data.products, note: tr(lang, 'In your knowledge base', 'في قاعدة المعرفة'), icon: Package },
+    { label: tr(lang, 'Approved answers', 'الإجابات المعتمدة'), value: data.faqs, note: tr(lang, 'Ready for customer questions', 'جاهزة لأسئلة العملاء'), icon: CircleHelp },
+    { label: tr(lang, 'Test conversations', 'محادثات الاختبار'), value: data.testSessions, note: `${data.aiMessages} ${tr(lang, 'agent replies', 'إجابة من الوكيل')}`, icon: MessageCircle },
+  ];
+  return <main className="page"><PageTitle eyebrow={`${workspace?.name} / OVERVIEW`} title={tr(lang, 'A clearer view of service.', 'نظرة أوضح على خدمة العملاء.')} description={tr(lang, 'Your business knowledge, your agents, and the conversations in between.', 'معرفة نشاطك ووكلاؤك والمحادثات التي تربط بينهم.')} action={<Link href="/agents/new" className="btn" data-testid="link-create-agent"><Plus size={15} />{tr(lang, 'Create an agent', 'أنشئ وكيلاً')}</Link>} />
+    <div className="metrics-grid">{metrics.map(({ label, value, note, icon: Icon }) => <section className="panel metric reveal" key={label} data-testid={`metric-${label.replaceAll(' ', '-')}`}><div className="metric-label">{label}<Icon /></div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></section>)}</div>
+    <div className="dashboard-grid"><section className="panel"><div className="panel-head"><div><h2 className="panel-title">{tr(lang, 'Recent activity', 'النشاط الأخير')}</h2><div className="panel-kicker">{tr(lang, 'A live record of workspace changes', 'سجل مباشر لتغييرات مساحة العمل')}</div></div><Activity size={16} /></div>
+      {data.recentActivity.length ? <div className="activity-list">{data.recentActivity.map((item) => <article key={item.id} className="activity-row" data-testid={`activity-${item.id}`}><div className="activity-dot" /><div><strong>{item.title}</strong><p>{item.detail}</p></div><time className="activity-time">{new Date(item.createdAt).toLocaleDateString(lang === 'ar' ? 'ar' : 'en', { month: 'short', day: 'numeric' })}</time></article>)}</div> : <EmptyState title={tr(lang, 'A fresh start', 'بداية جديدة')} detail={tr(lang, 'Your latest changes and conversations will appear here.', 'ستظهر هنا آخر التغييرات والمحادثات.')} />}</section>
+      <section className="panel"><div className="panel-head"><div><h2 className="panel-title">{tr(lang, 'Build your foundation', 'ابدأ ببناء أساسك')}</h2><div className="panel-kicker">{tr(lang, 'A few useful next steps', 'خطوات تالية مفيدة')}</div></div><ArrowUpRight size={16} /></div>
+        <div className="quick-list"><QuickLink href="/knowledge/products" icon={<Package />} title={tr(lang, 'Add your products', 'أضف منتجاتك')} detail={tr(lang, 'Save names, prices, and stock', 'احفظ الأسماء والأسعار والمخزون')} /><QuickLink href="/knowledge/faqs" icon={<CircleHelp />} title={tr(lang, 'Approve common answers', 'اعتمد الإجابات الشائعة')} detail={tr(lang, 'Keep answers consistent', 'وحّد إجابات فريقك')} /><QuickLink href="/knowledge/business" icon={<Building2 />} title={tr(lang, 'Set business policies', 'أضف سياسات نشاطك')} detail={tr(lang, 'Hours, delivery, and more', 'ساعات العمل والتوصيل وغيرها')} /></div></section></div>
+    <div className="section-label">{tr(lang, 'YOUR AGENTS', 'وكلاؤك')}</div>{agents.isError ? <ErrorState title="Agents unavailable" detail="Agent list could not be loaded." retry={() => void agents.refetch()} /> : agents.data?.length ? <div className="agent-grid">{agents.data.slice(0, 3).map((agent) => <AgentCard agent={agent} key={agent.id} />)}</div> : <section className="panel"><EmptyState title={tr(lang, 'No agents yet', 'لا يوجد وكلاء بعد')} detail={tr(lang, 'Create an agent, add your knowledge, and test its answers.', 'أنشئ وكيلاً، وأضف معرفتك، واختبر إجاباته.')} action={<Link className="btn small" href="/agents/new"><Plus size={14} />{tr(lang, 'Create an agent', 'أنشئ وكيلاً')}</Link>} /></section>}
+  </main>;
+}
+function QuickLink({ href, icon, title, detail }: { href: string; icon: ReactNode; title: string; detail: string }) { return <Link className="quick-link" href={href}><span className="quick-icon">{icon}</span><span className="quick-copy"><strong>{title}</strong><span>{detail}</span></span><ChevronRight /></Link>; }
+function statusLabel(status: string) { return status.replaceAll('_', ' '); }
+function AgentCard({ agent }: { agent: Agent }) {
+  return <article className="panel agent-card" data-testid={`card-agent-${agent.id}`}><div className="agent-card-top"><div className="agent-symbol"><Bot /></div><span className={`pill ${agent.status === 'active' ? 'active' : 'muted'}`}>{agent.status}</span></div><h3>{agent.name}</h3><p>{agent.description || 'A customer-service agent grounded in your business knowledge.'}</p><div className="agent-card-foot"><span className="cell-secondary">{agent.language} · {agent.tone}</span><Link href={`/agents/${agent.id}`} className="icon-button" aria-label={`Configure ${agent.name}`}><ArrowUpRight size={14} /></Link></div></article>;
+}
+function AgentsPage() {
+  const { headers } = useWorkspace();
+  const [search, setSearch] = useState('');
+  const query = useListAgents({ ...headers, query: { queryKey: getListAgentsQueryKey(), enabled: !!headers } });
+  const agents = (query.data ?? []).filter((item) => `${item.name} ${item.description ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+  return <main className="page"><PageTitle eyebrow="AGENT STUDIO" title="Agents" description="Configure practical customer-service assistants for your business." action={<Link href="/agents/new" className="btn"><Plus size={15} />New agent</Link>} />
+    <div className="toolbar"><div className="searchbox"><Search /><input aria-label="Search agents" data-testid="input-search-agents" placeholder="Search agents…" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
+    {query.isLoading ? <div className="agent-grid">{[1, 2, 3].map((x) => <div className="skeleton-card" key={x}><div className="skeleton w-1/3" /><div className="skeleton h-8 w-2/3" /><div className="skeleton w-4/5" /></div>)}</div> : query.isError ? <ErrorState title="Agents didn't load" detail="Your agents could not be retrieved." retry={() => void query.refetch()} /> : agents.length ? <div className="agent-grid">{agents.map((agent) => <AgentCard key={agent.id} agent={agent} />)}</div> : <section className="panel"><EmptyState title={search ? 'No matching agents' : 'Your first agent starts here'} detail={search ? 'Try another name or clear your search.' : 'Create an assistant with a clear voice, helpful boundaries, and your saved business knowledge.'} action={!search && <Link className="btn small" href="/agents/new"><Plus size={14} />Create an agent</Link>} /></section>}
+  </main>;
+}
+const emptyAgent = { name: '', description: '', language: 'Arabic and English', tone: 'Helpful and concise', greeting: 'Hello. How can I help you today?', fallback: 'I do not have enough information to answer that confidently. Let me connect you with our team.', instructions: '' };
+function AgentFormPage({ editing = false }: { editing?: boolean }) {
+  const params = useRoute<{ agentId: string }>(editing ? '/agents/:agentId/edit' : '/agents/new')[0];
+  const id = Number(params?.agentId);
+  const { headers } = useWorkspace();
+  const { setLocation } = { setLocation: useLocation()[1] };
+  const query = useGetAgent(id, { ...headers, query: { queryKey: getGetAgentQueryKey(id), enabled: editing && Number.isFinite(id) && !!headers } });
+  const [form, setForm] = useState(emptyAgent);
+  const [initialized, setInitialized] = useState(false);
+  useEffect(() => { if (query.data && !initialized) { setForm({ name: query.data.name, description: query.data.description ?? '', language: query.data.language, tone: query.data.tone, greeting: query.data.greeting, fallback: query.data.fallback, instructions: query.data.instructions }); setInitialized(true); } }, [query.data, initialized]);
+  const create = useCreateAgent({ request: headers });
+  const update = useUpdateAgent({ request: headers });
+  const qc = useQueryClient();
+  const submitting = create.isPending || update.isPending;
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const input = { ...form, name: form.name.trim() };
+    const onSuccess = async (agent: Agent) => { await Promise.all([qc.invalidateQueries({ queryKey: getListAgentsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); setLocation(`/agents/${agent.id}`); };
+    if (editing) update.mutate({ agentId: id, data: input }, { onSuccess });
+    else create.mutate({ data: input }, { onSuccess });
+  };
+  const set = (key: keyof typeof emptyAgent, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  if (editing && query.isLoading) return <main className="page"><div className="skeleton h-10 w-1/3 mb-6" /><div className="skeleton-card"><div className="skeleton h-28" /><div className="skeleton h-20" /></div></main>;
+  if (editing && query.isError) return <main className="page"><ErrorState title="Agent unavailable" detail="This agent could not be loaded." retry={() => void query.refetch()} /></main>;
+  return <main className="page"><PageTitle eyebrow={editing ? 'AGENT SETTINGS' : 'AGENT STUDIO / NEW'} title={editing ? 'Configure your agent.' : 'Create an agent.'} description="Give your assistant a clear voice and dependable boundaries." />
+    <form className="panel form-card" onSubmit={submit}><div className="form-grid">
+      <Field label="Agent name" required><input data-testid="input-agent-name" value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={120} required placeholder="e.g. Ayoub — Customer Care" /></Field>
+      <Field label="Response language"><select data-testid="select-agent-language" value={form.language} onChange={(e) => set('language', e.target.value)}><option>Arabic and English</option><option>Arabic</option><option>English</option></select></Field>
+      <Field label="Description" className="full"><input data-testid="input-agent-description" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="What this agent helps your customers with" /></Field>
+      <Field label="Tone"><input data-testid="input-agent-tone" value={form.tone} onChange={(e) => set('tone', e.target.value)} placeholder="Helpful and concise" /></Field>
+      <Field label="First greeting"><input data-testid="input-agent-greeting" value={form.greeting} onChange={(e) => set('greeting', e.target.value)} required /></Field>
+      <Field label="When the answer is not known" className="full"><textarea data-testid="input-agent-fallback" value={form.fallback} onChange={(e) => set('fallback', e.target.value)} required /></Field>
+      <Field label="Additional instructions" className="full" hint="Tell your agent how to use your saved knowledge. It should never invent product or policy details."><textarea data-testid="input-agent-instructions" value={form.instructions} onChange={(e) => set('instructions', e.target.value)} placeholder="Be accurate. If a detail is missing, say so and offer to connect the customer with the team." /></Field>
+    </div>{(create.isError || update.isError) && <p className="page-desc" role="alert">Could not save this agent. Please check the fields and retry.</p>}<div className="form-actions"><Link href="/agents" className="btn secondary">Cancel</Link><button className="btn" disabled={submitting || !form.name.trim()} data-testid="button-save-agent"><Save size={14} />{submitting ? 'Saving…' : editing ? 'Save changes' : 'Create agent'}</button></div></form>
+  </main>;
+}
+function AgentDetailsPage() {
+  const params = useRoute<{ agentId: string }>('/agents/:agentId');
+  const id = Number(params[0]?.agentId);
+  const [location, setLocation] = useLocation();
+  const { headers } = useWorkspace();
+  const query = useGetAgent(id, { ...headers, query: { queryKey: getGetAgentQueryKey(id), enabled: !!headers && Number.isFinite(id) } });
+  const activate = useSetAgentActivation({ request: headers });
+  const remove = useDeleteAgent({ request: headers });
+  const qc = useQueryClient();
+  if (query.isLoading) return <main className="page"><div className="skeleton h-10 w-1/3 mb-6" /><div className="skeleton-card"><div className="skeleton h-32" /></div></main>;
+  if (query.isError || !query.data) return <main className="page"><ErrorState title="Agent unavailable" detail="This agent could not be loaded." retry={() => void query.refetch()} /></main>;
+  const agent = query.data;
+  const onActivation = (status: 'active' | 'paused' | 'draft') => activate.mutate({ agentId: id, data: { status } }, { onSuccess: async () => { await Promise.all([qc.invalidateQueries({ queryKey: getGetAgentQueryKey(id) }), qc.invalidateQueries({ queryKey: getListAgentsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); } });
+  const onDelete = () => { if (window.confirm(`Delete "${agent.name}" and its test data?`)) remove.mutate({ agentId: id }, { onSuccess: async () => { await Promise.all([qc.invalidateQueries({ queryKey: getListAgentsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); setLocation('/agents'); } }); };
+  return <main className="page"><PageTitle eyebrow="AGENT STUDIO" title={agent.name} description={agent.description || 'Customer-service assistant'} action={<div className="flex gap-2 flex-wrap"><Link href={`/agents/${id}/test`} className="btn secondary"><MessageCircle size={15} />Test agent</Link><Link href={`/agents/${id}/edit`} className="btn"><SlidersHorizontal size={15} />Configure</Link></div>} />
+    <section className="panel form-card"><div className="agent-card-top"><div className="flex items-center gap-3"><div className="agent-symbol"><Bot /></div><div><strong>{agent.name}</strong><div className="cell-secondary">{agent.language} · {agent.tone}</div></div></div><span className={`pill ${agent.status === 'active' ? 'active' : 'muted'}`}>{agent.status}</span></div>
+      <div className="section-label">VOICE & BOUNDARIES</div><div className="form-grid"><InfoBlock label="Greeting" value={agent.greeting} /><InfoBlock label="Fallback" value={agent.fallback} /><InfoBlock label="Instructions" value={agent.instructions || 'No additional instructions set.'} wide /></div>
+      <div className="section-label">WORKFLOW</div><div className="flex gap-2 flex-wrap">{agent.status !== 'active' ? <button className="btn" disabled={activate.isPending} onClick={() => onActivation('active')} data-testid="button-activate-agent"><Check size={14} />Activate</button> : <button className="btn secondary" disabled={activate.isPending} onClick={() => onActivation('paused')} data-testid="button-pause-agent">Pause agent</button>}{agent.status !== 'draft' && <button className="btn secondary" disabled={activate.isPending} onClick={() => onActivation('draft')}>Return to draft</button>}<button className="btn ghost" disabled={remove.isPending} onClick={onDelete} data-testid="button-delete-agent"><Trash2 size={14} />Delete</button></div>
+    </section><div className="section-label">GROUND YOUR AGENT</div><div className="channel-grid"><QuickLink href="/knowledge/products" icon={<Package />} title="Products" detail="Product facts and availability" /><QuickLink href="/knowledge/faqs" icon={<CircleHelp />} title="Approved answers" detail="FAQs your team stands behind" /><QuickLink href="/knowledge/business" icon={<Building2 />} title="Business policies" detail="Hours, delivery, and terms" /></div>
+  </main>;
+}
+function InfoBlock({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) { return <div className={`field ${wide ? 'full' : ''}`}><label>{label}</label><div className="panel" style={{ padding: 13, fontSize: 12, lineHeight: 1.65 }}>{value}</div></div>; }
+function AgentTestPage() {
+  const params = useRoute<{ agentId: string }>('/agents/:agentId/test');
+  const id = Number(params[0]?.agentId);
+  const { headers } = useWorkspace();
+  const agentQuery = useGetAgent(id, { ...headers, query: { queryKey: getGetAgentQueryKey(id), enabled: !!headers } });
+  const send = useSendAgentTestMessage({ request: headers });
+  const [input, setInput] = useState('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<{ role: 'user' | 'agent'; text: string; sources?: string[]; handoff?: boolean }[]>([]);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const content = input.trim();
+    if (!content || send.isPending) return;
+    setInput('');
+    setMessages((old) => [...old, { role: 'user', text: content }]);
+    send.mutate({ agentId: id, data: { content, conversationId } }, { onSuccess: (result) => { setConversationId(result.conversationId); setMessages((old) => [...old, { role: 'agent', text: result.assistantMessage, sources: result.sources, handoff: result.handoff }]); }, onError: () => setMessages((old) => [...old, { role: 'agent', text: 'I could not get a response from the test service. Please try again.' }]) });
+  };
+  if (agentQuery.isLoading) return <main className="page"><div className="skeleton h-10 w-1/3 mb-6" /><div className="skeleton-card"><div className="skeleton h-60" /></div></main>;
+  if (agentQuery.isError || !agentQuery.data) return <main className="page"><ErrorState title="Agent unavailable" detail="The selected agent could not be loaded." retry={() => void agentQuery.refetch()} /></main>;
+  const agent = agentQuery.data;
+  return <main className="page"><PageTitle eyebrow="AGENT STUDIO / TEST" title="Try a real question." description="Messages go to your agent using your saved business knowledge." action={<Link href={`/agents/${id}`} className="btn secondary"><ArrowLeft size={14} />Agent details</Link>} />
+    <div className="chat-layout"><section className="panel chat-panel"><header className="chat-head"><div className="agent-symbol"><Bot /></div><div><strong>{agent.name}</strong><span>Grounded test conversation · {agent.language}</span></div><span className={`pill ${agent.status === 'active' ? 'active' : 'muted'}`}>{agent.status}</span></header>
+      <div className="chat-messages">{!messages.length && <div style={{ margin: 'auto', textAlign: 'center', maxWidth: 300 }}><div className="empty-mark"><MessageCircle /></div><h3 style={{ fontSize: 14, marginBottom: 6 }}>{agent.greeting}</h3><p className="page-desc">Ask about a product, delivery, payment, or another saved business detail.</p></div>}
+        {messages.map((message, i) => <div key={`${i}-${message.role}`} className={`message ${message.role}`} data-testid={`chat-message-${i}`}><div>{message.text}</div>{message.sources && message.sources.length > 0 && <div className="message-meta">Sources: {message.sources.join(' · ')}</div>}{message.handoff && <div className="message-meta">Needs a team member</div>}</div>)}
+        {send.isPending && <div className="message agent"><div className="skeleton w-36" /><div className="skeleton w-24 mt-2" /></div>}
+      </div><form className="chat-composer" onSubmit={submit}><input data-testid="input-test-message" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask your agent a question…" maxLength={4000} /><button className="btn" disabled={!input.trim() || send.isPending} data-testid="button-send-test-message">{send.isPending ? <LoaderCircle size={15} /> : <ArrowUpRight size={15} />}<span className="sr-only">Send message</span></button></form>
+    </section>
+      <aside className="panel chat-aside"><h3>Answer grounding</h3><p>Every message is sent to the real test endpoint. Check the returned source references to see which saved information supports the answer.</p><div className="source-label">LAST RESPONSE SOURCES</div>{[...messages].reverse().find((m) => m.role === 'agent' && m.sources)?.sources?.length ? [...messages].reverse().find((m) => m.role === 'agent')!.sources!.map((source, i) => <div className="source-item" key={`${source}-${i}`}><FileText size={12} style={{ verticalAlign: 'middle', marginRight: 6 }} />{source}</div>) : <div className="source-item">Sources appear here after your agent responds.</div>}{[...messages].reverse().find((m) => m.role === 'agent')?.handoff && <div className="handoff"><LifeBuoy size={13} style={{ verticalAlign: 'middle', marginRight: 7 }} />This response recommends a handoff to your team.</div>}</aside></div>
+  </main>;
+}
+function Field({ label, children, required = false, hint, className = '' }: { label: string; children: ReactNode; required?: boolean; hint?: string; className?: string }) { return <div className={`field ${className}`}><label>{label}{required && <span aria-hidden="true"> *</span>}</label>{children}{hint && <span className="hint">{hint}</span>}</div>; }
+type ModalProps = { title: string; description?: string; onClose: () => void; children: ReactNode };
+function Modal({ title, description, onClose, children }: ModalProps) { return <div className="dialog-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><div className="dialog" role="dialog" aria-modal="true" aria-label={title}><header className="dialog-head"><div><h2>{title}</h2>{description && <p>{description}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Close dialog"><X size={16} /></button></header>{children}</div></div>; }
+function ProductsPage() {
+  const { headers } = useWorkspace();
+  const [search, setSearch] = useState('');
+  const [modal, setModal] = useState<Product | 'new' | null>(null);
+  const query = useListProducts({ search: search || undefined }, { ...headers, query: { queryKey: getListProductsQueryKey({ search: search || undefined }), enabled: !!headers } });
+  const qc = useQueryClient();
+  const create = useCreateProduct({ request: headers }); const update = useUpdateProduct({ request: headers }); const remove = useDeleteProduct({ request: headers });
+  const save = (input: ProductInputValue, existing?: Product) => {
+    const clean = { ...input, aliases: input.aliases.split(',').map((x) => x.trim()).filter(Boolean), price: input.price || undefined, stockQuantity: input.stockQuantity === '' ? undefined : Number(input.stockQuantity) };
+    const done = async () => { await Promise.all([qc.invalidateQueries({ queryKey: getListProductsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); setModal(null); };
+    if (existing) update.mutate({ productId: existing.id, data: clean }, { onSuccess: done }); else create.mutate({ data: clean }, { onSuccess: done });
+  };
+  const deleteProduct = (product: Product) => { if (window.confirm(`Delete ${product.nameEnglish || product.nameArabic || 'this product'}?`)) remove.mutate({ productId: product.id }, { onSuccess: async () => { await Promise.all([qc.invalidateQueries({ queryKey: getListProductsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); } }); };
+  return <main className="page"><PageTitle eyebrow="KNOWLEDGE BASE / CATALOG" title="Products" description="Give your agent exact product names, prices, and availability." action={<button className="btn" onClick={() => setModal('new')} data-testid="button-add-product"><Plus size={15} />Add product</button>} />
+    <div className="toolbar"><div className="searchbox"><Search /><input placeholder="Search product names, categories…" data-testid="input-search-products" value={search} onChange={(e) => setSearch(e.target.value)} /></div><div className="pill"><Package size={12} />{query.data?.length ?? '—'} products</div></div>
+    <section className="panel">{query.isLoading ? <LoadingTable /> : query.isError ? <ErrorState title="Products unavailable" detail="Your product catalog could not be loaded." retry={() => void query.refetch()} /> : query.data?.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Availability</th><th aria-label="Actions" /></tr></thead><tbody>{query.data.map((p) => <tr key={p.id} data-testid={`row-product-${p.id}`}><td><div className="cell-primary">{p.nameEnglish || p.nameArabic || 'Unnamed product'}</div><div className="cell-secondary">{p.nameArabic && p.nameEnglish ? p.nameArabic : (p.sku ? `SKU ${p.sku}` : p.aliases.join(', '))}</div></td><td>{p.category || '—'}</td><td>{p.price ? `${p.currency} ${p.price}` : '—'}</td><td><span className={`pill ${p.availability === 'in_stock' ? 'active' : 'muted'}`}>{statusLabel(p.availability)}</span></td><td><div className="row-actions"><button className="icon-button" onClick={() => setModal(p)} aria-label={`Edit ${p.nameEnglish || 'product'}`}><SlidersHorizontal size={14} /></button><button className="icon-button" onClick={() => deleteProduct(p)} aria-label={`Delete ${p.nameEnglish || 'product'}`}><Trash2 size={14} /></button></div></td></tr>)}</tbody></table></div> : <EmptyState title={search ? 'No products match' : 'Your catalog is empty'} detail={search ? 'Try another search term.' : 'Add the products customers ask about. Your agent will only use saved details.'} action={!search && <button className="btn small" onClick={() => setModal('new')}><Plus size={14} />Add product</button>} />}</section>
+    {modal && <ProductModal product={modal === 'new' ? undefined : modal} saving={create.isPending || update.isPending} onClose={() => setModal(null)} onSave={save} />}
+  </main>;
+}
+type ProductInputValue = { nameEnglish: string; nameArabic: string; aliases: string; description: string; category: string; price: string; currency: string; unit: string; packageSize: string; availability: 'in_stock' | 'out_of_stock' | 'unknown'; stockQuantity: string; sku: string; notes: string };
+function ProductModal({ product, saving, onClose, onSave }: { product?: Product; saving: boolean; onClose: () => void; onSave: (input: ProductInputValue, existing?: Product) => void }) {
+  const [form, setForm] = useState<ProductInputValue>({ nameEnglish: product?.nameEnglish ?? '', nameArabic: product?.nameArabic ?? '', aliases: product?.aliases.join(', ') ?? '', description: product?.description ?? '', category: product?.category ?? '', price: product?.price ?? '', currency: product?.currency ?? 'USD', unit: product?.unit ?? '', packageSize: product?.packageSize ?? '', availability: product?.availability ?? 'unknown', stockQuantity: product?.stockQuantity?.toString() ?? '', sku: product?.sku ?? '', notes: product?.notes ?? '' });
+  const set = (key: keyof ProductInputValue, value: string) => setForm((x) => ({ ...x, [key]: value }));
+  return <Modal title={product ? 'Edit product' : 'Add product'} description="Keep customer-facing details accurate and specific." onClose={onClose}><form onSubmit={(e) => { e.preventDefault(); if (form.nameEnglish || form.nameArabic) onSave(form, product); }}>
+    <div className="form-grid"><Field label="Name in English"><input value={form.nameEnglish} onChange={(e) => set('nameEnglish', e.target.value)} placeholder="Product name" /></Field><Field label="Name in Arabic"><input dir="rtl" value={form.nameArabic} onChange={(e) => set('nameArabic', e.target.value)} placeholder="اسم المنتج" /></Field><Field label="Aliases" className="full" hint="Separate alternate names with commas"><input value={form.aliases} onChange={(e) => set('aliases', e.target.value)} placeholder="Short name, common spelling" /></Field><Field label="Category"><input value={form.category} onChange={(e) => set('category', e.target.value)} /></Field><Field label="Price"><div className="flex gap-2"><input style={{ width: 80 }} maxLength={3} value={form.currency} onChange={(e) => set('currency', e.target.value.toUpperCase())} /><input value={form.price} onChange={(e) => set('price', e.target.value)} placeholder="0.00" pattern="[0-9]+(\\.[0-9]{1,4})?" /></div></Field><Field label="Availability"><select value={form.availability} onChange={(e) => set('availability', e.target.value)}><option value="unknown">Unknown</option><option value="in_stock">In stock</option><option value="out_of_stock">Out of stock</option></select></Field><Field label="Stock quantity"><input type="number" min="0" value={form.stockQuantity} onChange={(e) => set('stockQuantity', e.target.value)} /></Field><Field label="Unit"><input value={form.unit} onChange={(e) => set('unit', e.target.value)} placeholder="piece, box…" /></Field><Field label="Package size"><input value={form.packageSize} onChange={(e) => set('packageSize', e.target.value)} /></Field><Field label="SKU"><input value={form.sku} onChange={(e) => set('sku', e.target.value)} /></Field><Field label="Description" className="full"><textarea value={form.description} onChange={(e) => set('description', e.target.value)} /></Field><Field label="Internal notes" className="full"><textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} /></Field></div>
+    <div className="form-actions"><button type="button" className="btn secondary" onClick={onClose}>Cancel</button><button className="btn" disabled={saving || (!form.nameEnglish.trim() && !form.nameArabic.trim())} data-testid="button-save-product">{saving ? 'Saving…' : product ? 'Save product' : 'Add product'}</button></div>
+  </form></Modal>;
+}
+function LoadingTable() { return <div className="p-5 grid gap-4">{[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-7 w-full" />)}</div>; }
+function FaqsPage() {
+  const { headers } = useWorkspace();
+  const [search, setSearch] = useState('');
+  const [modal, setModal] = useState<Faq | 'new' | null>(null);
+  const query = useListFaqs({ ...headers, query: { queryKey: getListFaqsQueryKey(), enabled: !!headers } });
+  const qc = useQueryClient(); const create = useCreateFaq({ request: headers }); const update = useUpdateFaq({ request: headers }); const remove = useDeleteFaq({ request: headers });
+  const filtered = (query.data ?? []).filter((f) => `${f.question} ${f.answer} ${f.category ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+  const save = (input: FaqFormValue, existing?: Faq) => { const data = { ...input, alternatives: input.alternatives.split('\n').map((x) => x.trim()).filter(Boolean) }; const done = async () => { await Promise.all([qc.invalidateQueries({ queryKey: getListFaqsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); setModal(null); }; if (existing) update.mutate({ faqId: existing.id, data }, { onSuccess: done }); else create.mutate({ data }, { onSuccess: done }); };
+  const deleteFaq = (faq: Faq) => { if (window.confirm('Delete this approved answer?')) remove.mutate({ faqId: faq.id }, { onSuccess: async () => { await Promise.all([qc.invalidateQueries({ queryKey: getListFaqsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); } }); };
+  const toggleFaq = (faq: Faq) => update.mutate({ faqId: faq.id, data: { enabled: !faq.enabled } }, { onSuccess: () => void qc.invalidateQueries({ queryKey: getListFaqsQueryKey() }) });
+  return <main className="page"><PageTitle eyebrow="KNOWLEDGE BASE / ANSWERS" title="Approved answers" description="Keep common customer questions consistent and on-message." action={<button className="btn" data-testid="button-add-faq" onClick={() => setModal('new')}><Plus size={15} />Add answer</button>} />
+    <div className="toolbar"><div className="searchbox"><Search /><input data-testid="input-search-faqs" placeholder="Search questions and answers…" value={search} onChange={(e) => setSearch(e.target.value)} /></div><div className="pill"><CircleHelp size={12} />{query.data?.length ?? '—'} saved</div></div>
+    <section className="panel">{query.isLoading ? <LoadingTable /> : query.isError ? <ErrorState title="Answers unavailable" detail="Your FAQ list could not be retrieved." retry={() => void query.refetch()} /> : filtered.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Customer question</th><th>Language</th><th>Category</th><th>State</th><th aria-label="Actions" /></tr></thead><tbody>{filtered.map((faq) => <tr key={faq.id} data-testid={`row-faq-${faq.id}`}><td><div className="cell-primary">{faq.question}</div><div className="cell-secondary" style={{ maxWidth: 410, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{faq.answer}</div></td><td>{faq.language}</td><td>{faq.category || '—'}</td><td><span className={`pill ${faq.enabled ? 'active' : 'muted'}`}>{faq.enabled ? 'enabled' : 'disabled'}</span></td><td><div className="row-actions"><button className="icon-button" onClick={() => toggleFaq(faq)} aria-label={faq.enabled ? 'Disable answer' : 'Enable answer'}><Check size={14} /></button><button className="icon-button" onClick={() => setModal(faq)} aria-label="Edit answer"><SlidersHorizontal size={14} /></button><button className="icon-button" onClick={() => deleteFaq(faq)} aria-label="Delete answer"><Trash2 size={14} /></button></div></td></tr>)}</tbody></table></div> : <EmptyState title={search ? 'No answers found' : 'No answers saved yet'} detail={search ? 'Try different keywords.' : 'Save reviewed answers to the questions your team hears most.'} action={!search && <button className="btn small" onClick={() => setModal('new')}><Plus size={14} />Add an answer</button>} />}</section>
+    {modal && <FaqModal faq={modal === 'new' ? undefined : modal} saving={create.isPending || update.isPending} onClose={() => setModal(null)} onSave={save} />}
+  </main>;
+}
+type FaqFormValue = { question: string; answer: string; alternatives: string; language: string; category: string; enabled: boolean };
+function FaqModal({ faq, saving, onClose, onSave }: { faq?: Faq; saving: boolean; onClose: () => void; onSave: (value: FaqFormValue, existing?: Faq) => void }) {
+  const [form, setForm] = useState<FaqFormValue>({ question: faq?.question ?? '', answer: faq?.answer ?? '', alternatives: faq?.alternatives.join('\n') ?? '', language: faq?.language ?? 'Arabic and English', category: faq?.category ?? '', enabled: faq?.enabled ?? true });
+  const set = (key: keyof FaqFormValue, value: string | boolean) => setForm((x) => ({ ...x, [key]: value }));
+  return <Modal title={faq ? 'Edit approved answer' : 'Add approved answer'} description="Write a response your team is comfortable standing behind." onClose={onClose}><form onSubmit={(e) => { e.preventDefault(); onSave(form, faq); }}><div className="form-grid"><Field label="Customer question" className="full" required><input value={form.question} onChange={(e) => set('question', e.target.value)} required /></Field><Field label="Approved answer" className="full" required><textarea value={form.answer} onChange={(e) => set('answer', e.target.value)} required /></Field><Field label="Alternative phrasings" className="full" hint="One alternative question per line"><textarea value={form.alternatives} onChange={(e) => set('alternatives', e.target.value)} /></Field><Field label="Language"><select value={form.language} onChange={(e) => set('language', e.target.value)}><option>Arabic and English</option><option>Arabic</option><option>English</option></select></Field><Field label="Category"><input value={form.category} onChange={(e) => set('category', e.target.value)} /></Field><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.enabled} onChange={(e) => set('enabled', e.target.checked)} />Approved and available to agents</label></div><div className="form-actions"><button type="button" className="btn secondary" onClick={onClose}>Cancel</button><button className="btn" disabled={saving || !form.question.trim() || !form.answer.trim()} data-testid="button-save-faq">{saving ? 'Saving…' : faq ? 'Save answer' : 'Add answer'}</button></div></form></Modal>;
+}
+const profileFields: { key: keyof BusinessProfileInput; label: string; description: string }[] = [
+  { key: 'introduction', label: 'Business introduction', description: 'What you do and who you serve' },
+  { key: 'branches', label: 'Branches', description: 'Locations and branch details' },
+  { key: 'contactInfo', label: 'Contact information', description: 'Phone, email, or other contact methods' },
+  { key: 'workingHours', label: 'Working hours', description: 'Opening hours and days' },
+  { key: 'deliveryPolicy', label: 'Delivery policy', description: 'Areas, timelines, and fees' },
+  { key: 'paymentMethods', label: 'Payment methods', description: 'Accepted payment options' },
+  { key: 'returnPolicy', label: 'Return policy', description: 'Conditions and time windows' },
+  { key: 'exchangePolicy', label: 'Exchange policy', description: 'How exchanges are handled' },
+  { key: 'warrantyPolicy', label: 'Warranty policy', description: 'Coverage and exclusions' },
+  { key: 'promotions', label: 'Promotions', description: 'Current offers and eligibility' },
+  { key: 'terms', label: 'Terms', description: 'Important business terms' },
+];
+function BusinessPage() {
+  const { headers } = useWorkspace();
+  const query = useGetBusinessProfile({ ...headers, query: { queryKey: getGetBusinessProfileQueryKey(), enabled: !!headers } });
+  const save = useSaveBusinessProfile({ request: headers });
+  const qc = useQueryClient();
+  const initial = useMemo(() => Object.fromEntries(profileFields.map((field) => [field.key, query.data?.[field.key] ?? ''])) as BusinessProfileInput, [query.data]);
+  const [form, setForm] = useState<BusinessProfileInput>(initial);
+  const [initialized, setInitialized] = useState(false);
+  useEffect(() => { if (query.data && !initialized) { setForm(initial); setInitialized(true); } }, [query.data, initial, initialized]);
+  const submit = (e: FormEvent) => { e.preventDefault(); save.mutate({ data: form }, { onSuccess: async () => { await qc.invalidateQueries({ queryKey: getGetBusinessProfileQueryKey() }); await qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); } }); };
+  if (query.isLoading) return <main className="page"><div className="skeleton h-10 w-1/3 mb-6" /><div className="skeleton-card"><div className="skeleton h-40" /><div className="skeleton h-24" /></div></main>;
+  if (query.isError) return <main className="page"><PageTitle eyebrow="KNOWLEDGE BASE" title="Business profile" /><ErrorState title="Profile unavailable" detail="We couldn't load your saved business details." retry={() => void query.refetch()} /></main>;
+  return <main className="page"><PageTitle eyebrow="KNOWLEDGE BASE / BUSINESS" title="Business profile" description="Policies and details your agent can use to answer with confidence." />
+    <form className="panel form-card" onSubmit={submit}><div className="form-grid">{profileFields.map((field) => <Field key={field.key} label={field.label} className={['introduction', 'branches', 'deliveryPolicy', 'returnPolicy', 'exchangePolicy', 'warrantyPolicy', 'terms'].includes(field.key) ? 'full' : ''} hint={field.description}><textarea data-testid={`input-business-${field.key}`} value={form[field.key]} onChange={(e) => setForm((x) => ({ ...x, [field.key]: e.target.value }))} /></Field>)}</div>{save.isError && <p role="alert" className="page-desc mt-4">Your business profile could not be saved. Please try again.</p>}{save.isSuccess && <p className="page-desc mt-4" role="status">Business profile saved.</p>}<div className="form-actions"><span className="cell-secondary mr-auto">{query.data?.updatedAt ? `Last saved ${new Date(query.data.updatedAt).toLocaleString()}` : 'Not saved yet'}</span><button className="btn" disabled={save.isPending} data-testid="button-save-business"><Save size={14} />{save.isPending ? 'Saving…' : 'Save profile'}</button></div></form>
+  </main>;
+}
+function ChannelsPage() {
+  const { headers } = useWorkspace();
+  const query = useListChannels({ ...headers, query: { queryKey: getListChannelsQueryKey(), enabled: !!headers } });
+  const iconMap: Record<string, ReactNode> = { website: <Code2 />, whatsapp: <MessageCircle />, instagram: <Globe2 />, messenger: <MessageSquareText /> };
+  return <main className="page"><PageTitle eyebrow="DEPLOYMENT" title="Channels" description="See where your agents are configured to meet customers." />
+    {query.isLoading ? <div className="channel-grid">{[1, 2, 3, 4].map((i) => <div className="skeleton-card" key={i}><div className="skeleton h-10 w-1/2" /><div className="skeleton w-4/5" /></div>)}</div> : query.isError ? <ErrorState title="Channels unavailable" detail="Channel configuration could not be loaded." retry={() => void query.refetch()} /> : query.data?.length ? <div className="channel-grid">{query.data.map((channel) => <article className="panel channel-card" key={channel.id} data-testid={`card-channel-${channel.id}`}><div className="channel-mark">{iconMap[channel.id] || <Globe2 />}</div><div className="channel-content"><h3>{channel.name}</h3><p>{channel.detail || 'No additional configuration details.'}</p><span className={`pill ${channel.status === 'connected' ? 'active' : 'muted'}`}>{statusLabel(channel.status)}</span></div></article>)}</div> : <section className="panel"><EmptyState title="No channels listed" detail="Channel states will appear here when they are available for this workspace." /></section>}
+    <div className="section-label">CONNECTION STATE IS LIVE</div><p className="page-desc">This view reflects the channel configuration returned by your workspace. Connection setup actions are not available unless the backend provides them.</p>
+  </main>;
+}
+function SettingsPage() {
+  const { workspace } = useWorkspace(); const { user } = useUser(); const { lang, setLang } = useLang();
+  const [tab, setTab] = useState<'account' | 'workspace' | 'language'>('account');
+  return <main className="page"><PageTitle eyebrow="PREFERENCES" title="Settings" description="Manage your account, workspace context, and language." />
+    <section className="panel form-card"><div className="settings-nav"><button onClick={() => setTab('account')} className={`settings-tab ${tab === 'account' ? 'active' : ''}`}>Account</button><button onClick={() => setTab('workspace')} className={`settings-tab ${tab === 'workspace' ? 'active' : ''}`}>Workspace</button><button onClick={() => setTab('language')} className={`settings-tab ${tab === 'language' ? 'active' : ''}`}>Language</button></div>
+      {tab === 'account' && <div className="form-grid"><InfoBlock label="Name" value={user?.fullName || '—'} /><InfoBlock label="Email" value={user?.primaryEmailAddress?.emailAddress || '—'} /><div className="field full"><label>Authentication</label><div className="panel p-4 text-xs leading-relaxed">Your account is secured by Clerk. Sign-in and session state use your browser's secure session cookie.</div></div></div>}
+      {tab === 'workspace' && <div className="form-grid"><InfoBlock label="Workspace name" value={workspace?.name || '—'} /><InfoBlock label="Workspace ID" value={String(workspace?.id ?? '—')} /><div className="field full"><label>Knowledge and agent ownership</label><div className="panel p-4 text-xs leading-relaxed">Agents, products, approved answers, business policies, and channel states belong to this workspace.</div></div></div>}
+      {tab === 'language' && <div className="form-grid"><Field label="Interface language"><select value={lang} onChange={(e) => setLang(e.target.value as Lang)}><option value="en">English · Left to right</option><option value="ar">العربية · من اليمين إلى اليسار</option></select></Field><div className="field"><label>Direction</label><div className="panel p-3 text-xs">{lang === 'ar' ? 'RTL — من اليمين إلى اليسار' : 'LTR — Left to right'}</div></div><div className="field full"><p className="page-desc">The workspace interface direction updates immediately. Agent response language is configured for each agent.</p></div></div>}
+    </section></main>;
+}
+function RootRoute() {
+  return <><Show when="signed-out"><HomePage /></Show><Show when="signed-in"><Redirect to="/dashboard" /></Show></>;
+}
+function ProtectedRoute({ children }: { children: ReactNode }) { return <Protected>{children}</Protected>; }
+function Router() {
+  const [location] = useLocation();
+  return <ErrorBoundary resetKey={location}><Switch>
+    <Route path="/" component={RootRoute} />
+    <Route path="/sign-in/*?"><SignIn routing="path" path={`${basePath}/sign-in`} /></Route>
+    <Route path="/sign-up/*?"><SignUp routing="path" path={`${basePath}/sign-up`} /></Route>
+    <Route path="/dashboard"><ProtectedRoute><DashboardPage /></ProtectedRoute></Route>
+    <Route path="/agents"><ProtectedRoute><AgentsPage /></ProtectedRoute></Route>
+    <Route path="/agents/new"><ProtectedRoute><AgentFormPage /></ProtectedRoute></Route>
+    <Route path="/agents/:agentId/test"><ProtectedRoute><AgentTestPage /></ProtectedRoute></Route>
+    <Route path="/agents/:agentId/edit"><ProtectedRoute><AgentFormPage editing /></ProtectedRoute></Route>
+    <Route path="/agents/:agentId"><ProtectedRoute><AgentDetailsPage /></ProtectedRoute></Route>
+    <Route path="/knowledge/products"><ProtectedRoute><ProductsPage /></ProtectedRoute></Route>
+    <Route path="/knowledge/faqs"><ProtectedRoute><FaqsPage /></ProtectedRoute></Route>
+    <Route path="/knowledge/business"><ProtectedRoute><BusinessPage /></ProtectedRoute></Route>
+    <Route path="/channels"><ProtectedRoute><ChannelsPage /></ProtectedRoute></Route>
+    <Route path="/settings"><ProtectedRoute><SettingsPage /></ProtectedRoute></Route>
+    <Route component={NotFound} />
+  </Switch></ErrorBoundary>;
+}
 function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
+  return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} routerPush={(to) => { window.history.pushState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }} routerReplace={(to) => { window.history.replaceState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }}>
+    <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider>
+  </ClerkProvider>;
 }
 
 export default App;
