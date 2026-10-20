@@ -29,3 +29,9 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+CLERK_PUBLISHABLE_KEY = "pk_test_c3dlZXBpbmctZ2xpZGVyLTI3NTUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+VITE_CLERK_PUBLISHABLE_KEY = "pk_test_c3dlZXBpbmctZ2xpZGVyLTI3NTUuY2xlcmsuYWNjb3VudHMuZGV2JA"
