@@ -24,6 +24,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { exportProductsCsv, parseProductCsv, PRODUCT_CSV_TEMPLATE } from '@/lib/product-csv';
+import readXlsxFile from 'read-excel-file/browser';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -244,6 +245,214 @@ function AgentsPage() {
   </main>;
 }
 const emptyAgent = { name: '', description: '', language: 'Arabic and English', tone: 'Helpful and concise', greeting: 'Hello. How can I help you today?', fallback: 'I do not have enough information to answer that confidently. Let me connect you with our team.', instructions: '' };
+function AgentBuilderPage() {
+  const [, createParams] = useRoute('/agents/new');
+  const [, setupParams] = useRoute<{ agentId: string }>('/agents/:agentId/setup');
+  const id = Number(setupParams?.agentId);
+  const isResume = !!setupParams?.agentId;
+  const { lang } = useLang();
+  const { headers } = useWorkspace();
+  const [, setLocation] = useLocation();
+  const qc = useQueryClient();
+  const agentQuery = useGetAgent(id, { ...headers, query: { queryKey: getGetAgentQueryKey(id), enabled: isResume && Number.isFinite(id) && !!headers } });
+  const [step, setStep] = useState(isResume ? 2 : 1);
+  const [agent, setAgent] = useState<Agent | null>(null);
+  const [form, setForm] = useState(emptyAgent);
+  const [productForm, setProductForm] = useState({ name: '', price: '', currency: 'JOD', availability: 'in_stock' as 'in_stock' | 'out_of_stock' | 'unknown' });
+  const [phone, setPhone] = useState('');
+  const [question, setQuestion] = useState('');
+  const [turns, setTurns] = useState<{ question: string; answer: string; sources: string[]; handoff: boolean }[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [imported, setImported] = useState(0);
+  const [fileBusy, setFileBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const createAgent = useCreateAgent({ request: headers });
+  const createProduct = useCreateProduct({ request: headers });
+  const sendTest = useSendAgentTestMessage({ request: headers });
+  const activate = useSetAgentActivation({ request: headers });
+  const profileQuery = useGetBusinessProfile({ ...headers, query: { queryKey: getGetBusinessProfileQueryKey(), enabled: step === 4 && !!headers } });
+  const saveProfile = useSaveBusinessProfile({ request: headers });
+  const productQuery = useListProducts({}, { ...headers, query: { queryKey: getListProductsQueryKey(), enabled: step === 2 && !!headers } });
+  const products = productQuery.data ?? [];
+  useEffect(() => {
+    if (isResume && agentQuery.data) setAgent(agentQuery.data);
+  }, [isResume, agentQuery.data]);
+  const copy = (en: string, ar: string) => tr(lang, en, ar);
+  const setAgentField = (key: keyof typeof emptyAgent, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const saveStepOne = (event: FormEvent) => {
+    event.preventDefault();
+    createAgent.mutate({ data: { ...form, name: form.name.trim() } }, {
+      onSuccess: async (created) => {
+        setAgent(created);
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: getListAgentsQueryKey() }),
+          qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+          qc.invalidateQueries({ queryKey: getGetAgentQueryKey(created.id) }),
+        ]);
+        setStep(2);
+        setLocation(`/agents/${created.id}/setup`);
+      },
+    });
+  };
+  const addProduct = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!productForm.name.trim()) return;
+    const [nameArabic, nameEnglish] = /[\u0600-\u06ff]/.test(productForm.name)
+      ? [productForm.name.trim(), undefined] as const
+      : [undefined, productForm.name.trim()] as const;
+    await createProduct.mutateAsync({ data: {
+      nameArabic, nameEnglish, price: productForm.price || undefined,
+      currency: productForm.currency.toUpperCase(), availability: productForm.availability,
+    } });
+    setProductForm({ name: '', price: '', currency: productForm.currency, availability: 'in_stock' });
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: getListProductsQueryKey() }),
+      qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+    ]);
+  };
+  const readImportFile = async (file: File) => {
+    setFileBusy(true);
+    setImportErrors([]);
+    setImported(0);
+    try {
+      let csvText = '';
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        csvText = await file.text();
+      } else {
+        if (file.name.toLowerCase().endsWith('.xls')) {
+          throw new Error(copy('Legacy .xls workbooks are not supported by the browser XLSX reader. Save this workbook as .xlsx or .csv, then import it again.', 'قارئ Excel في المتصفح لا يدعم ملفات .xls القديمة. احفظ الملف بصيغة .xlsx أو .csv ثم أعد استيراده.'));
+        }
+        const workbook = await readXlsxFile(file);
+        const sheet = workbook[0];
+        if (!sheet) throw new Error(copy('The workbook has no readable sheet.', 'لا يحتوي ملف Excel على ورقة قابلة للقراءة.'));
+        csvText = sheet.data.map((row) => row.map((cell) => {
+          const value = cell instanceof Date ? cell.toISOString() : cell == null ? '' : String(cell);
+          return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+        }).join(',')).join('\r\n');
+      }
+      const parsed = parseProductCsv(csvText);
+      const errors = [...parsed.errors];
+      if (!parsed.products.length) {
+        setImportErrors(errors.length ? errors : [copy('No valid product rows were found.', 'لم يتم العثور على صفوف منتجات صالحة.')]);
+        return;
+      }
+      const knownNames = new Set(products.flatMap((item) => [item.nameArabic, item.nameEnglish].filter(Boolean).map((name) => name!.trim().toLocaleLowerCase())));
+      const knownSkus = new Set(products.map((item) => item.sku?.trim().toLocaleLowerCase()).filter(Boolean));
+      let count = 0;
+      for (const row of parsed.products) {
+        const inputNames = [row.product.nameArabic, row.product.nameEnglish].filter(Boolean).map((name) => name!.trim().toLocaleLowerCase());
+        const sku = row.product.sku?.trim().toLocaleLowerCase();
+        if (inputNames.some((name) => knownNames.has(name)) || (!!sku && knownSkus.has(sku))) {
+          errors.push(copy(`Row ${row.rowNumber}: skipped because this product name or SKU is already saved.`, `الصف ${row.rowNumber}: تم تخطيه لأن اسم المنتج أو رمزه محفوظ مسبقاً.`));
+          continue;
+        }
+        try {
+          await createProduct.mutateAsync({ data: row.product });
+          count += 1;
+          inputNames.forEach((name) => knownNames.add(name));
+          if (sku) knownSkus.add(sku);
+        } catch {
+          errors.push(copy(`Row ${row.rowNumber}: could not be saved. No retry was attempted.`, `الصف ${row.rowNumber}: تعذر حفظه. لم تتم إعادة المحاولة.`));
+        }
+      }
+      setImported(count);
+      setImportErrors(errors);
+      if (count) await Promise.all([
+        qc.invalidateQueries({ queryKey: getListProductsQueryKey() }),
+        qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+      ]);
+    } catch (error) {
+      setImportErrors([error instanceof Error ? error.message : copy('The workbook could not be read.', 'تعذرت قراءة ملف Excel.')]);
+    } finally {
+      setFileBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+  const askAgent = (event: FormEvent) => {
+    event.preventDefault();
+    const content = question.trim();
+    if (!agent || !content) return;
+    sendTest.mutate({ agentId: agent.id, data: { content, conversationId } }, {
+      onSuccess: (result) => {
+        setTurns((current) => [...current, { question: content, answer: result.assistantMessage, sources: result.sources, handoff: result.handoff }]);
+        setConversationId(result.conversationId);
+        setQuestion('');
+      },
+    });
+  };
+  const finishActivation = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!agent || !profileQuery.data || !phone.trim()) return;
+    const currentProfile = profileQuery.data;
+    const line = `WhatsApp Business: ${phone.trim()}`;
+    const existing = currentProfile.contactInfo.split(/\r?\n/);
+    const labelPattern = /^\s*(?:WhatsApp Business|واتساب للأعمال)\s*:/i;
+    const matchingIndex = existing.findIndex((part) => labelPattern.test(part));
+    const contactInfo = matchingIndex >= 0
+      ? existing.map((part, index) => index === matchingIndex ? line : part).join('\n')
+      : [...existing.filter((part) => part.trim()), line].join('\n');
+    const payload: BusinessProfileInput = {
+      introduction: currentProfile.introduction, branches: currentProfile.branches, contactInfo,
+      workingHours: currentProfile.workingHours, deliveryPolicy: currentProfile.deliveryPolicy,
+      paymentMethods: currentProfile.paymentMethods, returnPolicy: currentProfile.returnPolicy,
+      exchangePolicy: currentProfile.exchangePolicy, warrantyPolicy: currentProfile.warrantyPolicy,
+      promotions: currentProfile.promotions, terms: currentProfile.terms,
+    };
+    try {
+      await saveProfile.mutateAsync({ data: payload });
+      await qc.invalidateQueries({ queryKey: getGetBusinessProfileQueryKey() });
+      await activate.mutateAsync({ agentId: agent.id, data: { status: 'active' } });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: getGetAgentQueryKey(agent.id) }),
+        qc.invalidateQueries({ queryKey: getListAgentsQueryKey() }),
+        qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+      ]);
+      setLocation(`/agents/${agent.id}`);
+    } catch {
+      // Mutation states below surface the actual API failure without implying activation succeeded.
+    }
+  };
+  if (isResume && agentQuery.isLoading) return <main className="page"><div className="skeleton h-10 w-1/3 mb-6" /><div className="skeleton-card"><div className="skeleton h-32" /></div></main>;
+  if (isResume && (agentQuery.isError || !agentQuery.data)) return <main className="page"><ErrorState title={copy('Setup could not be resumed', 'تعذر استئناف الإعداد')} detail={copy('We could not load this saved agent.', 'لم نتمكن من تحميل هذا الوكيل المحفوظ.')} retry={() => void agentQuery.refetch()} /></main>;
+  const steps = [copy('Agent', 'الوكيل'), copy('Products', 'المنتجات'), copy('Test', 'الاختبار'), copy('Activate', 'التفعيل')];
+  return <main className="page agent-builder" data-testid="agent-builder">
+    <PageTitle eyebrow={copy('AGENT STUDIO / SETUP', 'استوديو الوكلاء / الإعداد')} title={copy('Build an agent that knows your business.', 'أنشئ وكيلاً يعرف نشاطك.')} description={copy('Four practical steps. Every answer starts with what you have actually saved.', 'أربع خطوات عملية. كل إجابة تستند إلى معلوماتك المحفوظة فعلياً.')} />
+    <div className="builder-progress" aria-label={copy(`Step ${step} of 4`, `الخطوة ${step} من ٤`)}>{steps.map((label, index) => <button type="button" key={label} className={`builder-step ${step === index + 1 ? 'current' : ''} ${step > index + 1 ? 'complete' : ''}`} onClick={() => { if (agent && index > 0) setStep(index + 1); }} disabled={index > 0 && !agent} data-testid={`button-builder-step-${index + 1}`}><span>{step > index + 1 ? <Check size={13} /> : `0${index + 1}`}</span>{label}</button>)}</div>
+    {step === 1 && <section className="builder-card reveal"><div className="builder-intro"><span className="builder-index">01 / IDENTITY</span><h2>{copy('Give your assistant a name and a point of view.', 'اختر اسماً لمساعدك وحدد أسلوبه.')}</h2><p>{copy('This is the customer-facing identity. The rest sets the voice and boundaries it follows.', 'هذا هو الاسم الذي سيظهر للعملاء. وتحدد الإعدادات التالية أسلوبه وحدوده.')}</p></div>
+      <form onSubmit={saveStepOne}><div className="form-grid">
+        <Field label={copy('Name customers will see', 'الاسم الذي سيظهر للعملاء')} required><input value={form.name} onChange={(event) => setAgentField('name', event.target.value)} required maxLength={120} placeholder={copy('e.g. Layali Customer Care', 'مثال: خدمة عملاء ليالي')} data-testid="input-builder-agent-name" /></Field>
+        <Field label={copy('Response languages', 'لغات الرد')}><select value={form.language} onChange={(event) => setAgentField('language', event.target.value)} data-testid="select-builder-language"><option>Arabic and English</option><option>Arabic</option><option>English</option></select></Field>
+        <Field label={copy('What it helps with', 'ما الذي يساعد فيه')} className="full"><input value={form.description} onChange={(event) => setAgentField('description', event.target.value)} placeholder={copy('Product questions, store information, and more', 'الاستفسارات عن المنتجات ومعلومات المتجر وغيرها')} data-testid="input-builder-description" /></Field>
+        <Field label={copy('Tone', 'النبرة')}><input value={form.tone} onChange={(event) => setAgentField('tone', event.target.value)} required data-testid="input-builder-tone" /></Field>
+        <Field label={copy('First greeting', 'التحية الأولى')}><input value={form.greeting} onChange={(event) => setAgentField('greeting', event.target.value)} required data-testid="input-builder-greeting" /></Field>
+        <Field label={copy('When it does not know', 'عندما لا يعرف الإجابة')} className="full"><textarea value={form.fallback} onChange={(event) => setAgentField('fallback', event.target.value)} required data-testid="input-builder-fallback" /></Field>
+        <Field label={copy('Additional instructions', 'تعليمات إضافية')} className="full"><textarea value={form.instructions} onChange={(event) => setAgentField('instructions', event.target.value)} data-testid="input-builder-instructions" placeholder={copy('Optional boundaries or preferences', 'حدود أو تفضيلات اختيارية')} /></Field>
+      </div>{createAgent.isError && <p role="alert" className="builder-error">{copy('The agent could not be saved. Your entries are still here; try again.', 'تعذر حفظ الوكيل. لا تزال بياناتك هنا؛ حاول مرة أخرى.')}</p>}
+      <div className="builder-actions"><span>{copy('Saved as a real workspace agent before continuing.', 'سيُحفظ كوكيل فعلي في مساحة العمل قبل المتابعة.')}</span><button className="btn" disabled={createAgent.isPending || !form.name.trim()} data-testid="button-builder-save-agent">{createAgent.isPending ? copy('Saving agent…', 'جارٍ حفظ الوكيل…') : copy('Save agent & continue', 'احفظ الوكيل وتابع')}<ArrowRight size={15} /></button></div></form>
+    </section>}
+    {step === 2 && <section className="builder-card reveal"><div className="builder-intro"><span className="builder-index">02 / KNOWLEDGE</span><h2>{copy('Start with the products you actually sell.', 'ابدأ بالمنتجات التي تبيعها فعلياً.')}</h2><p>{copy('Saved products become grounded facts the agent can use in its answers.', 'تتحول المنتجات المحفوظة إلى معلومات موثوقة يستخدمها الوكيل في إجاباته.')}</p></div>
+      <div className="builder-product-columns"><form className="builder-product-form" onSubmit={(event) => { void addProduct(event).catch(() => undefined); }}><h3>{copy('Add one product', 'أضف منتجاً')}</h3><Field label={copy('Product name', 'اسم المنتج')} required><input value={productForm.name} onChange={(event) => setProductForm((prev) => ({ ...prev, name: event.target.value }))} required data-testid="input-builder-product-name" /></Field><div className="form-grid"><Field label={copy('Price', 'السعر')}><input type="number" min="0" step="0.0001" value={productForm.price} onChange={(event) => setProductForm((prev) => ({ ...prev, price: event.target.value }))} data-testid="input-builder-product-price" /></Field><Field label={copy('Currency', 'العملة')}><input value={productForm.currency} onChange={(event) => setProductForm((prev) => ({ ...prev, currency: event.target.value.toUpperCase() }))} pattern="[A-Za-z]{3}" minLength={3} maxLength={3} required data-testid="input-builder-product-currency" /></Field></div><Field label={copy('Availability', 'التوفر')}><select value={productForm.availability} onChange={(event) => setProductForm((prev) => ({ ...prev, availability: event.target.value as typeof prev.availability }))} data-testid="select-builder-product-availability"><option value="in_stock">{copy('In stock', 'متوفر')}</option><option value="out_of_stock">{copy('Out of stock', 'غير متوفر')}</option><option value="unknown">{copy('Not specified', 'غير محدد')}</option></select></Field><button className="btn small" disabled={createProduct.isPending || fileBusy} data-testid="button-builder-add-product"><Plus size={14} />{createProduct.isPending || fileBusy ? copy('Saving…', 'جارٍ الحفظ…') : copy('Save product', 'احفظ المنتج')}</button>{createProduct.isError && <p role="alert" className="builder-error">{copy('Product could not be saved. Please check the details and retry.', 'تعذر حفظ المنتج. تحقق من البيانات وحاول مجدداً.')}</p>}</form>
+        <div className="builder-import"><div className="builder-import-title"><Upload size={16} /><div><h3>{copy('Bring in a catalog', 'استورد قائمة المنتجات')}</h3><p>{copy('Import a .xlsx or .csv workbook using the product catalog columns. Legacy .xls files must first be saved as .xlsx.', 'استورد ملف .xlsx أو .csv باستخدام أعمدة كتالوج المنتجات. يجب حفظ ملفات .xls القديمة بصيغة .xlsx أولاً.')}</p></div></div><input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="builder-file-input" aria-label={copy('Choose product file', 'اختر ملف المنتجات')} onChange={(event) => { const file = event.target.files?.[0]; if (file) void readImportFile(file); }} data-testid="input-builder-import-file" /><button type="button" className="btn secondary small" onClick={() => fileRef.current?.click()} disabled={fileBusy || createProduct.isPending || productQuery.isLoading || productQuery.isError} data-testid="button-builder-import">{fileBusy ? copy('Reading and saving…', 'جارٍ القراءة والحفظ…') : copy('Choose file', 'اختر ملفاً')}<Upload size={14} /></button>{imported > 0 && <p className="builder-success" role="status">{copy(`${imported} product${imported === 1 ? '' : 's'} saved from this file.`, `تم حفظ ${imported} منتج من هذا الملف.`)}</p>}{importErrors.length > 0 && <ul className="builder-row-errors" role="alert">{importErrors.map((error, index) => <li key={`${index}-${error}`}>{lang === 'ar' ? `مشكلة في الاستيراد: ${error}` : error}</li>)}</ul>}</div></div>
+      <div className="builder-saved-products"><div className="builder-list-head"><div><h3>{copy('Saved products', 'المنتجات المحفوظة')}</h3><span>{productQuery.isLoading ? copy('Loading catalog…', 'جارٍ تحميل الكتالوج…') : copy(`${products.length} in this workspace`, `${products.length} في مساحة العمل`)}</span></div><Package size={18} /></div>{productQuery.isError ? <ErrorState title={copy('Products unavailable', 'تعذر تحميل المنتجات')} detail={copy('Saved products could not be loaded.', 'تعذر تحميل المنتجات المحفوظة.')} retry={() => void productQuery.refetch()} /> : productQuery.isLoading ? <div className="skeleton h-16" /> : products.length ? <div className="builder-product-list">{products.map((product) => <div className="builder-product-row" key={product.id} data-testid={`row-builder-product-${product.id}`}><strong>{product.nameArabic || product.nameEnglish}</strong><span>{product.price ? `${product.price} ${product.currency}` : copy('Price not set', 'السعر غير محدد')}</span><span className="pill muted">{copy(product.availability.replaceAll('_', ' '), product.availability === 'in_stock' ? 'متوفر' : product.availability === 'out_of_stock' ? 'غير متوفر' : 'غير محدد')}</span></div>)}</div> : <p className="builder-empty">{copy('No products yet. Add one here or import your catalog.', 'لا توجد منتجات بعد. أضف منتجاً أو استورد كتالوجك.')}</p>}</div>
+      <div className="builder-actions"><span>{copy('You can add more products later from Knowledge.', 'يمكنك إضافة المزيد لاحقاً من قاعدة المعرفة.')}</span><button className="btn" onClick={() => setStep(3)} data-testid="button-builder-to-test">{copy('Continue to test', 'تابع إلى الاختبار')}<ArrowRight size={15} /></button></div>
+    </section>}
+    {step === 3 && <section className="builder-card reveal"><div className="builder-intro"><span className="builder-index">03 / PROOF</span><h2>{copy('Ask a real question. Inspect the real answer.', 'اسأل سؤالاً حقيقياً وافحص الإجابة.')}</h2><p>{copy('This sends your message to the saved agent test endpoint. Replies and sources below come from the configured service.', 'يرسل هذا رسالتك إلى نقطة اختبار الوكيل المحفوظ. الإجابات والمصادر أدناه من الخدمة الفعلية.')}</p></div>
+      <div className="builder-chat" aria-live="polite">{turns.length ? turns.map((turn, index) => <article className="builder-turn" key={`${index}-${turn.question}`} data-testid={`turn-builder-${index}`}><div className="builder-question">{turn.question}</div><div className="builder-answer"><strong>{agent?.name}</strong><p>{turn.answer}</p>{turn.handoff && <span className="pill muted">{copy('Human handoff suggested', 'يُنصح بالتواصل مع الفريق')}</span>}{turn.sources.length > 0 && <div className="builder-sources"><span>{copy('Sources returned', 'المصادر المستخدمة')}</span>{turn.sources.map((source) => <small key={source}>{source}</small>)}</div>}{!turn.sources.length && <small className="builder-no-sources">{copy('No saved source was returned for this answer.', 'لم يتم إرجاع مصدر محفوظ لهذه الإجابة.')}</small>}</div></article>) : <div className="builder-chat-empty"><MessageSquareText size={22} /><p>{copy('Your live test conversation will appear here.', 'ستظهر هنا محادثة الاختبار الفعلية.')}</p></div>}</div>
+      <form className="builder-chat-form" onSubmit={askAgent}><input value={question} onChange={(event) => setQuestion(event.target.value)} required maxLength={4000} placeholder={copy('Ask about a product, price, or policy…', 'اسأل عن منتج أو سعر أو سياسة…')} disabled={!agent || sendTest.isPending} data-testid="input-builder-test-question" /><button className="btn" disabled={!agent || sendTest.isPending || !question.trim()} data-testid="button-builder-send-question">{sendTest.isPending ? <LoaderCircle size={15} className="builder-spinner" /> : <ArrowRight size={15} />}{sendTest.isPending ? copy('Waiting for answer…', 'بانتظار الإجابة…') : copy('Send question', 'أرسل السؤال')}</button></form>
+      {sendTest.isError && <p role="alert" className="builder-error">{copy('The test service did not return an answer. Your question was not added to the conversation.', 'لم تُرجع خدمة الاختبار إجابة. لم تتم إضافة السؤال إلى المحادثة.')}</p>}
+      <div className="builder-actions"><span>{copy('Test again or continue when you are ready.', 'اختبر مرة أخرى أو تابع عندما تكون مستعداً.')}</span><button className="btn" onClick={() => { setStep(4); void profileQuery.refetch(); }} data-testid="button-builder-to-activate">{copy('Continue to activation', 'تابع إلى التفعيل')}<ArrowRight size={15} /></button></div>
+    </section>}
+    {step === 4 && <section className="builder-card reveal"><div className="builder-intro"><span className="builder-index">04 / WORKSPACE</span><h2>{copy('Put the agent to work in your workspace.', 'فعّل الوكيل في مساحة عملك.')}</h2><p>{copy('Activation makes this agent active in AYOUB AI. It does not connect WhatsApp or enable automatic replies.', 'يؤدي التفعيل إلى تشغيل الوكيل في AYOUB AI، لكنه لا يربطه بواتساب ولا يفعّل الردود التلقائية.')}</p></div>
+      <div className="builder-whatsapp"><div className="builder-whatsapp-mark"><MessageCircle size={20} /></div><div><strong>{copy('WhatsApp Business', 'واتساب للأعمال')}</strong><span className="pill muted" data-testid="status-builder-whatsapp">{copy('Not connected', 'غير متصل')}</span><p>{copy('Add the business number to your profile. Automated WhatsApp replies still require a verified Meta/WhatsApp connection.', 'أضف رقم النشاط إلى ملفك. ما زالت الردود التلقائية عبر واتساب تتطلب اتصالاً موثقاً مع Meta/WhatsApp.')}</p></div></div>
+      {profileQuery.isLoading ? <div className="skeleton h-12" /> : profileQuery.isError ? <ErrorState title={copy('Business profile unavailable', 'تعذر تحميل ملف النشاط')} detail={copy('We cannot safely update the contact number until the saved profile is available.', 'لا يمكننا تحديث رقم التواصل بأمان قبل تحميل ملف النشاط المحفوظ.')} retry={() => void profileQuery.refetch()} /> : <form onSubmit={finishActivation}><Field label={copy('WhatsApp Business number', 'رقم واتساب للأعمال')} hint={copy('Include country code. This is saved to Business profile contact info.', 'أضف رمز الدولة. سيتم حفظه ضمن معلومات التواصل في ملف النشاط.')} required><input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required placeholder="+962 7X XXX XXXX" data-testid="input-builder-whatsapp-number" /></Field>
+        {(saveProfile.isError || activate.isError) && <p role="alert" className="builder-error">{saveProfile.isError ? copy('The phone number could not be saved to Business profile.', 'تعذر حفظ رقم الهاتف في ملف النشاط.') : copy('The contact number was saved, but workspace activation failed. Retry activation after checking the agent.', 'تم حفظ رقم التواصل، لكن تعذر تفعيل الوكيل في مساحة العمل. تحقق من الوكيل وحاول مجدداً.')}</p>}
+        <div className="builder-activation-note"><ShieldCheck size={18} /><p>{copy('Automated WhatsApp replies are not enabled. A verified Meta/WhatsApp connection is still required.', 'الردود التلقائية عبر واتساب غير مفعلة. ما زال الاتصال الموثق مع Meta/WhatsApp مطلوباً.')}</p></div>
+        <div className="builder-actions"><span>{copy('This activates the agent in your AYOUB AI workspace only.', 'هذا يفعّل الوكيل في مساحة AYOUB AI فقط.')}</span><button className="btn" disabled={saveProfile.isPending || activate.isPending || !phone.trim() || !profileQuery.data} data-testid="button-builder-activate">{activate.isPending || saveProfile.isPending ? copy('Saving and activating…', 'جارٍ الحفظ والتفعيل…') : copy('Activate my agent', 'فعّل وكيلي')}<Check size={15} /></button></div>
+      </form>}
+    </section>}
+  </main>;
+}
 function AgentFormPage({ editing = false }: { editing?: boolean }) {
   const [, params] = useRoute<{ agentId: string }>(editing ? '/agents/:agentId/edit' : '/agents/new');
   const id = Number(params?.agentId);
@@ -516,7 +725,8 @@ function Router() {
     <Route path="/sign-up/*?"><SignUp routing="path" path={`${basePath}/sign-up`} /></Route>
     <Route path="/dashboard"><ProtectedRoute><DashboardPage /></ProtectedRoute></Route>
     <Route path="/agents"><ProtectedRoute><AgentsPage /></ProtectedRoute></Route>
-    <Route path="/agents/new"><ProtectedRoute><AgentFormPage /></ProtectedRoute></Route>
+    <Route path="/agents/new"><ProtectedRoute><AgentBuilderPage /></ProtectedRoute></Route>
+    <Route path="/agents/:agentId/setup"><ProtectedRoute><AgentBuilderPage /></ProtectedRoute></Route>
     <Route path="/agents/:agentId/test"><ProtectedRoute><AgentTestPage /></ProtectedRoute></Route>
     <Route path="/agents/:agentId/edit"><ProtectedRoute><AgentFormPage editing /></ProtectedRoute></Route>
     <Route path="/agents/:agentId"><ProtectedRoute><AgentDetailsPage /></ProtectedRoute></Route>
