@@ -8,7 +8,7 @@ Install dependencies with `pnpm install --frozen-lockfile`, then start the full 
 
 Before starting the API, add `DATABASE_URL` for PostgreSQL, `CLERK_SECRET_KEY`, and `OPENAI_API_KEY` for agent test responses to Replit Secrets. Set `CLERK_PUBLISHABLE_KEY` and `VITE_CLERK_PUBLISHABLE_KEY` as shared environment variables; the current development setup uses Clerk test keys, while production needs its own live keys. `OPENAI_MODEL` and `VITE_CLERK_PROXY_URL` are optional. Without Clerk keys, the public homepage and health endpoint still work, sign-in shows a setup message, and protected API requests are rejected with 401. Without the OpenAI key, AI test responses return an explicit unavailable error rather than a simulated answer.
 
-Run `pnpm run typecheck` to check all packages, `pnpm run build` to build the workspace, and `pnpm --filter @workspace/db run push` only when intentionally applying the Drizzle schema to a development database. The API package can be checked independently with `pnpm --filter @workspace/api-server run typecheck`.
+Run `pnpm run typecheck` to check all packages and `pnpm run build` to build the workspace. The checked-in Drizzle migration is the production schema path: set `DATABASE_URL` or `MIGRATION_DATABASE_URL` and run `pnpm --filter @workspace/db run migrate`. `pnpm --filter @workspace/db run push` is for intentional development-only schema pushes; do not use `push-force` against production. The API package can be checked independently with `pnpm --filter @workspace/api-server run typecheck`.
 
 ## Current product capabilities
 
