@@ -130,7 +130,7 @@ function SiteBrand({ inverse = false }: { inverse?: boolean }) {
 function HomePage() {
   const { lang } = useLang();
   return <main className="public-home">
-    <nav className="public-nav"><SiteBrand /><div className="public-nav-actions"><a className="nav-phone" href="tel:05772211" aria-label={tr(lang, 'Call 05772211', 'اتصل على 05772211')}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">05772211</span></a><div className="topbar-right"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></div></nav>
+    <header className="public-header"><div className="public-topline"><SiteBrand /><a className="nav-phone" href="tel:05772211" aria-label={tr(lang, 'Call 05772211', 'اتصل على 05772211')}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">05772211</span></a></div><nav className="public-nav" aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><div className="public-nav-links"><a className="public-nav-link" href="#about-us">{tr(lang, 'About us', 'من نحن')}</a><a className="public-nav-link" href="#how-it-works">{tr(lang, 'How it works', 'كيف نعمل')}</a></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>
     <section className="public-hero">
       <div className="hero-copy reveal"><div className="eyebrow">{tr(lang, 'CUSTOMER SERVICE, GROUNDED', 'خدمة عملاء تستند إلى معلوماتك')}</div>
         <h1>{lang === 'ar' ? <>خدمة عملاء<br />تعرف عملك.</> : <>Customer care<br />that knows<br />your business.</>}</h1>
@@ -143,7 +143,7 @@ function HomePage() {
         <div className="orbit-node three"><MessageSquareText /><span>Grounded replies</span></div><div className="core-mark">A.</div><div className="art-label">KNOWLEDGE → CONVERSATION</div>
       </div>
     </section>
-    <section className="public-section" id="how-it-works"><div className="public-section-inner">
+    <section className="public-section" id="about-us"><div className="public-section-inner" id="how-it-works">
       <div className="section-heading"><div><div className="eyebrow">{tr(lang, 'A SIMPLE FOUNDATION', 'بداية واضحة')}</div><h2>{tr(lang, 'Give your agent the right things to know.', 'امنح وكيلك المعرفة التي يحتاجها.')}</h2></div><p>{tr(lang, 'AYOUB AI turns the knowledge your team already has into practical, dependable customer conversations—in Arabic and English.', 'يحوّل AYOUB AI معرفة فريقك إلى محادثات عملية وموثوقة مع العملاء، بالعربية والإنجليزية.')}</p></div>
       <div className="steps-row"><article className="step"><div className="step-num">01 / KNOWLEDGE</div><h3>{tr(lang, 'Save what is true', 'أضف المعلومات الصحيحة')}</h3><p>{tr(lang, 'Organize product details, approved FAQs, store hours, and business policies in one place.', 'نظّم تفاصيل المنتجات والأسئلة المعتمدة وساعات العمل والسياسات في مكان واحد.')}</p></article>
         <article className="step"><div className="step-num">02 / AGENT</div><h3>{tr(lang, 'Shape the conversation', 'صمّم أسلوب المحادثة')}</h3><p>{tr(lang, 'Choose a language, tone, greeting, and the boundaries your customer assistant follows.', 'اختر اللغة والنبرة والتحية والحدود التي يتبعها مساعد خدمة العملاء.')}</p></article>
