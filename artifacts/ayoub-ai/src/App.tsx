@@ -125,12 +125,12 @@ function LanguageButton() {
   return <button className="lang-toggle" data-testid="button-language" onClick={() => setLang(lang === 'en' ? 'ar' : 'en')} aria-label="Switch language"><Languages size={14} /> {lang === 'en' ? 'العربية' : 'English'}</button>;
 }
 function SiteBrand({ inverse = false }: { inverse?: boolean }) {
-  return <Link href="/" className="brand" style={inverse ? { color: '#fff', padding: 0 } : undefined}><span className="brand-mark">A.</span><span className="brand-name">AYOUB AI</span></Link>;
+  return <Link href="/" className="brand" style={inverse ? { color: '#fff', padding: 0 } : undefined}><span className="brand-mark"><img src="/chatbot.png" alt="" /></span><span className="brand-name">AYOUB AI</span></Link>;
 }
 function HomePage() {
   const { lang } = useLang();
   return <main className="public-home">
-    <nav className="public-nav"><SiteBrand /><div className="topbar-right"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav>
+    <nav className="public-nav"><SiteBrand /><div className="public-nav-actions"><a className="nav-phone" href="tel:05772211" aria-label={tr(lang, 'Call 05772211', 'اتصل على 05772211')}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">05772211</span></a><div className="topbar-right"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></div></nav>
     <section className="public-hero">
       <div className="hero-copy reveal"><div className="eyebrow">{tr(lang, 'CUSTOMER SERVICE, GROUNDED', 'خدمة عملاء تستند إلى معلوماتك')}</div>
         <h1>{lang === 'ar' ? <>خدمة عملاء<br />تعرف عملك.</> : <>Customer care<br />that knows<br />your business.</>}</h1>
