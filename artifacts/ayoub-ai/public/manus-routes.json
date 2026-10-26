@@ -1,1 +1,23 @@
-{"routes":[{"path":"/","title":"Home"},{"path":"/sign-in/*","title":"Sign in"},{"path":"/sign-up/*","title":"Sign up"},{"path":"/admin/login","title":"Admin login"},{"path":"/admin","title":"Admin dashboard"},{"path":"/dashboard","title":"Dashboard"},{"path":"/agents","title":"Agents"},{"path":"/agents/new","title":"Create agent"},{"path":"/agents/:agentId","title":"Agent"},{"path":"/agents/:agentId/edit","title":"Edit agent"},{"path":"/agents/:agentId/test","title":"Test agent"},{"path":"/knowledge/products","title":"Products"},{"path":"/knowledge/faqs","title":"FAQs"},{"path":"/knowledge/business","title":"Business profile"},{"path":"/channels","title":"Channels"},{"path":"/settings","title":"Settings"}]}
+{
+  "routes": [
+    { "path": "/", "title": "Home" },
+    { "path": "/store", "title": "Store" },
+    { "path": "/sign-in/*", "title": "Sign in" },
+    { "path": "/sign-up/*", "title": "Sign up" },
+    { "path": "/admin/login", "title": "Admin login" },
+    { "path": "/admin", "title": "Admin dashboard" },
+    { "path": "/admin/store", "title": "Store administration" },
+    { "path": "/dashboard", "title": "Dashboard" },
+    { "path": "/agents", "title": "Agents" },
+    { "path": "/agents/new", "title": "Create agent" },
+    { "path": "/agents/:agentId/setup", "title": "Agent setup" },
+    { "path": "/agents/:agentId", "title": "Agent" },
+    { "path": "/agents/:agentId/edit", "title": "Edit agent" },
+    { "path": "/agents/:agentId/test", "title": "Test agent" },
+    { "path": "/knowledge/products", "title": "Products" },
+    { "path": "/knowledge/faqs", "title": "FAQs" },
+    { "path": "/knowledge/business", "title": "Business profile" },
+    { "path": "/channels", "title": "Channels" },
+    { "path": "/settings", "title": "Settings" }
+  ]
+}

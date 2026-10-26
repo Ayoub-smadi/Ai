@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState, useRef, createContext, useContext, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, SignUp, Show, useAuth, useUser } from '@clerk/react';
-import { publishableKeyFromHost } from '@clerk/react/internal';
-import { shadcn } from '@clerk/themes';
 import {
   Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bot, Building2, Check,
   ChevronRight, CircleHelp, Code2, Download, Droplets, FileText, Flower2, Globe2, HeartPulse, Languages, LayoutDashboard, Leaf, LifeBuoy, LoaderCircle,
@@ -24,75 +21,25 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { AdminStorePage, PublicStorePage } from '@/pages/store';
 import { exportProductsCsv, parseProductCsv, PRODUCT_CSV_TEMPLATE } from '@/lib/product-csv';
+import { AuthProvider, useAppAuth } from '@/lib/app-auth';
+import { AdminSettingsProvider, defaultHeroMotionScenes, useAdminSettings, type AdminSettings, type HeroMotionIcon, type HeroMotionScene, type SocialIcon, type SocialLink } from '@/lib/site-settings';
 import readXlsxFile from 'read-excel-file/browser';
 import './index.css';
 
 const queryClient = new QueryClient();
-const configuredClerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const clerkPubKey = configuredClerkPubKey
-  ? publishableKeyFromHost(window.location.hostname, configuredClerkPubKey)
-  : undefined;
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-function stripBase(path: string) { return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path; }
-
-const clerkAppearance = {
-  theme: shadcn,
-  cssLayerName: 'clerk',
-  options: {
-    logoPlacement: 'inside' as const,
-    logoLinkUrl: basePath || '/',
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
-  },
-  variables: {
-    colorPrimary: '#020618', colorForeground: '#020618', colorMutedForeground: 'rgba(2, 6, 24, .58)',
-    colorBackground: '#FFFFFF', colorInput: '#FFFFFF', colorInputForeground: '#020618',
-    colorDanger: '#020618', colorNeutral: '#020618', fontFamily: "'DM Sans', 'Noto Sans Arabic', sans-serif",
-  },
-  elements: {
-    cardBox: 'w-[440px] max-w-full !bg-white border border-[#020618]/15 rounded-2xl shadow-none',
-    card: '!bg-transparent shadow-none',
-    footer: '!bg-transparent',
-    headerTitle: 'text-[#020618] tracking-[-.04em]',
-    headerSubtitle: 'text-[#020618]/60',
-    socialButtonsBlockButtonText: 'text-[#020618]',
-    formFieldLabel: 'text-[#020618]',
-    formFieldInput: 'text-[#020618] border-[#020618]/20 focus:border-[#020618]',
-    footerActionLink: 'text-[#020618] font-semibold',
-    footerActionText: 'text-[#020618]/65',
-    dividerText: 'text-[#020618]/55',
-    formButtonPrimary: 'bg-[#020618] text-white hover:bg-[#020618]/90',
-  },
-};
 
 type Lang = 'en' | 'ar';
 const LanguageContext = createContext<{ lang: Lang; setLang: (lang: Lang) => void }>({ lang: 'en', setLang: () => undefined });
 function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('ayoub-language') as Lang) || 'en');
-  useEffect(() => { localStorage.setItem('ayoub-language', lang); document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; }, [lang]);
+  const [lang, setLang] = useState<Lang>(() => typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('ar') ? 'ar' : 'en');
+  useEffect(() => { document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; }, [lang]);
   return <LanguageContext.Provider value={{ lang, setLang }}>{children}</LanguageContext.Provider>;
 }
 function useLang() { return useContext(LanguageContext); }
 function tr(lang: Lang, en: string, ar: string) { return lang === 'ar' ? ar : en; }
-type SocialIcon = 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'website';
-type SocialLink = { id: string; label: string; url: string; icon: SocialIcon };
-type HeroMotionIcon = 'sprout' | 'garden' | 'care';
-type HeroMotionScene = { id: string; icon: HeroMotionIcon; titleEn: string; titleAr: string; descriptionEn: string; descriptionAr: string };
-const defaultHeroMotionScenes: HeroMotionScene[] = [
-  { id: 'project', icon: 'sprout', titleEn: 'Starting an agricultural project?', titleAr: 'عندك مشروع زراعي؟', descriptionEn: 'Let’s turn your idea into a clear growing plan.', descriptionAr: 'نحوّل فكرتك إلى بداية واضحة وخطة نموّ.' },
-  { id: 'garden', icon: 'garden', titleEn: 'Ready to plant your garden?', titleAr: 'عندك حديقة وبدك تزرعها؟', descriptionEn: 'Choose the right plants and make every corner bloom.', descriptionAr: 'نختار معك النباتات المناسبة ونرتّب خطوات الزراعة.' },
-  { id: 'care', icon: 'care', titleEn: 'Is your plant looking unwell?', titleAr: 'نبتتك تعبانة وبدها عناية؟', descriptionEn: 'Understand what it needs and help it thrive again.', descriptionAr: 'نساعدك تعرف احتياجها وتعتني فيها بطريقة أفضل.' },
-];
-type AdminSettings = { brandNameEn: string; brandNameAr: string; phone: string; primaryColor: string; logoUrl: string; heroTitleEn: string; heroTitleAr: string; heroDescriptionEn: string; heroDescriptionAr: string; heroMotionEnabled: boolean; heroMotionScenes: HeroMotionScene[]; socialLinks: SocialLink[] };
-const defaultAdminSettings: AdminSettings = { brandNameEn: 'QADRI AI', brandNameAr: 'قادري AI', phone: '0777772211', primaryColor: '#020618', logoUrl: '/chatbot.png', heroTitleEn: 'Customer care\nthat knows\nyour business.', heroTitleAr: 'خدمة عملاء\nتعرف عملك.', heroDescriptionEn: 'Build a bilingual AI agent that answers from your real products, policies, and approved answers.', heroDescriptionAr: 'أنشئ وكيلاً ذكياً ثنائي اللغة يجيب من منتجاتك وسياساتك وإجاباتك المعتمدة.', heroMotionEnabled: true, heroMotionScenes: defaultHeroMotionScenes, socialLinks: [] };
-const AdminSettingsContext = createContext<{ settings: AdminSettings; update: (patch: Partial<AdminSettings>) => void }>({ settings: defaultAdminSettings, update: () => undefined });
-function AdminSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AdminSettings>(() => { try { return { ...defaultAdminSettings, ...JSON.parse(localStorage.getItem('qadri-admin-settings') || '{}') }; } catch { return defaultAdminSettings; } });
-  const update = (patch: Partial<AdminSettings>) => setSettings((current) => { const next = { ...current, ...patch }; localStorage.setItem('qadri-admin-settings', JSON.stringify(next)); return next; });
-  return <AdminSettingsContext.Provider value={{ settings, update }}>{children}</AdminSettingsContext.Provider>;
-}
-function useAdminSettings() { return useContext(AdminSettingsContext); }
 function HeroMotionGraphic({ scenes, enabled, lang }: { scenes: HeroMotionScene[]; enabled: boolean; lang: Lang }) {
   const activeScenes = scenes.length ? scenes : defaultHeroMotionScenes;
   const [activeIndex, setActiveIndex] = useState(0);
@@ -143,16 +90,12 @@ function useWorkspace() { return useContext(WorkspaceContext); }
 function WorkspaceProvider({ children }: { children: ReactNode }) {
   const workspacesQuery = useListWorkspaces({ query: { queryKey: getListWorkspacesQueryKey() } });
   const createWorkspace = useCreateWorkspace();
-  const [selected, setSelected] = useState<number | null>(() => {
-    const id = Number(localStorage.getItem('ayoub-workspace'));
-    return Number.isFinite(id) && id > 0 ? id : null;
-  });
+  const [selected, setSelected] = useState<number | null>(null);
   const workspaces = workspacesQuery.data ?? [];
   const workspace = workspaces.find((item) => item.id === selected) ?? workspaces[0] ?? null;
   useEffect(() => {
     if (workspace && workspace.id !== selected) setSelected(workspace.id);
   }, [workspace, selected]);
-  useEffect(() => { if (workspace) localStorage.setItem('ayoub-workspace', String(workspace.id)); }, [workspace]);
   const headers = workspace ? { headers: { 'X-Workspace-Id': String(workspace.id) } } : undefined;
   if (workspacesQuery.isLoading) return <LoadingScreen label="Loading your workspace" />;
   if (workspacesQuery.isError) return <ErrorState title="Workspace unavailable" detail="We couldn't load your workspace. Check your connection and try again." retry={() => void workspacesQuery.refetch()} />;
@@ -196,7 +139,7 @@ function HomePage() {
   const { lang } = useLang();
   const { settings } = useAdminSettings();
   return <main className="public-home">
-    <header className="public-header"><div className="public-topline"><a className="nav-phone" href={`tel:${settings.phone}`} aria-label={tr(lang, `Call ${settings.phone}`, `اتصل على ${settings.phone}`)}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">{settings.phone}</span></a></div><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><a className="public-nav-link" href="#about-us">{tr(lang, 'About us', 'من نحن')}</a><a className="public-nav-link" href="#how-it-works">{tr(lang, 'How it works', 'كيف نعمل')}</a></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>
+    <header className="public-header"><div className="public-topline"><a className="nav-phone" href={`tel:${settings.phone}`} aria-label={tr(lang, `Call ${settings.phone}`, `اتصل على ${settings.phone}`)}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">{settings.phone}</span></a></div><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><a className="public-nav-link" href="#about-us">{tr(lang, 'About us', 'من نحن')}</a><a className="public-nav-link" href="#how-it-works">{tr(lang, 'How it works', 'كيف نعمل')}</a><Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>
     <section className="public-hero">
       <div className="hero-copy reveal"><div className="eyebrow">{tr(lang, 'CUSTOMER SERVICE, GROUNDED', 'خدمة عملاء تستند إلى معلوماتك')}</div>
         <h1>{(lang === 'ar' ? settings.heroTitleAr : settings.heroTitleEn).split('\n').map((line, index) => <span key={`${line}-${index}`}>{line}</span>)}</h1>
@@ -215,19 +158,19 @@ function HomePage() {
     <section className="quote-band"><div className="quote-content"><div className="quote-glyph">“</div><blockquote>{tr(lang, 'A useful answer is one your customer can trust—and your team can stand behind.', 'الإجابة المفيدة هي ما يثق به عميلك ويستطيع فريقك الاعتماد عليه.')}</blockquote></div></section>
     <section className="trust-row"><div className="trust-stat"><strong>01</strong><span>{tr(lang, 'source-backed knowledge base', 'قاعدة معرفة موثوقة')}</span></div><div className="trust-stat"><strong>02</strong><span>{tr(lang, 'languages, one workspace', 'لغتان في مساحة واحدة')}</span></div><div className="trust-stat"><strong>100%</strong><span>{tr(lang, 'your business, your boundaries', 'عملك، وحدودك')}</span></div><div className="eyebrow">{tr(lang, 'CLEAR ANSWERS. HUMAN OVERSIGHT.', 'إجابات واضحة. وإشراف بشري.')}</div></section>
     <section className="cta-section"><div className="eyebrow" style={{ color: '#ffffff75' }}>{tr(lang, 'START WITH WHAT YOU KNOW', 'ابدأ بما تعرفه')}</div><h2>{tr(lang, 'Make every answer feel like yours.', 'اجعل كل إجابة تعبّر عن عملك.')}</h2><p>{tr(lang, 'A practical AI assistant begins with real business knowledge.', 'يبدأ المساعد العملي بمعرفة حقيقية عن عملك.')}</p><Link className="btn" href="/sign-up">{tr(lang, 'Create your workspace', 'أنشئ مساحة عملك')} <ArrowRight size={15} /></Link></section>
-    <footer className="public-footer" style={{ background: settings.primaryColor }}><div className="footer-brand"><SiteBrand inverse /><p>© {new Date().getFullYear()} {tr(lang, settings.brandNameEn, settings.brandNameAr)}. {tr(lang, 'Built for better service.', 'لخدمة أفضل.')}</p></div><div className="footer-links"><a href="#how-it-works">{tr(lang, 'How it works', 'كيف يعمل')}</a><Link href="/sign-in">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link>{(settings.socialLinks ?? []).map((social) => <a key={social.id} className="footer-social-link" href={social.url} target="_blank" rel="noreferrer" aria-label={social.label} title={social.label}><SocialIconMark icon={social.icon} /></a>)}</div></footer>
+    <footer className="public-footer" style={{ background: settings.primaryColor }}><div className="footer-brand"><SiteBrand inverse /><p>© {new Date().getFullYear()} {tr(lang, settings.brandNameEn, settings.brandNameAr)}. {tr(lang, 'Built for better service.', 'لخدمة أفضل.')}</p></div><div className="footer-links"><a href="#how-it-works">{tr(lang, 'How it works', 'كيف يعمل')}</a><Link href="/store">{tr(lang, 'Store', 'المتجر')}</Link><Link href="/sign-in">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link>{(settings.socialLinks ?? []).map((social) => <a key={social.id} className="footer-social-link" href={social.url} target="_blank" rel="noreferrer" aria-label={social.label} title={social.label}><SocialIconMark icon={social.icon} /></a>)}</div></footer>
   </main>;
 }
 function Protected({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth();
-  if (!isLoaded) return <LoadingScreen label="Checking your session" />;
-  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  const { user, loading } = useAppAuth();
+  if (loading) return <LoadingScreen label="Checking your session" />;
+  if (!user) return <Redirect to="/sign-in" />;
   return <WorkspaceProvider><AppShell>{children}</AppShell></WorkspaceProvider>;
 }
 function AppShell({ children }: { children: ReactNode }) {
   const { lang } = useLang();
   const { workspace, workspaces, select } = useWorkspace();
-  const { user } = useUser();
+  const { user } = useAppAuth();
   const [location] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const nav = [
@@ -239,13 +182,13 @@ function AppShell({ children }: { children: ReactNode }) {
     { label: tr(lang, 'Channels', 'القنوات'), href: '/channels', icon: Globe2 },
   ];
   const current = [...nav, { label: tr(lang, 'Settings', 'الإعدادات'), href: '/settings', icon: Settings2 }].find((item) => location.startsWith(item.href))?.label ?? 'Workspace';
-  const initials = user?.firstName?.slice(0, 1) || 'A';
+  const initials = user?.name?.slice(0, 1) || 'A';
   return <div className="app-shell">
     <aside className="sidebar"><SiteBrand inverse />
       <div className="nav-caption">{tr(lang, 'WORKSPACE', 'مساحة العمل')}</div>{nav.map((item) => <Link key={item.href} href={item.href} className={`nav-link ${location.startsWith(item.href) ? 'active' : ''}`} data-testid={`link-nav-${item.href.replaceAll('/', '-').replace(/^-/, '')}`}><item.icon />{item.label}</Link>)}
       <div className="nav-caption" style={{ marginTop: 14 }}>{tr(lang, 'PREFERENCES', 'التفضيلات')}</div><Link href="/settings" className={`nav-link ${location.startsWith('/settings') ? 'active' : ''}`} data-testid="link-nav-settings"><Settings2 />{tr(lang, 'Settings', 'الإعدادات')}</Link>
       <div className="sidebar-bottom"><div className="workspace-chip"><div className="workspace-avatar">{workspace?.name?.slice(0, 1).toUpperCase() || initials}</div><div className="workspace-label"><strong>{workspace?.name}</strong><span>{workspaces.length > 1 ? <select aria-label="Select workspace" value={workspace?.id} onChange={(e) => select(Number(e.target.value))} style={{ background: 'transparent', color: '#ffffffa6', border: 0, fontSize: 10 }}>{workspaces.map((item) => <option style={{ color: '#020618' }} value={item.id} key={item.id}>{item.name}</option>)}</select> : tr(lang, 'Business workspace', 'مساحة عمل تجارية')}</span></div></div>
-        <div className="nav-link" style={{ cursor: 'default' }}><div className="workspace-avatar" style={{ width: 24, height: 24 }}>{initials}</div><span>{user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Account'}</span></div>
+        <div className="nav-link" style={{ cursor: 'default' }}><div className="workspace-avatar" style={{ width: 24, height: 24 }}>{initials}</div><span>{user?.name || user?.email || 'Account'}</span></div>
       </div>
     </aside>
     {menuOpen && <div className="dialog-backdrop" onClick={() => setMenuOpen(false)}><aside className="sidebar" onClick={(e) => e.stopPropagation()}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}><SiteBrand inverse /><button className="icon-button" onClick={() => setMenuOpen(false)}><X size={16} /></button></div>{nav.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className={`nav-link ${location.startsWith(item.href) ? 'active' : ''}`}><item.icon />{item.label}</Link>)}<Link href="/settings" className="nav-link"><Settings2 />{tr(lang, 'Settings', 'الإعدادات')}</Link></aside></div>}
@@ -253,8 +196,13 @@ function AppShell({ children }: { children: ReactNode }) {
   </div>;
 }
 function UserMenu() {
-  const { signOut } = useAuth();
-  return <button className="icon-button" title="Sign out" aria-label="Sign out" data-testid="button-sign-out" onClick={() => void signOut({ redirectUrl: '/' })}><LogOut size={15} /></button>;
+  const { logout } = useAppAuth();
+  const [, setLocation] = useLocation();
+  const signOut = async () => {
+    try { await logout(); } catch { /* The server session is cleared on the next successful request. */ }
+    setLocation('/');
+  };
+  return <button className="icon-button" title="Sign out" aria-label="Sign out" data-testid="button-sign-out" onClick={() => void signOut()}><LogOut size={15} /></button>;
 }
 function PageTitle({ eyebrow, title, description, action }: { eyebrow: string; title: string; description?: string; action?: ReactNode }) {
   return <div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{description && <p className="page-desc">{description}</p>}</div>{action}</div>;
@@ -754,12 +702,25 @@ function ChannelsPage() {
   </main>;
 }
 function AdminLoginPage() {
-  const [, setLocation] = useLocation();
-  const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState('');
-  const submit = (event: FormEvent) => { event.preventDefault(); if (username === 'Ayoub' && password === 'Ayoub123') { localStorage.setItem('qadri-admin-session', 'active'); setLocation('/admin'); } else setError('اسم المستخدم أو كلمة السر غير صحيحة.'); };
-  return <main className="admin-login-page"><form className="panel admin-login-card" onSubmit={submit}><div className="admin-login-brand"><SiteBrand /></div><div className="eyebrow">QADRI AI / ADMIN</div><h1>تسجيل دخول الإدارة</h1><p className="page-desc">ادخل إلى لوحة التحكم لإدارة هوية الموقع ومحتواه.</p><div className="field"><label htmlFor="admin-username">اسم المستخدم</label><input id="admin-username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required /></div><div className="field"><label htmlFor="admin-password">كلمة السر</label><input id="admin-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></div>{error && <p className="admin-error" role="alert">{error}</p>}<button className="btn" type="submit">دخول لوحة التحكم <ArrowRight size={15} /></button><Link className="admin-back-link" href="/">العودة إلى الموقع</Link></form></main>;
+  const { user, loading, login, logout, error: sessionError } = useAppAuth();
+  const [error, setError] = useState('');
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    setError('');
+    void login().catch((cause) => setError(cause instanceof Error ? cause.message : 'تعذر بدء تسجيل الدخول.'));
+  };
+  if (loading) return <LoadingScreen label="Checking your sign-in status" />;
+  if (user?.role === 'admin') return <Redirect to="/admin" />;
+  if (user) return <main className="admin-login-page"><section className="panel admin-login-card"><div className="admin-login-brand"><SiteBrand /></div><div className="eyebrow">AYOUB AI / ACCESS</div><h1>هذا الحساب ليس حساب أدمن</h1><p className="page-desc">سجّلت الدخول بحساب Manus لا يملك صلاحية إدارة الموقع.</p><Link className="btn" href="/dashboard">الانتقال إلى مساحة العمل <ArrowRight size={15} /></Link><button className="btn secondary mt-3" onClick={() => void logout().catch(() => undefined)}>تسجيل الخروج</button><Link className="admin-back-link" href="/">العودة إلى الموقع</Link></section></main>;
+  return <main className="admin-login-page"><form className="panel admin-login-card" onSubmit={submit}><div className="admin-login-brand"><SiteBrand /></div><div className="eyebrow">AYOUB AI / ADMIN</div><h1>تسجيل دخول الإدارة</h1><p className="page-desc">استخدم حساب Manus المصرّح له لإدارة الموقع ومحتواه.</p>{(error || sessionError) && <p className="admin-error" role="alert">{error || sessionError}</p>}<button className="btn" type="submit">تسجيل الدخول باستخدام Manus <ArrowRight size={15} /></button><Link className="admin-back-link" href="/">العودة إلى الموقع</Link></form></main>;
 }
-function AdminGuard({ children }: { children: ReactNode }) { return localStorage.getItem('qadri-admin-session') === 'active' ? <>{children}</> : <Redirect to="/admin/login" />; }
+function AdminGuard({ children }: { children: ReactNode }) {
+  const { user, loading } = useAppAuth();
+  if (loading) return <LoadingScreen label="Checking administrator permissions" />;
+  if (!user) return <Redirect to="/admin/login" />;
+  if (user.role !== 'admin') return <Redirect to="/dashboard" />;
+  return <>{children}</>;
+}
 function HeroMotionAdminEditor({ scenes, enabled, onToggle, onUpdate }: { scenes: HeroMotionScene[]; enabled: boolean; onToggle: () => void; onUpdate: (id: string, patch: Partial<HeroMotionScene>) => void }) {
   return <section className="panel admin-editor hero-admin-editor">
     <div className="panel-head hero-admin-panel-head"><div><h2 className="panel-title">موشن جرافيك الصفحة الرئيسية</h2><div className="panel-kicker">ثلاثة مشاهد متحركة؛ خمس ثوانٍ لكل مشهد، ثم تبدأ الدورة من جديد (15 ثانية).</div></div><button type="button" className={`btn small ${enabled ? 'secondary' : ''}`} onClick={onToggle} aria-pressed={enabled} data-testid="button-toggle-hero-motion">{enabled ? 'إيقاف الحركة' : 'تشغيل الحركة'}</button></div>
@@ -767,11 +728,11 @@ function HeroMotionAdminEditor({ scenes, enabled, onToggle, onUpdate }: { scenes
       <div className="hero-admin-scene-head"><span>المشهد {String(index + 1).padStart(2, '0')} / {String(scenes.length).padStart(2, '0')}</span><label className="field hero-admin-icon-field" htmlFor={`hero-scene-icon-${scene.id}`}>الأيقونة<select id={`hero-scene-icon-${scene.id}`} value={scene.icon} onChange={(event) => onUpdate(scene.id, { icon: event.target.value as HeroMotionIcon })}><option value="sprout">شتلة</option><option value="garden">حديقة</option><option value="care">عناية بالنبتة</option></select></label></div>
       <div className="form-grid hero-admin-fields"><label className="field full">النص بالعربية<input maxLength={80} value={scene.titleAr} onChange={(event) => onUpdate(scene.id, { titleAr: event.target.value })} /></label><label className="field full">الوصف بالعربية<textarea maxLength={150} value={scene.descriptionAr} onChange={(event) => onUpdate(scene.id, { descriptionAr: event.target.value })} /></label><label className="field">Text in English<input maxLength={80} dir="ltr" value={scene.titleEn} onChange={(event) => onUpdate(scene.id, { titleEn: event.target.value })} /></label><label className="field">Description in English<textarea maxLength={150} dir="ltr" value={scene.descriptionEn} onChange={(event) => onUpdate(scene.id, { descriptionEn: event.target.value })} /></label></div>
     </article>)}</div>
-    <p className="admin-save-note" role="status">يتم حفظ النصوص والأيقونات تلقائيًا في متصفح الأدمن الحالي.</p>
+    <p className="admin-save-note" role="status">تُحفظ النصوص والأيقونات تلقائيًا في قاعدة Neon.</p>
   </section>;
 }
 function AdminDashboardPage() {
-  const { settings, update } = useAdminSettings(); const [, setLocation] = useLocation();
+  const { settings, update, saveState } = useAdminSettings(); const [, setLocation] = useLocation(); const { logout: authLogout } = useAppAuth();
   const chartData = [{ name: 'Jan', visits: 420, leads: 32 }, { name: 'Feb', visits: 610, leads: 46 }, { name: 'Mar', visits: 540, leads: 41 }, { name: 'Apr', visits: 830, leads: 68 }, { name: 'May', visits: 760, leads: 59 }, { name: 'Jun', visits: 980, leads: 84 }];
   const set = (key: keyof AdminSettings, value: string) => update({ [key]: value });
   const [draftSocial, setDraftSocial] = useState<{ label: string; url: string; icon: SocialIcon }>({ label: '', url: '', icon: 'instagram' });
@@ -788,46 +749,33 @@ function AdminDashboardPage() {
   const motionScenes = settings.heroMotionScenes?.length ? settings.heroMotionScenes : defaultHeroMotionScenes;
   const updateMotionScene = (id: string, patch: Partial<HeroMotionScene>) => update({ heroMotionScenes: motionScenes.map((scene) => scene.id === id ? { ...scene, ...patch } : scene) });
   const toggleHeroMotion = () => update({ heroMotionEnabled: !settings.heroMotionEnabled });
-  const logout = () => { localStorage.removeItem('qadri-admin-session'); setLocation('/'); };
-  return <main className="admin-page"><div className="admin-head"><div><div className="eyebrow">QADRI AI / ADMIN DASHBOARD</div><h1>لوحة تحكم الأدمن</h1><p className="page-desc">تحليلات الموقع وإدارة الهوية والمحتوى من مكان واحد.</p></div><div className="admin-head-actions"><Link className="btn secondary small" href="/">مشاهدة الموقع</Link><button className="btn small" onClick={logout}>تسجيل الخروج</button></div></div><div className="admin-metrics"><section className="panel admin-metric"><span>زيارات الموقع</span><strong>4,140</strong><small>+18.4% هذا الشهر</small></section><section className="panel admin-metric"><span>طلبات التواصل</span><strong>330</strong><small>+12.1% هذا الشهر</small></section><section className="panel admin-metric"><span>معدل التحويل</span><strong>8.1%</strong><small>قابل للربط بالبيانات لاحقًا</small></section><section className="panel admin-metric"><span>آخر تحديث</span><strong>الآن</strong><small>إعدادات محفوظة محليًا</small></section></div><div className="admin-chart-grid"><section className="panel admin-chart-card"><div className="panel-head"><div><h2 className="panel-title">أداء الموقع</h2><div className="panel-kicker">زيارات العملاء والطلبات خلال الأشهر الأخيرة</div></div></div><div className="admin-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="visitsFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={settings.primaryColor} stopOpacity={0.28} /><stop offset="95%" stopColor={settings.primaryColor} stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="#02061812" vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Area type="monotone" dataKey="visits" stroke={settings.primaryColor} fill="url(#visitsFill)" strokeWidth={2} /></AreaChart></ResponsiveContainer></div></section><section className="panel admin-chart-card"><div className="panel-head"><div><h2 className="panel-title">طلبات التواصل</h2><div className="panel-kicker">بيانات تجريبية جاهزة للربط مع التحليلات</div></div></div><div className="admin-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData}><CartesianGrid stroke="#02061812" vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="leads" fill={settings.primaryColor} radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer></div></section></div><section className="panel admin-editor"><div className="panel-head"><div><h2 className="panel-title">تعديل الموقع</h2><div className="panel-kicker">أي تغيير تحفظه هنا يظهر مباشرة على الصفحة الرئيسية في هذا المتصفح.</div></div></div><div className="admin-editor-grid"><div className="field"><label>اسم الموقع بالإنجليزية</label><input value={settings.brandNameEn} onChange={(event) => set('brandNameEn', event.target.value)} /></div><div className="field"><label>اسم الموقع بالعربية</label><input value={settings.brandNameAr} onChange={(event) => set('brandNameAr', event.target.value)} /></div><div className="field"><label>رقم الهاتف</label><input dir="ltr" value={settings.phone} onChange={(event) => set('phone', event.target.value.replace(/[^0-9+]/g, ''))} /></div><div className="field"><label>رابط الشعار</label><input dir="ltr" value={settings.logoUrl} onChange={(event) => set('logoUrl', event.target.value)} /></div><div className="field"><label>اللون الرئيسي</label><div className="admin-color-field"><input type="color" value={settings.primaryColor} onChange={(event) => set('primaryColor', event.target.value)} /><code>{settings.primaryColor}</code></div></div><div className="field"><label>عنوان الصفحة بالإنجليزية</label><textarea value={settings.heroTitleEn} onChange={(event) => set('heroTitleEn', event.target.value)} /></div><div className="field"><label>عنوان الصفحة بالعربية</label><textarea value={settings.heroTitleAr} onChange={(event) => set('heroTitleAr', event.target.value)} /></div><div className="field full"><label>وصف الصفحة بالإنجليزية</label><textarea value={settings.heroDescriptionEn} onChange={(event) => set('heroDescriptionEn', event.target.value)} /></div><div className="field full"><label>وصف الصفحة بالعربية</label><textarea value={settings.heroDescriptionAr} onChange={(event) => set('heroDescriptionAr', event.target.value)} /></div></div><p className="admin-save-note" role="status">يتم الحفظ تلقائيًا في المتصفح.</p></section><HeroMotionAdminEditor scenes={motionScenes} enabled={settings.heroMotionEnabled !== false} onToggle={toggleHeroMotion} onUpdate={updateMotionScene} />
-    <section className="panel admin-editor admin-social-editor"><div className="panel-head"><div><h2 className="panel-title">روابط السوشيال ميديا</h2><div className="panel-kicker">أضف الروابط التي ستظهر في الفوتر. التعديل والحذف يتمان مباشرة.</div></div></div><div className="admin-social-list">{socialLinks.length ? socialLinks.map((social) => <div className="admin-social-row" key={social.id}><div className="admin-social-icon"><SocialIconMark icon={social.icon} /></div><div className="field"><label>الاسم</label><input value={social.label} onChange={(event) => updateSocial(social.id, { label: event.target.value })} /></div><div className="field"><label>الرابط</label><input dir="ltr" type="url" value={social.url} onChange={(event) => updateSocial(social.id, { url: event.target.value })} /></div><div className="field"><label>المنصة</label><select value={social.icon} onChange={(event) => updateSocial(social.id, { icon: event.target.value as SocialIcon })}><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="linkedin">LinkedIn</option><option value="youtube">YouTube</option><option value="website">Website</option></select></div><button type="button" className="icon-button admin-delete-social" onClick={() => removeSocial(social.id)} aria-label={`حذف ${social.label}`} title="حذف الرابط"><Trash2 size={15} /></button></div>) : <p className="admin-social-empty">لا توجد روابط مضافة بعد. أضف أول رابط ليظهر في الفوتر.</p>}</div><div className="admin-social-add"><div className="field"><label>اسم الرابط</label><input value={draftSocial.label} onChange={(event) => setDraftSocial((current) => ({ ...current, label: event.target.value }))} placeholder="Instagram" /></div><div className="field"><label>الرابط الكامل</label><input dir="ltr" type="url" value={draftSocial.url} onChange={(event) => setDraftSocial((current) => ({ ...current, url: event.target.value }))} placeholder="https://instagram.com/..." /></div><div className="field"><label>المنصة</label><select value={draftSocial.icon} onChange={(event) => setDraftSocial((current) => ({ ...current, icon: event.target.value as SocialIcon }))}><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="linkedin">LinkedIn</option><option value="youtube">YouTube</option><option value="website">Website</option></select></div><button type="button" className="btn small" onClick={addSocial} disabled={!draftSocial.label.trim() || !/^https?:\/\//i.test(draftSocial.url.trim())}><Plus size={14} />إضافة رابط</button></div><p className="admin-save-note" role="status">تظهر التغييرات فوراً في الفوتر وتحفظ تلقائياً في إعدادات الأدمن.</p></section></main>;
+  const logout = async () => { try { await authLogout(); } catch { /* The server session is checked again on navigation. */ } setLocation('/'); };
+  return <main className="admin-page"><div className="admin-head"><div><div className="eyebrow">QADRI AI / ADMIN DASHBOARD</div><h1>لوحة تحكم الأدمن</h1><p className="page-desc">تحليلات الموقع وإدارة الهوية والمحتوى من مكان واحد.</p></div><div className="admin-head-actions"><Link className="btn secondary small" href="/">مشاهدة الموقع</Link><Link className="btn secondary small" href="/admin/store">إدارة المتجر</Link><button className="btn small" onClick={logout}>تسجيل الخروج</button></div></div><div className="admin-metrics"><section className="panel admin-metric"><span>زيارات الموقع</span><strong>4,140</strong><small>+18.4% هذا الشهر</small></section><section className="panel admin-metric"><span>طلبات التواصل</span><strong>330</strong><small>+12.1% هذا الشهر</small></section><section className="panel admin-metric"><span>معدل التحويل</span><strong>8.1%</strong><small>قابل للربط بالبيانات لاحقًا</small></section><section className="panel admin-metric"><span>آخر تحديث</span><strong>الآن</strong><small>إعدادات محفوظة في Neon</small></section></div><div className="admin-chart-grid"><section className="panel admin-chart-card"><div className="panel-head"><div><h2 className="panel-title">أداء الموقع</h2><div className="panel-kicker">زيارات العملاء والطلبات خلال الأشهر الأخيرة</div></div></div><div className="admin-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="visitsFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={settings.primaryColor} stopOpacity={0.28} /><stop offset="95%" stopColor={settings.primaryColor} stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="#02061812" vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Area type="monotone" dataKey="visits" stroke={settings.primaryColor} fill="url(#visitsFill)" strokeWidth={2} /></AreaChart></ResponsiveContainer></div></section><section className="panel admin-chart-card"><div className="panel-head"><div><h2 className="panel-title">طلبات التواصل</h2><div className="panel-kicker">بيانات تجريبية جاهزة للربط مع التحليلات</div></div></div><div className="admin-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData}><CartesianGrid stroke="#02061812" vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="leads" fill={settings.primaryColor} radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer></div></section></div><section className="panel admin-editor"><div className="panel-head"><div><h2 className="panel-title">تعديل الموقع</h2><div className="panel-kicker">تُحفظ التغييرات في Neon وتظهر للزوار بعد اكتمال الحفظ.</div></div></div><div className="admin-editor-grid"><div className="field"><label>اسم الموقع بالإنجليزية</label><input value={settings.brandNameEn} onChange={(event) => set('brandNameEn', event.target.value)} /></div><div className="field"><label>اسم الموقع بالعربية</label><input value={settings.brandNameAr} onChange={(event) => set('brandNameAr', event.target.value)} /></div><div className="field"><label>رقم الهاتف</label><input dir="ltr" value={settings.phone} onChange={(event) => set('phone', event.target.value.replace(/[^0-9+]/g, ''))} /></div><div className="field"><label>رابط الشعار</label><input dir="ltr" value={settings.logoUrl} onChange={(event) => set('logoUrl', event.target.value)} /></div><div className="field"><label>اللون الرئيسي</label><div className="admin-color-field"><input type="color" value={settings.primaryColor} onChange={(event) => set('primaryColor', event.target.value)} /><code>{settings.primaryColor}</code></div></div><div className="field"><label>عنوان الصفحة بالإنجليزية</label><textarea value={settings.heroTitleEn} onChange={(event) => set('heroTitleEn', event.target.value)} /></div><div className="field"><label>عنوان الصفحة بالعربية</label><textarea value={settings.heroTitleAr} onChange={(event) => set('heroTitleAr', event.target.value)} /></div><div className="field full"><label>وصف الصفحة بالإنجليزية</label><textarea value={settings.heroDescriptionEn} onChange={(event) => set('heroDescriptionEn', event.target.value)} /></div><div className="field full"><label>وصف الصفحة بالعربية</label><textarea value={settings.heroDescriptionAr} onChange={(event) => set('heroDescriptionAr', event.target.value)} /></div></div><p className="admin-save-note" role="status">{saveState === 'saving' ? 'جارٍ الحفظ في Neon…' : saveState === 'error' ? 'تعذر الحفظ في Neon. حاول مجددًا.' : 'تم الحفظ في قاعدة بيانات Neon.'}</p></section><HeroMotionAdminEditor scenes={motionScenes} enabled={settings.heroMotionEnabled !== false} onToggle={toggleHeroMotion} onUpdate={updateMotionScene} />
+    <section className="panel admin-editor admin-social-editor"><div className="panel-head"><div><h2 className="panel-title">روابط السوشيال ميديا</h2><div className="panel-kicker">أضف الروابط التي ستظهر في الفوتر. التعديل والحذف يتمان مباشرة.</div></div></div><div className="admin-social-list">{socialLinks.length ? socialLinks.map((social) => <div className="admin-social-row" key={social.id}><div className="admin-social-icon"><SocialIconMark icon={social.icon} /></div><div className="field"><label>الاسم</label><input value={social.label} onChange={(event) => updateSocial(social.id, { label: event.target.value })} /></div><div className="field"><label>الرابط</label><input dir="ltr" type="url" value={social.url} onChange={(event) => updateSocial(social.id, { url: event.target.value })} /></div><div className="field"><label>المنصة</label><select value={social.icon} onChange={(event) => updateSocial(social.id, { icon: event.target.value as SocialIcon })}><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="linkedin">LinkedIn</option><option value="youtube">YouTube</option><option value="website">Website</option></select></div><button type="button" className="icon-button admin-delete-social" onClick={() => removeSocial(social.id)} aria-label={`حذف ${social.label}`} title="حذف الرابط"><Trash2 size={15} /></button></div>) : <p className="admin-social-empty">لا توجد روابط مضافة بعد. أضف أول رابط ليظهر في الفوتر.</p>}</div><div className="admin-social-add"><div className="field"><label>اسم الرابط</label><input value={draftSocial.label} onChange={(event) => setDraftSocial((current) => ({ ...current, label: event.target.value }))} placeholder="Instagram" /></div><div className="field"><label>الرابط الكامل</label><input dir="ltr" type="url" value={draftSocial.url} onChange={(event) => setDraftSocial((current) => ({ ...current, url: event.target.value }))} placeholder="https://instagram.com/..." /></div><div className="field"><label>المنصة</label><select value={draftSocial.icon} onChange={(event) => setDraftSocial((current) => ({ ...current, icon: event.target.value as SocialIcon }))}><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="linkedin">LinkedIn</option><option value="youtube">YouTube</option><option value="website">Website</option></select></div><button type="button" className="btn small" onClick={addSocial} disabled={!draftSocial.label.trim() || !/^https?:\/\//i.test(draftSocial.url.trim())}><Plus size={14} />إضافة رابط</button></div><p className="admin-save-note" role="status">تظهر التغييرات في الفوتر بعد حفظها في قاعدة Neon.</p></section></main>;
 }
 function SettingsPage() {
-  const { workspace } = useWorkspace(); const { user } = useUser(); const { lang, setLang } = useLang();
+  const { workspace } = useWorkspace(); const { user } = useAppAuth(); const { lang, setLang } = useLang();
   const [tab, setTab] = useState<'account' | 'workspace' | 'language'>('account');
   return <main className="page"><PageTitle eyebrow="PREFERENCES" title="Settings" description="Manage your account, workspace context, and language." />
     <section className="panel form-card"><div className="settings-nav"><button onClick={() => setTab('account')} className={`settings-tab ${tab === 'account' ? 'active' : ''}`}>Account</button><button onClick={() => setTab('workspace')} className={`settings-tab ${tab === 'workspace' ? 'active' : ''}`}>Workspace</button><button onClick={() => setTab('language')} className={`settings-tab ${tab === 'language' ? 'active' : ''}`}>Language</button></div>
-      {tab === 'account' && <div className="form-grid"><InfoBlock label="Name" value={user?.fullName || '—'} /><InfoBlock label="Email" value={user?.primaryEmailAddress?.emailAddress || '—'} /><div className="field full"><label>Authentication</label><div className="panel p-4 text-xs leading-relaxed">Your account is secured by Clerk. Sign-in and session state use your browser's secure session cookie.</div></div></div>}
+      {tab === 'account' && <div className="form-grid"><InfoBlock label="Name" value={user?.name || '—'} /><InfoBlock label="Email" value={user?.email || '—'} /><div className="field full"><label>Authentication</label><div className="panel p-4 text-xs leading-relaxed">Your account uses Manus OAuth. The server verifies your session; no sign-in token is saved in browser storage.</div></div></div>}
       {tab === 'workspace' && <div className="form-grid"><InfoBlock label="Workspace name" value={workspace?.name || '—'} /><InfoBlock label="Workspace ID" value={String(workspace?.id ?? '—')} /><div className="field full"><label>Knowledge and agent ownership</label><div className="panel p-4 text-xs leading-relaxed">Agents, products, approved answers, business policies, and channel states belong to this workspace.</div></div></div>}
       {tab === 'language' && <div className="form-grid"><Field label="Interface language"><select value={lang} onChange={(e) => setLang(e.target.value as Lang)}><option value="en">English · Left to right</option><option value="ar">العربية · من اليمين إلى اليسار</option></select></Field><div className="field"><label>Direction</label><div className="panel p-3 text-xs">{lang === 'ar' ? 'RTL — من اليمين إلى اليسار' : 'LTR — Left to right'}</div></div><div className="field full"><p className="page-desc">The workspace interface direction updates immediately. Agent response language is configured for each agent.</p></div></div>}
     </section></main>;
 }
 function RootRoute() {
-  return <><Show when="signed-out"><HomePage /></Show><Show when="signed-in"><Redirect to="/dashboard" /></Show></>;
+  return <HomePage />;
 }
 function ProtectedRoute({ children }: { children: ReactNode }) { return <Protected>{children}</Protected>; }
-function AuthSetupPage() {
-  const { lang } = useLang();
-  return <main className="public-home"><nav className="public-nav"><SiteBrand /><LanguageButton /></nav><section className="public-section"><div className="panel form-card" style={{ maxWidth: 620, margin: '40px auto' }}><div className="eyebrow">AYOUB AI / ACCOUNT SETUP</div><h1>{tr(lang, 'Account access is not configured yet', 'لم يتم إعداد الدخول إلى الحساب بعد')}</h1><p className="page-desc">{tr(lang, 'The public site is available, but sign-up and sign-in need the project owner to configure Clerk keys for the frontend and API. No demo account or simulated authentication is being used.', 'الموقع العام متاح، لكن التسجيل وتسجيل الدخول يحتاجان إلى إعداد مفاتيح Clerk للواجهة والخادم. لن نستخدم حسابًا تجريبيًا أو دخولًا وهميًا.')}</p><Link className="btn secondary small" href="/">{tr(lang, 'Back to home', 'العودة إلى الرئيسية')} <ArrowLeft size={14} /></Link></div></section></main>;
-}
-function PublicPreviewRouter() {
-  const [location] = useLocation();
-  return <ErrorBoundary resetKey={location}><Switch>
-    <Route path="/" component={HomePage} />
-    <Route path="/sign-in/*?" component={AdminLoginPage} />
-    <Route path="/admin/login" component={AdminLoginPage} />
-    <Route path="/admin"><AdminGuard><AdminDashboardPage /></AdminGuard></Route>
-    <Route path="/sign-up/*?" component={AuthSetupPage} />
-    <Route component={NotFound} />
-  </Switch></ErrorBoundary>;
-}
 function Router() {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}><Switch>
     <Route path="/" component={RootRoute} />
+    <Route path="/store" component={PublicStorePage} />
     <Route path="/sign-in/*?" component={AdminLoginPage} />
-    <Route path="/sign-up/*?"><SignUp routing="path" path={`${basePath}/sign-up`} /></Route>
+    <Route path="/sign-up/*?" component={AdminLoginPage} />
     <Route path="/admin/login" component={AdminLoginPage} />
+    <Route path="/admin/store"><AdminGuard><AdminStorePage /></AdminGuard></Route>
     <Route path="/admin"><AdminGuard><AdminDashboardPage /></AdminGuard></Route>
     <Route path="/dashboard"><ProtectedRoute><DashboardPage /></ProtectedRoute></Route>
     <Route path="/agents"><ProtectedRoute><AgentsPage /></ProtectedRoute></Route>
@@ -845,12 +793,7 @@ function Router() {
   </Switch></ErrorBoundary>;
 }
 function App() {
-  if (!clerkPubKey) {
-    return <AdminSettingsProvider><QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><PublicPreviewRouter /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider></AdminSettingsProvider>;
-  }
-  return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} routerPush={(to) => { window.history.pushState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }} routerReplace={(to) => { window.history.replaceState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }}>
-    <AdminSettingsProvider><QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider></AdminSettingsProvider>
-  </ClerkProvider>;
+  return <QueryClientProvider client={queryClient}><AuthProvider><AdminSettingsProvider><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></AdminSettingsProvider></AuthProvider></QueryClientProvider>;
 }
 
 export default App;

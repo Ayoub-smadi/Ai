@@ -337,6 +337,10 @@ export async function customFetch<T = unknown>(
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
 
+  if (!new Set(["GET", "HEAD", "OPTIONS"]).has(method)) {
+    headers.set("X-App-Request", "1");
+  }
+
   if (
     typeof init.body === "string" &&
     !headers.has("content-type") &&

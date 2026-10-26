@@ -611,5 +611,3 @@ export const ListChannelsResponseItem = zod.object({
   "detail": zod.string()
 })
 export const ListChannelsResponse = zod.array(ListChannelsResponseItem)
-
-

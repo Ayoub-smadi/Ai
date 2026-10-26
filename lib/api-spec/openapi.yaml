@@ -653,4 +653,3 @@ components:
         status: { type: string, enum: [not_configured, configuration_required, connected, error, disconnected] }
         detail: { type: string }
       required: [id, name, status, detail]
-

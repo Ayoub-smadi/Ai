@@ -359,4 +359,3 @@ export const ListProductsAvailability = {
   out_of_stock: 'out_of_stock',
   unknown: 'unknown',
 } as const;
-
