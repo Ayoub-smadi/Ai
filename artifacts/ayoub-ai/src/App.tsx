@@ -157,10 +157,7 @@ function HomePage() {
         <div className="hero-actions"><Link href="/sign-up" className="btn">{tr(lang, 'Build your first agent', 'أنشئ وكيلك الأول')} <ArrowRight size={15} /></Link><a href="#how-it-works" className="btn secondary">{tr(lang, 'See how it works', 'كيف يعمل')} <ArrowDownLeft size={14} /></a></div>
         <div className="hero-note">{tr(lang, 'BUILT FOR THE DETAILS THAT MATTER', 'مصمم للتفاصيل المهمة')}</div>
       </div>
-      <div className="hero-art reveal"><div className="art-grid" /><div className="orbit" /><div className="orbit two" /><div className="orbit three" />
-        <div className="orbit-node one"><Package /><span>Product facts</span></div><div className="orbit-node two"><ShieldCheck /><span>Approved policies</span></div>
-        <div className="orbit-node three"><MessageSquareText /><span>Grounded replies</span></div><div className="core-mark">A.</div><div className="art-label">KNOWLEDGE → CONVERSATION</div>
-      </div>
+      <div className="hero-art hero-video-art reveal"><video className="hero-video" autoPlay loop muted playsInline preload="metadata" aria-label={tr(lang, 'Animated gardening service introduction', 'فيديو تعريفي متحرك لخدمات الزراعة')}><source src="/hero-motion.mp4" type="video/mp4" /></video></div>
     </section>
     <section className="public-section" id="about-us"><div className="public-section-inner" id="how-it-works">
       <div className="section-heading"><div><div className="eyebrow">{tr(lang, 'A SIMPLE FOUNDATION', 'بداية واضحة')}</div><h2>{tr(lang, 'Give your agent the right things to know.', 'امنح وكيلك المعرفة التي يحتاجها.')}</h2></div><p>{tr(lang, 'AYOUB AI turns the knowledge your team already has into practical, dependable customer conversations—in Arabic and English.', 'يحوّل AYOUB AI معرفة فريقك إلى محادثات عملية وموثوقة مع العملاء، بالعربية والإنجليزية.')}</p></div>

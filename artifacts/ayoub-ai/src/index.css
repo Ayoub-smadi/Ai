@@ -187,6 +187,8 @@ h1,h2,h3,p { margin-top:0; } h1 {font-size:clamp(30px,4vw,43px);letter-spacing:-
 .hero-note{font:10px var(--app-font-mono);color:#0206186d;margin-top:20px;display:flex;align-items:center;gap:9px;}
 .hero-note:before{content:'';width:20px;height:1px;background:#02061866;}
 .hero-art{min-height:430px;position:relative;border:1px solid #02061816;border-radius:20px;overflow:hidden;background:#fff;display:grid;place-items:center;}
+.hero-video-art{background:#fff;isolation:isolate;}
+.hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
 .art-grid{position:absolute;inset:0;background-image:linear-gradient(#0206180a 1px,transparent 1px),linear-gradient(90deg,#0206180a 1px,transparent 1px);background-size:35px 35px;mask-image:linear-gradient(black,transparent 90%);}
 .orbit{border:1px solid #0206181b;border-radius:50%;position:absolute;width:340px;height:340px;}
 .orbit.two{width:245px;height:245px;border-style:dashed;opacity:.55;}
