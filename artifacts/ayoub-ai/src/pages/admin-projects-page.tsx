@@ -1,0 +1,23 @@
+import { useState, type FormEvent } from 'react';
+import { ArrowRight, ImagePlus, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
+import { Link } from 'wouter';
+import { getPortfolioProjects, savePortfolioProjects, type PortfolioProject } from '@/data/site-content';
+
+const blankProject = (): PortfolioProject => ({ id: '', name: '', category: '', description: '', image: '', location: '', date: '' });
+export default function AdminProjectsPage() {
+  const [projects, setProjects] = useState(getPortfolioProjects);
+  const [draft, setDraft] = useState<PortfolioProject | null>(null);
+  const [error, setError] = useState('');
+  const updateDraft = (patch: Partial<PortfolioProject>) => setDraft((current) => current ? { ...current, ...patch } : current);
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    if (!draft?.name.trim()) { setError('يرجى إدخال اسم المشروع.'); return; }
+    const next = draft.id ? projects.map((project) => project.id === draft.id ? draft : project) : [{ ...draft, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...projects];
+    setProjects(next); savePortfolioProjects(next); setDraft(null); setError('');
+  };
+  const remove = (id: string) => { if (!window.confirm('هل تريد حذف هذا المشروع؟')) return; const next = projects.filter((project) => project.id !== id); setProjects(next); savePortfolioProjects(next); };
+  return <main className="admin-page content-admin-page" dir="rtl"><header className="admin-head"><div><div className="eyebrow">QADRI AI / PORTFOLIO</div><h1>إدارة المشاريع</h1><p className="page-desc">أضف مشاريعكم وأعمالكم لتظهر في صفحة مشاريعنا على الموقع.</p></div><div className="admin-head-actions"><Link className="btn secondary small" href="/admin"><ArrowRight size={14} />لوحة التحكم</Link><button className="btn" onClick={() => setDraft(blankProject())}><Plus size={15} />إضافة مشروع</button></div></header>
+    {projects.length ? <div className="content-admin-grid">{projects.map((project) => <article className="panel content-admin-card" key={project.id}>{project.image ? <img src={project.image} alt={project.name} /> : <div className="content-admin-card-placeholder"><ImagePlus size={24} /></div>}<div className="content-admin-card-body"><span className="eyebrow">{project.category || 'مشروع'}</span><h2>{project.name}</h2><p>{project.description || 'لا يوجد وصف.'}</p>{project.location && <small>{project.location}</small>}<div className="content-admin-card-actions"><button className="btn secondary small" onClick={() => setDraft({ ...project })}><Pencil size={14} />تعديل</button><button className="btn danger small" onClick={() => remove(project.id)}><Trash2 size={14} />حذف</button></div></div></article>)}</div> : <section className="panel content-admin-empty"><ImagePlus size={28} /><h2>لا توجد مشاريع بعد</h2><p>أضف أول مشروع ليظهر للزوار في صفحة مشاريعنا.</p><button className="btn" onClick={() => setDraft(blankProject())}><Plus size={15} />إضافة مشروع</button></section>}
+    {draft && <div className="content-admin-backdrop" onClick={() => setDraft(null)}><form className="panel content-admin-form" onSubmit={save} onClick={(event) => event.stopPropagation()}><header><div><span className="eyebrow">PROJECT DETAILS</span><h2>{draft.id ? 'تعديل المشروع' : 'إضافة مشروع جديد'}</h2></div><button type="button" className="icon-button" onClick={() => setDraft(null)} aria-label="إغلاق"><X size={18} /></button></header><label>اسم المشروع *<input required value={draft.name} onChange={(event) => updateDraft({ name: event.target.value })} /></label><div className="content-admin-form-row"><label>التصنيف<input value={draft.category} onChange={(event) => updateDraft({ category: event.target.value })} placeholder="تنسيق حدائق، زراعة..." /></label><label>الموقع<input value={draft.location} onChange={(event) => updateDraft({ location: event.target.value })} placeholder="المدينة أو المنطقة" /></label></div><label>وصف المشروع<textarea rows={4} value={draft.description} onChange={(event) => updateDraft({ description: event.target.value })} /></label><label>رابط صورة المشروع<input dir="ltr" type="url" value={draft.image} onChange={(event) => updateDraft({ image: event.target.value })} placeholder="https://..." /></label><label>تاريخ المشروع<input type="date" value={draft.date} onChange={(event) => updateDraft({ date: event.target.value })} /></label>{error && <p className="admin-error">{error}</p>}<footer><button type="button" className="btn secondary" onClick={() => setDraft(null)}>إلغاء</button><button className="btn" type="submit"><Save size={15} />حفظ المشروع</button></footer></form></div>}
+  </main>;
+}
