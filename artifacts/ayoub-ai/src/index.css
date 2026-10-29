@@ -394,3 +394,7 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
 
 /* Keep the image column inside the quote sheet instead of overflowing beyond its left edge */
 .quote-items-table{width:100%;min-width:0!important;table-layout:fixed}.quote-items-wrap{width:100%;max-width:100%;overflow-x:auto}.quote-items-table td.quote-image-cell,.quote-items-table th:last-child{min-width:0}
+
+/* Editable logo on the quote sheet */
+.quote-logo-picker{position:relative;cursor:pointer;outline:2px dashed transparent;outline-offset:3px;transition:outline-color .15s}.quote-logo-picker:hover,.quote-logo-picker:focus-within{outline-color:#839a86}.quote-logo-picker .quote-logo-edit-hint{position:absolute;inset:auto 0 0;background:#020618c9;color:white;text-align:center;font-size:9px;padding:5px 3px;opacity:0;transition:opacity .15s}.quote-logo-picker:hover .quote-logo-edit-hint,.quote-logo-picker:focus-within .quote-logo-edit-hint{opacity:1}.quote-logo-picker input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.quote-export-logo{width:88px;height:88px;object-fit:contain}
+@media print{.quote-logo-picker{outline:0}.quote-logo-picker .quote-logo-edit-hint,.quote-logo-picker input[type=file]{display:none}}
