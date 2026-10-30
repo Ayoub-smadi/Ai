@@ -16,12 +16,16 @@ export type LandscapeQuoteItem = {
   landscapeY?: number;
 };
 export type LandscapeGlobalShape = 'circle' | 'rectangle' | 'square';
-export type LandscapeQuote = { number: string; items: LandscapeQuoteItem[]; showScientificNames?: boolean; landscapeDefaultSize?: number; landscapeDefaultShape?: LandscapeGlobalShape | 'auto' };
+export type LandscapeAnnotation =
+  | { id: string; kind: 'line'; x: number; y: number; length: number; thickness: number; angle: number; color: string }
+  | { id: string; kind: 'number'; x: number; y: number; value: string; size: number; color: string };
+export type LandscapeQuote = { number: string; items: LandscapeQuoteItem[]; showScientificNames?: boolean; landscapeDefaultSize?: number; landscapeDefaultShape?: LandscapeGlobalShape | 'auto'; landscapeAnnotations?: LandscapeAnnotation[] };
 type Props = {
   quote: LandscapeQuote;
   onItemChange: (id: string, patch: Partial<LandscapeQuoteItem>) => void;
   onShowScientificNamesChange: (value: boolean) => void;
   onGlobalSettingsChange: (size: number, shape: LandscapeGlobalShape) => void;
+  onAnnotationsChange: (annotations: LandscapeAnnotation[]) => void;
   onAddMaterial: (name: string) => void;
 };
 type Material = { name: string; icon: typeof Sprout };
@@ -73,18 +77,22 @@ function UploadField({ label, onFile }: { label: string; onFile: (src: string) =
   };
   return <label className="landscape-upload-button"><Upload size={13} />{label}<input type="file" accept="image/*" onChange={readImage} />{error && <small role="alert">{error}</small>}</label>;
 }
-export default function LandscapePlan({ quote, onItemChange, onShowScientificNamesChange, onGlobalSettingsChange, onAddMaterial }: Props) {
+export default function LandscapePlan({ quote, onItemChange, onShowScientificNamesChange, onGlobalSettingsChange, onAnnotationsChange, onAddMaterial }: Props) {
   const items = quote.items.filter((item) => item.name.trim());
   const globalSize = quote.landscapeDefaultSize ?? 58;
   const globalShape: LandscapeGlobalShape = quote.landscapeDefaultShape === 'rectangle' || quote.landscapeDefaultShape === 'square' ? quote.landscapeDefaultShape : 'circle';
   const materialItems = items.filter((item) => item.category.includes('مواد Landscape /'));
+  const annotations = quote.landscapeAnnotations ?? [];
   const canvasRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState('');
   const activeDrag = useRef<{ id: string; pointerId: number } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'plan' | 'table'>('plan');
+  const activeAnnotationDrag = useRef<{ id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number } | null>(null);
+  const selectedAnnotation = annotations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
   const startDrag = (event: PointerEvent<HTMLDivElement>, id: string) => {
     if (event.button !== 0) return;
     event.preventDefault();
@@ -103,6 +111,37 @@ export default function LandscapePlan({ quote, onItemChange, onShowScientificNam
     if (activeDrag.current?.pointerId === event.pointerId) {
       activeDrag.current = null;
       setDraggingId(null);
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+  const addAnnotation = (kind: 'line' | 'number') => {
+    const id = `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const annotation: LandscapeAnnotation = kind === 'line'
+      ? { id, kind, x: 18, y: 82, length: 34, thickness: 4, angle: 0, color: '#315c3c' }
+      : { id, kind, x: 50, y: 50, value: String(annotations.filter((item) => item.kind === 'number').length + 1), size: 34, color: '#315c3c' };
+    onAnnotationsChange([...annotations, annotation]);
+    setSelectedAnnotationId(id);
+  };
+  const updateAnnotation = (id: string, changes: Partial<LandscapeAnnotation>) => onAnnotationsChange(annotations.map((annotation) => annotation.id === id ? { ...annotation, ...changes } as LandscapeAnnotation : annotation));
+  const startAnnotationDrag = (event: PointerEvent<HTMLDivElement>, annotation: LandscapeAnnotation) => {
+    if (event.button !== 0 || !canvasRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    activeAnnotationDrag.current = { id: annotation.id, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startX: annotation.x, startY: annotation.y };
+    setSelectedAnnotationId(annotation.id);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moveAnnotationDrag = (event: PointerEvent<HTMLDivElement>, id: string) => {
+    const active = activeAnnotationDrag.current;
+    if (!active || active.id !== id || active.pointerId !== event.pointerId || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = Math.max(2, Math.min(98, active.startX + (event.clientX - active.startClientX) / rect.width * 100));
+    const y = Math.max(3, Math.min(97, active.startY + (event.clientY - active.startClientY) / rect.height * 100));
+    updateAnnotation(id, { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) });
+  };
+  const endAnnotationDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (activeAnnotationDrag.current?.pointerId === event.pointerId) {
+      activeAnnotationDrag.current = null;
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     }
   };
@@ -143,6 +182,7 @@ export default function LandscapePlan({ quote, onItemChange, onShowScientificNam
           if (!canvasRef.current) throw new Error('المخطط غير ظاهر للتنزيل.');
           const clone = canvasRef.current.cloneNode(true) as HTMLDivElement;
           clone.style.cssText += ';width:1120px!important;height:500px!important;max-width:none!important;margin:0!important;overflow:hidden!important;';
+          clone.querySelectorAll('.selected').forEach((element) => element.classList.remove('selected'));
           wrapper.appendChild(clone);
         } else {
           if (!tableRef.current) throw new Error('الجدول غير ظاهر للتنزيل.');
@@ -183,7 +223,7 @@ export default function LandscapePlan({ quote, onItemChange, onShowScientificNam
   return <section className="landscape-board">
     <div className="landscape-board-head">
       <div className="landscape-heading-copy"><div className="eyebrow">LANDSCAPE PLAN / {quote.number}</div><div className="landscape-heading-actions"><div className="landscape-view-switch" role="tablist" aria-label="طريقة عرض عناصر Landscape"><button type="button" role="tab" aria-selected={viewMode === 'plan'} className={viewMode === 'plan' ? 'active' : ''} onClick={() => setViewMode('plan')}>مخطط</button><button type="button" role="tab" aria-selected={viewMode === 'table'} className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>جدول</button></div><button type="button" className="btn secondary small landscape-pdf-button" onClick={downloadCurrentPdf} disabled={pdfBusy}><Download size={14} />{pdfBusy ? 'جارٍ تجهيز PDF…' : viewMode === 'plan' ? 'تنزيل المخطط PDF' : 'تنزيل الجدول PDF'}</button></div>{pdfError && <small className="landscape-pdf-error" role="alert">{pdfError}</small>}<h2>{viewMode === 'plan' ? 'مخطط تنسيق مقترح' : 'جدول عناصر المخطط'}</h2><p>{viewMode === 'plan' ? 'اسحب النباتات والمواد مباشرةً داخل المخطط لتحريكها، أو عدّل موقعها وحجمها من الإعدادات.' : 'عرض منظم للنباتات والمواد المضافة إلى مخطط Landscape.'}</p></div>
-      <label className="landscape-science-toggle"><input type="checkbox" checked={quote.showScientificNames !== false} onChange={(event) => onShowScientificNamesChange(event.target.checked)} />إظهار الاسم العلمي تحت الأيقونة</label>
+      {viewMode === 'plan' && <label className="landscape-science-toggle"><input type="checkbox" checked={quote.showScientificNames !== false} onChange={(event) => onShowScientificNamesChange(event.target.checked)} />إظهار الاسم العلمي تحت الأيقونة</label>}
     </div>
 
     {viewMode === 'plan' ? <div ref={canvasRef} className="landscape-canvas landscape-canvas-white" aria-label="مخطط Landscape بخلفية بيضاء">
@@ -218,12 +258,23 @@ export default function LandscapePlan({ quote, onItemChange, onShowScientificNam
           <small>{quote.showScientificNames !== false && item.scientificName ? <>{item.scientificName} · </> : null}{item.quantity} ×{item.landscapeArea ? ` · ${item.landscapeArea}م²` : ''}</small>
         </div>;
       })}
-      {!items.length && <p className="landscape-empty">أضف نباتات أو مواد لتظهر هنا.</p>}
-    </div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الاسم العلمي</th><th>الأيقونة</th><th>الكمية</th><th>القسم</th></tr></thead><tbody>{items.length ? items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.scientificName || '—'}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td><td>{item.quantity}</td><td>{item.category || '—'}</td></tr>; }) : <tr><td colSpan={5} className="landscape-table-empty">أضف نباتات أو مواد ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
+      {annotations.map((annotation) => annotation.kind === 'line' ? <div key={annotation.id} className={`landscape-drawn-line-hitarea ${selectedAnnotationId === annotation.id ? 'selected' : ''}`} role="button" tabIndex={0} aria-label="خط قابل للتحريك" style={{ left: `${annotation.x}%`, top: `${annotation.y}%`, width: `${annotation.length}%` }} onPointerDown={(event) => startAnnotationDrag(event, annotation)} onPointerMove={(event) => moveAnnotationDrag(event, annotation.id)} onPointerUp={endAnnotationDrag} onPointerCancel={endAnnotationDrag}><span className="landscape-drawn-line-stroke" style={{ height: annotation.thickness, backgroundColor: annotation.color, transform: `translateY(-50%) rotate(${annotation.angle}deg)` }} /></div> : <div key={annotation.id} className={`landscape-number-mark ${selectedAnnotationId === annotation.id ? 'selected' : ''}`} role="button" tabIndex={0} aria-label={`رقم ${annotation.value} قابل للتحريك`} style={{ left: `${annotation.x}%`, top: `${annotation.y}%`, color: annotation.color, fontSize: annotation.size }} onPointerDown={(event) => startAnnotationDrag(event, annotation)} onPointerMove={(event) => moveAnnotationDrag(event, annotation.id)} onPointerUp={endAnnotationDrag} onPointerCancel={endAnnotationDrag}>{annotation.value}</div>)}
+      {!items.length && !annotations.length && <p className="landscape-empty">أضف نباتات أو مواد لتظهر هنا.</p>}
+    </div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.length ? items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف نباتات أو مواد ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
 
     <div className="landscape-material-presets">
       <strong>إضافة مادة أو شكل للمخطط</strong>
       {materials.map(({ name, icon: Icon }) => <button key={name} type="button" onClick={() => onAddMaterial(name)}><Icon size={14} />{name}</button>)}
+    </div>
+
+    <div className="landscape-annotation-tools">
+      <div className="landscape-annotation-tools-head"><strong>إضافات على المخطط</strong><div><button type="button" onClick={() => addAnnotation('line')}>إضافة خط</button><button type="button" onClick={() => addAnnotation('number')}>إضافة رقم</button></div></div>
+      <p>اسحب الخط أو الرقم داخل المخطط. حدّد العنصر لتعديل حجمه أو امتداده.</p>
+      {selectedAnnotation && <div className="landscape-annotation-editor">
+        {selectedAnnotation.kind === 'line' ? <><label>طول الخط / شدّ <b>{selectedAnnotation.length}%</b><input type="range" min="3" max="90" value={selectedAnnotation.length} onChange={(event) => updateAnnotation(selectedAnnotation.id, { length: Number(event.target.value) })} /></label><label>سماكة الخط <b>{selectedAnnotation.thickness}px</b><input type="range" min="1" max="16" value={selectedAnnotation.thickness} onChange={(event) => updateAnnotation(selectedAnnotation.id, { thickness: Number(event.target.value) })} /></label><label>زاوية الخط <b>{selectedAnnotation.angle}°</b><input type="range" min="-180" max="180" value={selectedAnnotation.angle} onChange={(event) => updateAnnotation(selectedAnnotation.id, { angle: Number(event.target.value) })} /></label></> : <><label>الرقم<input type="number" min="0" max="99999" value={selectedAnnotation.value} onChange={(event) => updateAnnotation(selectedAnnotation.id, { value: event.target.value })} /></label><label>حجم الرقم <b>{selectedAnnotation.size}px</b><input type="range" min="12" max="96" value={selectedAnnotation.size} onChange={(event) => updateAnnotation(selectedAnnotation.id, { size: Number(event.target.value) })} /></label></>}
+        <label className="landscape-annotation-color">اللون<input type="color" value={selectedAnnotation.color} onChange={(event) => updateAnnotation(selectedAnnotation.id, { color: event.target.value })} /></label>
+        <button type="button" className="landscape-annotation-delete" onClick={() => { onAnnotationsChange(annotations.filter((item) => item.id !== selectedAnnotation.id)); setSelectedAnnotationId(null); }}>حذف العنصر المحدد</button>
+      </div>}
     </div>
 
     <div className="landscape-settings-list">
