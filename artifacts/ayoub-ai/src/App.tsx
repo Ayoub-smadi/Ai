@@ -41,6 +41,7 @@ import { getQuoteRequests, saveQuoteRequests } from '@/data/quote-requests';
 import LandscapePlan, { type LandscapeAnnotation, type LandscapeGlobalShape, type LandscapeQuoteItem } from '@/pages/landscape-plan';
 import { ProjectsPage, StorePage } from '@/pages/public-showcase-pages';
 import AboutUsPage from '@/pages/about-us-page';
+import LandscapeEditorPage from '@/pages/landscape-editor-page';
 
 const queryClient = new QueryClient();
 const configuredClerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -174,7 +175,7 @@ function HomePage() {
   const heroTitle = (lang === 'ar' ? settings.heroTitleAr : settings.heroTitleEn) === oldTitle ? (lang === 'ar' ? defaultAdminSettings.heroTitleAr : defaultAdminSettings.heroTitleEn) : (lang === 'ar' ? settings.heroTitleAr : settings.heroTitleEn);
   const heroDescription = (lang === 'ar' ? settings.heroDescriptionAr : settings.heroDescriptionEn) === oldDescription ? (lang === 'ar' ? defaultAdminSettings.heroDescriptionAr : defaultAdminSettings.heroDescriptionEn) : (lang === 'ar' ? settings.heroDescriptionAr : settings.heroDescriptionEn);
   return <main className="public-home">
-    <header className="public-header"><div className="public-topline"><a className="nav-phone" href={`tel:${settings.phone}`} aria-label={tr(lang, `Call ${settings.phone}`, `اتصل على ${settings.phone}`)}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">{settings.phone}</span></a></div><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><a className="public-nav-link" href="#about-us">{tr(lang, 'Crop care', 'الرعاية الزراعية')}</a>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}<Link className="public-nav-link" href="/about">{tr(lang, 'About us', 'من نحن')}</Link>{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>
+    <header className="public-header"><div className="public-topline"><a className="nav-phone" href={`tel:${settings.phone}`} aria-label={tr(lang, `Call ${settings.phone}`, `اتصل على ${settings.phone}`)}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">{settings.phone}</span></a></div><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><a className="public-nav-link" href="#about-us">{tr(lang, 'Crop care', 'الرعاية الزراعية')}</a>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}<Link className="public-nav-link" href="/about">{tr(lang, 'About us', 'من نحن')}</Link>{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link" href="/landscape-editor">{tr(lang, 'Landscape', 'لاندسكيب')}</Link><Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>
     <section className="public-hero">
       <div className="hero-copy reveal"><div className="eyebrow">{tr(lang, 'SMART AGRONOMY, GROUNDED IN YOUR PLANTS', 'مساعدة زراعية ذكية تبدأ من نبتتك')}</div>
         <h1>{heroTitle.split('\n').map((line, index) => <span key={`${line}-${index}`}>{line}</span>)}</h1>
@@ -198,9 +199,10 @@ function HomePage() {
 }
 function PublicPageNav() {
   const { lang } = useLang(); const { settings } = useAdminSettings();
-  return <header className="public-header"><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><Link className="public-nav-link" href="/">{tr(lang, 'Home', 'الرئيسية')}</Link>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>;
+  return <header className="public-header"><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><Link className="public-nav-link" href="/">{tr(lang, 'Home', 'الرئيسية')}</Link>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link" href="/landscape-editor">{tr(lang, 'Landscape', 'لاندسكيب')}</Link><Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>;
 }
 function PublicPlantTreatmentRoute() { const { lang } = useLang(); return <><PublicPageNav /><PlantTreatmentPage lang={lang} /></>; }
+function PublicLandscapeEditorRoute() { return <><PublicPageNav /><LandscapeEditorPage /></>; }
 function PublicProjectsRoute() { return <><PublicPageNav /><ProjectsPage /></>; }
 function PublicStoreRoute() { return <><PublicPageNav /><StorePage /></>; }
 function Protected({ children }: { children: ReactNode }) {
@@ -944,6 +946,7 @@ function PublicPreviewRouter() {
     <Route path="/projects" component={PublicProjectsRoute} />
     <Route path="/store" component={PublicStoreRoute} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
+    <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
     <Route path="/sign-in/*?" component={AdminLoginPage} />
     <Route path="/admin/login" component={AdminLoginPage} />
     <Route path="/admin"><AdminGuard><AdminDashboardPage /></AdminGuard></Route>
@@ -969,6 +972,7 @@ function Router() {
     <Route path="/projects" component={PublicProjectsRoute} />
     <Route path="/store" component={PublicStoreRoute} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
+    <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
     <Route path="/sign-in/*?" component={AdminLoginPage} />
     <Route path="/sign-up/*?"><SignUp routing="path" path={`${basePath}/sign-up`} /></Route>
     <Route path="/admin/login" component={AdminLoginPage} />
