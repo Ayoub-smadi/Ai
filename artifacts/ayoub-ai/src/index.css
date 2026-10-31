@@ -633,3 +633,27 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
 .quote-items-table th[data-quote-part="col-image"],.quote-items-table td[data-quote-part="col-image"],.quote-pdf-page .quote-image-cell{width:132px!important;min-width:132px!important}
 .quote-item-image.quote-image-picker,.quote-pdf-page .quote-item-image.quote-image-picker{width:120px!important;height:120px!important;max-width:none!important;max-height:none!important;margin:0 auto!important}
 .quote-pdf-page .quote-item-image.quote-image-picker{border:0!important;cursor:default!important}
+
+
+/* Homepage founder biography ticker */
+.founder-bio-ticker{width:min(1160px,calc(100% - 48px));min-height:260px;margin:22px auto 0;padding:24px 30px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid #dfe9dc;border-radius:18px;background:linear-gradient(135deg,#f8fbf6,#eef5eb);color:#263b2b}
+.founder-bio-ticker p{width:100%;margin:0;text-align:center;font-size:15px;line-height:2.05;font-weight:500;white-space:normal;overflow-wrap:anywhere}
+.founder-bio-cursor{display:inline-block;width:2px;height:1.05em;margin-inline-start:4px;vertical-align:-.16em;background:#537a52;animation:founder-bio-caret .9s steps(1,end) infinite}
+@keyframes founder-bio-caret{50%{opacity:0}}
+@media(max-width:700px){.founder-bio-ticker{width:calc(100% - 28px);min-height:540px;margin-top:14px;padding:20px 16px;border-radius:14px}.founder-bio-ticker p{font-size:14px;line-height:1.95}}
+@media(prefers-reduced-motion:reduce){.founder-bio-cursor{animation:none}}
+
+/* Mobile header: reserve a separate phone row and keep both status cards in normal flow */
+@media(max-width:520px){
+  .public-topline{min-height:0;padding:10px 14px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+  .public-topline .nav-phone{position:relative;order:0;align-self:center;z-index:1;font-size:13px;line-height:1.4}
+  .public-topline .nav-phone-label{display:none}
+  .weather-above-logo{position:static!important;inset:auto!important;order:1;width:max-content!important;max-width:100%;margin:0 auto;display:flex;justify-content:center;gap:5px;z-index:1}
+  .weather-above-logo .weather-bar{width:150px!important;flex:0 0 150px!important}
+  .weather-above-logo .workday-timer{width:118px;flex:0 0 118px}
+}
+@media(max-width:340px){
+  .weather-above-logo .weather-bar{width:130px!important;flex-basis:130px!important}
+  .weather-above-logo .workday-timer{width:108px;flex-basis:108px}
+  .workday-timer-count{font-size:15px}
+}
