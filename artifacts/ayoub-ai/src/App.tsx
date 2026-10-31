@@ -8,7 +8,7 @@ import {
   ChevronRight, CircleHelp, Code2, Download, FileText, Globe2, Languages, LayoutDashboard, LifeBuoy,
   BrainCircuit, Calculator, CalendarDays, Database, Facebook, FileArchive, FileDown, FileSpreadsheet, Image as ImageIcon, Instagram, Linkedin, Link2, LoaderCircle,
   LogOut, Mail, Menu, MessageCircle, MessageSquareText, Mic, Package, Paperclip, Play, Plus, Phone, Receipt, Save, SaveAll, Search, Send, Settings2, ShieldCheck,
-  ShoppingBag, SlidersHorizontal, Sparkles, Store, Trash2, Upload, Video, Wifi, X, Youtube, ImagePlus, MapPinned, RotateCcw, TreePine, Flower2, Droplets, Mountain, Sprout, Cloud, CloudLightning, CloudRain, CloudSnow, CloudSun, Sun, Wind
+  ShoppingBag, SlidersHorizontal, Sparkles, Store, Trash2, Upload, Video, Wifi, X, Youtube, ImagePlus, MapPinned, RotateCcw, TreePine, Flower2, Droplets, Mountain, Sprout, Cloud, CloudLightning, CloudRain, CloudSnow, CloudSun, Sun, Wind, Clock3
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation, useRoute } from 'wouter';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -38,9 +38,12 @@ import AdminQuoteRequestsPage from '@/pages/admin-quote-requests-page';
 import AdminStoreOrdersPage from '@/pages/admin-store-orders-page';
 import AdminProjectsPage from '@/pages/admin-projects-page';
 import AdminStorePage from '@/pages/admin-store-page';
+import OrderAlertControl, { activateOrderAlertsFromUserGesture } from '@/components/order-alert-control';
 import { getQuoteRequests, saveQuoteRequests } from '@/data/quote-requests';
 import LandscapePlan, { type LandscapeAnnotation, type LandscapeGlobalShape, type LandscapeQuoteItem } from '@/pages/landscape-plan';
 import { ProjectsPage, StorePage } from '@/pages/public-showcase-pages';
+import StoreCartPage from '@/pages/store-cart-page';
+import StoreCheckoutPage from '@/pages/store-checkout-page';
 import AboutUsPage from '@/pages/about-us-page';
 import LandscapeEditorPage from '@/pages/landscape-editor-page';
 
@@ -169,6 +172,22 @@ function HeroSlideshow() {
   return <div className="hero-art hero-slideshow reveal"><div className="hero-slides">{slides.map((slide, index) => <img key={slide.id} className={`hero-slide ${index === active ? 'active' : ''}`} src={slide.src} alt={slide.alt || tr(lang, 'QADRI AI visual', 'صورة تعريفية')} />)}</div><div className="hero-slide-overlay"><span>{tr(lang, 'LIVE VISUAL SYSTEM', 'نظام بصري متحرك')}</span><div className="hero-slide-dots">{slides.map((slide, index) => <button key={slide.id} className={index === active ? 'active' : ''} onClick={() => setActive(index)} aria-label={`${tr(lang, 'Show image', 'عرض الصورة')} ${index + 1}`} />)}</div></div></div>;
 }
 type WeatherSnapshot = { temperature: number; apparent: number; humidity: number; wind: number; code: number; isDay: number; high: number; low: number; location: string };
+const WEATHER_FALLBACK = { latitude: 32.2800, longitude: 35.9000, label: 'جرش' };
+function jordanLocationLabel(latitude: number, longitude: number) {
+  const places = [
+    { label: 'جرش', latitude: 32.2800, longitude: 35.9000 },
+    { label: 'عمّان', latitude: 31.9539, longitude: 35.9106 },
+    { label: 'إربد', latitude: 32.5556, longitude: 35.8500 },
+    { label: 'الزرقاء', latitude: 32.0728, longitude: 36.0880 },
+    { label: 'السلط', latitude: 32.0392, longitude: 35.7272 },
+    { label: 'عجلون', latitude: 32.3326, longitude: 35.7528 },
+  ];
+  const nearest = places.reduce((best, place) => {
+    const distance = Math.hypot(latitude - place.latitude, longitude - place.longitude);
+    return distance < best.distance ? { label: place.label, distance } : best;
+  }, { label: 'موقعك الحالي', distance: Number.POSITIVE_INFINITY });
+  return nearest.distance < 0.35 ? nearest.label : 'موقعك الحالي';
+}
 function weatherMeta(code: number, isDay: number) {
   if (code === 0) return { label: 'سماء صافية', icon: isDay ? Sun : CloudSun, tone: 'sunny', motion: 'weather-float' };
   if ([1, 2].includes(code)) return { label: 'غائم جزئيًا', icon: CloudSun, tone: 'cloudy', motion: 'weather-drift' };
@@ -183,19 +202,49 @@ function WeatherBar() {
   const { lang } = useLang();
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
-  const loadWeather = (latitude = 31.9539, longitude = 35.9106, label = 'عمّان') => {
+  const loadWeather = (latitude = WEATHER_FALLBACK.latitude, longitude = WEATHER_FALLBACK.longitude, label = WEATHER_FALLBACK.label) => {
     setLoading(true);
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto`;
     fetch(url).then((response) => { if (!response.ok) throw new Error('weather'); return response.json(); }).then((data) => setWeather({ temperature: data.current.temperature_2m, apparent: data.current.apparent_temperature, humidity: data.current.relative_humidity_2m, wind: data.current.wind_speed_10m, code: data.current.weather_code, isDay: data.current.is_day, high: data.daily.temperature_2m_max[0], low: data.daily.temperature_2m_min[0], location: label })).catch(() => setWeather(null)).finally(() => setLoading(false));
   };
   useEffect(() => {
-    loadWeather();
-    if (navigator.geolocation) navigator.geolocation.getCurrentPosition((position) => loadWeather(position.coords.latitude, position.coords.longitude, 'موقعك الحالي'), () => undefined, { timeout: 4500 });
+    const loadFallback = () => loadWeather();
+    if (!navigator.geolocation) { loadFallback(); return; }
+    navigator.geolocation.getCurrentPosition(
+      (position) => loadWeather(position.coords.latitude, position.coords.longitude, jordanLocationLabel(position.coords.latitude, position.coords.longitude)),
+      loadFallback,
+      { enableHighAccuracy: true, maximumAge: 15 * 60 * 1000, timeout: 7000 },
+    );
   }, []);
   if (loading) return <div className="weather-bar weather-loading" aria-live="polite"><span className="weather-loader" />{tr(lang, 'Reading today’s sky…', 'نقرأ حالة السماء اليوم…')}</div>;
   if (!weather) return <div className="weather-bar weather-error"><Cloud size={20} />{tr(lang, 'Weather is temporarily unavailable', 'الطقس غير متاح مؤقتًا')}<button onClick={() => loadWeather()}>{tr(lang, 'Retry', 'إعادة المحاولة')}</button></div>;
   const meta = weatherMeta(weather.code, weather.isDay); const Icon = meta.icon;
   return <section className={`weather-bar weather-${meta.tone}`} aria-label="حالة الطقس اليوم"><div className={`weather-main-icon ${meta.motion}`}><Icon size={31} strokeWidth={1.7} /></div><div className="weather-copy"><div className="weather-location"><span>{weather.location}</span><small>{tr(lang, 'TODAY / LIVE WEATHER', 'الطقس اليوم / مباشر')}</small></div><strong>{meta.label}</strong></div><div className="weather-temperature"><b>{Math.round(weather.temperature)}°</b><span>{Math.round(weather.low)}° / {Math.round(weather.high)}°</span></div><div className="weather-facts"><span><Droplets size={14} />{weather.humidity}%</span><span><Wind size={14} />{Math.round(weather.wind)} كم/س</span><span>المحسوس {Math.round(weather.apparent)}°</span></div></section>;
+}
+function WorkdayTimer() {
+  const { lang } = useLang();
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+  const timeParts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Amman', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const values = Object.fromEntries(timeParts.map((part) => [part.type, Number(part.value)]));
+  const secondsOfDay = values.hour * 3600 + values.minute * 60 + values.second;
+  const start = 9 * 3600;
+  const end = 17 * 3600;
+  const isActive = secondsOfDay >= start && secondsOfDay < end;
+  const remaining = secondsOfDay < start ? end - start : isActive ? end - secondsOfDay : 0;
+  const hours = Math.floor(remaining / 3600);
+  const minutes = Math.floor((remaining % 3600) / 60);
+  const seconds = remaining % 60;
+  const countdown = [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+  const status = secondsOfDay < start ? tr(lang, 'Starts at 9:00 AM', 'يبدأ الساعة 9 صباحًا') : isActive ? tr(lang, 'Until 5:00 PM', 'حتى الساعة 5 مساءً') : tr(lang, 'Finished for today', 'انتهى دوام اليوم');
+  return <section className={`workday-timer ${isActive ? 'is-active' : ''}`} aria-label={tr(lang, 'Daily workday countdown', 'العد التنازلي اليومي للدوام')}>
+    <div className="workday-timer-heading"><Clock3 size={14} /><span>{tr(lang, 'DAILY / 9 AM–5 PM', 'يومي / 9 ص–5 م')}</span></div>
+    <strong className="workday-timer-count" dir="ltr" aria-live="off">{countdown}</strong>
+    <small>{status}</small>
+  </section>;
 }
 function HomePage() {
   const { lang } = useLang();
@@ -205,7 +254,7 @@ function HomePage() {
   const heroTitle = (lang === 'ar' ? settings.heroTitleAr : settings.heroTitleEn) === oldTitle ? (lang === 'ar' ? defaultAdminSettings.heroTitleAr : defaultAdminSettings.heroTitleEn) : (lang === 'ar' ? settings.heroTitleAr : settings.heroTitleEn);
   const heroDescription = (lang === 'ar' ? settings.heroDescriptionAr : settings.heroDescriptionEn) === oldDescription ? (lang === 'ar' ? defaultAdminSettings.heroDescriptionAr : defaultAdminSettings.heroDescriptionEn) : (lang === 'ar' ? settings.heroDescriptionAr : settings.heroDescriptionEn);
   return <main className="public-home">
-    <header className="public-header"><div className="public-topline"><a className="nav-phone" href={`tel:${settings.phone}`} aria-label={tr(lang, `Call ${settings.phone}`, `اتصل على ${settings.phone}`)}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">{settings.phone}</span></a><div className="weather-above-logo"><WeatherBar /></div></div><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><a className="public-nav-link" href="#about-us">{tr(lang, 'Crop care', 'الرعاية الزراعية')}</a>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}<Link className="public-nav-link" href="/about">{tr(lang, 'About us', 'من نحن')}</Link>{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link" href="/landscape-editor">{tr(lang, 'Landscape', 'لاندسكيب')}</Link><Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>
+    <header className="public-header"><div className="public-topline"><a className="nav-phone" href={`tel:${settings.phone}`} aria-label={tr(lang, `Call ${settings.phone}`, `اتصل على ${settings.phone}`)}><span className="nav-phone-label">{tr(lang, 'Call us', 'اتصل بنا')}</span><span dir="ltr">{settings.phone}</span></a><div className="weather-above-logo"><WeatherBar /><WorkdayTimer /></div></div><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><a className="public-nav-link" href="#about-us">{tr(lang, 'Crop care', 'الرعاية الزراعية')}</a>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}<Link className="public-nav-link" href="/about">{tr(lang, 'About us', 'من نحن')}</Link>{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link" href="/landscape-editor">{tr(lang, 'Landscape', 'لاندسكيب')}</Link><Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>
     <section className="public-hero">
       <div className="hero-copy reveal"><div className="eyebrow">{tr(lang, 'SMART AGRONOMY, GROUNDED IN YOUR PLANTS', 'مساعدة زراعية ذكية تبدأ من نبتتك')}</div>
         <h1>{heroTitle.split('\n').map((line, index) => <span key={`${line}-${index}`}>{line}</span>)}</h1>
@@ -780,10 +829,10 @@ function AiChatPage() {
 function AdminLoginPage() {
   const [, setLocation] = useLocation();
   const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState('');
-  const submit = (event: FormEvent) => { event.preventDefault(); if (username === 'Ayoub' && password === 'Ayoub123') { localStorage.setItem('qadri-admin-session', 'active'); setLocation('/admin'); } else setError('اسم المستخدم أو كلمة السر غير صحيحة.'); };
+  const submit = (event: FormEvent) => { event.preventDefault(); if (username === 'Ayoub' && password === 'Ayoub123') { localStorage.setItem('qadri-admin-session', 'active'); sessionStorage.removeItem('qadri-admin-order-summary-shown-v1'); activateOrderAlertsFromUserGesture(); setLocation('/admin'); } else setError('اسم المستخدم أو كلمة السر غير صحيحة.'); };
   return <main className="admin-login-page"><form className="panel admin-login-card" onSubmit={submit}><div className="admin-login-brand"><SiteBrand /></div><div className="eyebrow">QADRI AI / ADMIN</div><h1>تسجيل دخول الإدارة</h1><p className="page-desc">ادخل إلى لوحة التحكم لإدارة هوية الموقع ومحتواه.</p><div className="field"><label htmlFor="admin-username">اسم المستخدم</label><input id="admin-username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required /></div><div className="field"><label htmlFor="admin-password">كلمة السر</label><input id="admin-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></div>{error && <p className="admin-error" role="alert">{error}</p>}<button className="btn" type="submit">دخول لوحة التحكم <ArrowRight size={15} /></button><Link className="admin-back-link" href="/">العودة إلى الموقع</Link></form></main>;
 }
-function AdminGuard({ children }: { children: ReactNode }) { return localStorage.getItem('qadri-admin-session') === 'active' ? <>{children}</> : <Redirect to="/admin/login" />; }
+function AdminGuard({ children }: { children: ReactNode }) { return localStorage.getItem('qadri-admin-session') === 'active' ? <>{children}<OrderAlertControl /></> : <Redirect to="/admin/login" />; }
 type TrainingSource = { id: string; name: string; type: string; detail: string; status: 'ready' | 'training' | 'trained' };
 function AdminTrainingPage() {
   const [, setLocation] = useLocation(); const [sources, setSources] = useState<TrainingSource[]>(() => { try { return JSON.parse(localStorage.getItem('qadri-training-sources') || '[]'); } catch { return []; } }); const [text, setText] = useState(''); const [url, setUrl] = useState(''); const [isTraining, setIsTraining] = useState(false);
@@ -1009,6 +1058,8 @@ function PublicPreviewRouter() {
     <Route path="/about" component={AboutUsPage} />
     <Route path="/projects" component={PublicProjectsRoute} />
     <Route path="/store" component={PublicStoreRoute} />
+    <Route path="/cart" component={StoreCartPage} />
+    <Route path="/checkout" component={StoreCheckoutPage} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
     <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
     <Route path="/sign-in/*?" component={AdminLoginPage} />
@@ -1036,6 +1087,8 @@ function Router() {
     <Route path="/quotes" component={QuoteCatalogPage} />
     <Route path="/projects" component={PublicProjectsRoute} />
     <Route path="/store" component={PublicStoreRoute} />
+    <Route path="/cart" component={StoreCartPage} />
+    <Route path="/checkout" component={StoreCheckoutPage} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
     <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
     <Route path="/sign-in/*?" component={AdminLoginPage} />
