@@ -614,3 +614,22 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
 @media(max-width:380px){.public-store-page__grid{grid-template-columns:1fr}.public-store-page__image{height:190px}}
 .store-flow-success>.store-order-reference{width:min(100%,360px);height:auto;margin:20px auto;padding:14px;display:grid;grid-template-columns:minmax(0,1fr);place-items:stretch}
 .store-order-reference strong{display:block;width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word;text-align:center}
+
+
+/* A4 quote PDF layout: keep English and Arabic identities clear, with the quote title on its own row */
+.quote-pdf-page .quote-sheet-header{direction:ltr!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 88px!important;grid-template-rows:auto auto!important;align-items:start!important;column-gap:12px!important;row-gap:7px!important}
+.quote-pdf-page .quote-sheet-header .quote-logo-picker{grid-column:3!important;grid-row:1!important;width:88px!important;height:88px!important}
+.quote-pdf-page .quote-sheet-header .quote-company-en{grid-column:1!important;grid-row:1!important;align-self:start!important;min-width:0!important;direction:ltr!important;text-align:left!important}
+.quote-pdf-page .quote-sheet-header .quote-company-ar{grid-column:2!important;grid-row:1!important;align-self:start!important;min-width:0!important;direction:rtl!important;text-align:right!important}
+.quote-pdf-page .quote-sheet-header .quote-title-block{grid-column:1/3!important;grid-row:2!important;justify-self:stretch!important;align-self:center!important;min-width:0!important;direction:rtl!important;text-align:center!important;padding-top:0!important}
+.quote-pdf-page:not(.invoice-sheet) .quote-sheet-header{grid-template-rows:auto!important;row-gap:0!important}
+.quote-pdf-page:not(.invoice-sheet) .quote-sheet-header .quote-title-block{display:none!important}
+.quote-sheet:not(.invoice-sheet) .quote-title-block{display:none!important}
+.quote-pdf-page .quote-title-block input{display:block;width:100%!important;max-width:none!important;padding:0!important;direction:rtl!important;text-align:center!important;font-size:20px!important;line-height:1.35!important}
+.quote-pdf-page .quote-meta-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.quote-pdf-page.invoice-sheet .quote-meta-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.quote-pdf-page .quote-items-wrap{width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important}
+.quote-pdf-page .quote-items-table{width:100%!important;min-width:0!important;table-layout:fixed!important;border-collapse:collapse!important}
+.quote-items-table th[data-quote-part="col-image"],.quote-items-table td[data-quote-part="col-image"],.quote-pdf-page .quote-image-cell{width:132px!important;min-width:132px!important}
+.quote-item-image.quote-image-picker,.quote-pdf-page .quote-item-image.quote-image-picker{width:120px!important;height:120px!important;max-width:none!important;max-height:none!important;margin:0 auto!important}
+.quote-pdf-page .quote-item-image.quote-image-picker{border:0!important;cursor:default!important}
