@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ShoppingCart } from "lucide-react";
 import { useStoreCart } from "@/hooks/use-store-cart";
 import { getPortfolioProjects, getStoreProducts, type PortfolioProject, type StoreProduct } from "../data/site-content";
+import "./store-image-size.css";
 
 const textOrEmpty = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 const categoryNames: Record<string, string> = { irrigation: "شبكات الري", "garden-decor": "ديكور الحدائق", pots: "أحواض وأصص", tools: "أدوات زراعية", fertilizers: "أسمدة ومحسنات تربة", pesticides: "مبيدات ومعالجات", seeds: "بذور", "seedling-supplies": "مستلزمات المشاتل" };
