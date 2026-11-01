@@ -30,6 +30,7 @@ import readXlsxFile from 'read-excel-file/browser';
 import './index.css';
 import { quoteCatalog, quoteCatalogItems, type QuoteCatalogCategory, type QuoteCatalogItem } from '@/data/quote-catalog';
 import ManagedCatalogPage from '@/pages/managed-catalog-page';
+import DailyPlantFeature from '@/pages/daily-plant-feature';
 import { getManagedPlants } from '@/data/managed-plants';
 import { getStoreProducts, type StoreProduct } from '@/data/site-content';
 import PlantTreatmentPage from '@/pages/plant-treatment-page';
@@ -301,6 +302,7 @@ function HomePage() {
       </div>
       <HeroSlideshow />
     </section>
+    <DailyPlantFeature lang={lang} />
     <FounderBiographyTicker />
     <section className="public-section" id="about-us"><div className="public-section-inner" id="how-it-works">
       <div className="section-heading"><div><div className="eyebrow">{tr(lang, 'CARE STARTS WITH OBSERVATION', 'العناية تبدأ بالملاحظة')}</div><h2>{tr(lang, 'Start with what you can see.', 'ابدأ بما تراه في نبتتك.')}</h2></div><p>{tr(lang, 'A plant photo prepares the ground for practical crop-care guidance. Automated diagnosis will be available after the AI service is connected.', 'صورة النبتة تمهّد لإرشادات عملية للعناية بالمحاصيل. سيتاح التشخيص الآلي بعد ربط خدمة الذكاء الاصطناعي.')}</p></div>

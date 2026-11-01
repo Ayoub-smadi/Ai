@@ -3,9 +3,10 @@ import { ArrowLeft, ImagePlus, Leaf, Plus, Search, Trash2, Upload, X } from 'luc
 import { Link } from 'wouter';
 import { getManagedPlants, saveManagedPlants, type ManagedPlant } from '@/data/managed-plants';
 import { quoteCatalog } from '@/data/quote-catalog';
+import './managed-catalog-care.css';
 
-type PlantDraft = Pick<ManagedPlant, 'nameAr' | 'nameEn' | 'scientificName' | 'descriptionAr' | 'descriptionEn' | 'categoryId' | 'categoryAr' | 'image' | 'landscapeIcon'>;
-const freshDraft = (): PlantDraft => { const category = quoteCatalog.find((c) => c.items.some((i) => i.source === 'plant')); return { nameAr: '', nameEn: '', scientificName: '', descriptionAr: '', descriptionEn: '', categoryId: category?.id || 'plants', categoryAr: category?.nameAr || 'نباتات', image: '', landscapeIcon: '' }; };
+type PlantDraft = Pick<ManagedPlant, 'nameAr' | 'nameEn' | 'scientificName' | 'descriptionAr' | 'descriptionEn' | 'categoryId' | 'categoryAr' | 'image' | 'landscapeIcon' | 'plantingSeasonAr' | 'plantingSeasonEn' | 'preferredClimateAr' | 'preferredClimateEn' | 'soilTypeAr' | 'soilTypeEn'>;
+const freshDraft = (): PlantDraft => { const category = quoteCatalog.find((c) => c.items.some((i) => i.source === 'plant')); return { nameAr: '', nameEn: '', scientificName: '', descriptionAr: '', descriptionEn: '', categoryId: category?.id || 'plants', categoryAr: category?.nameAr || 'نباتات', image: '', landscapeIcon: '', plantingSeasonAr: '', plantingSeasonEn: '', preferredClimateAr: '', preferredClimateEn: '', soilTypeAr: '', soilTypeEn: '' }; };
 const newId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
@@ -30,6 +31,7 @@ export default function ManagedCatalogPage() {
     try {
       saveManagedPlants(next);
       setPlants(next);
+      window.dispatchEvent(new Event('qadri-managed-plants-updated'));
       setNotice('تم حفظ التغييرات في هذا المتصفح.');
     } catch {
       setNotice('تعذر الحفظ: مساحة التخزين في المتصفح ممتلئة. استخدم صورًا أصغر أو انتظر ربط التخزين الدائم.');
@@ -38,7 +40,7 @@ export default function ManagedCatalogPage() {
   const startNew = () => { setEditingId(null); setDraft(freshDraft()); setNotice(''); };
   const startEdit = (plant: ManagedPlant) => {
     setEditingId(plant.id);
-    setDraft({ nameAr: plant.nameAr, nameEn: plant.nameEn, scientificName: plant.scientificName || '', descriptionAr: plant.descriptionAr || '', descriptionEn: plant.descriptionEn || '', categoryId: plant.categoryId, categoryAr: plant.categoryAr, image: plant.image || '', landscapeIcon: plant.landscapeIcon || '' });
+    setDraft({ nameAr: plant.nameAr, nameEn: plant.nameEn, scientificName: plant.scientificName || '', descriptionAr: plant.descriptionAr || '', descriptionEn: plant.descriptionEn || '', categoryId: plant.categoryId, categoryAr: plant.categoryAr, image: plant.image || '', landscapeIcon: plant.landscapeIcon || '', plantingSeasonAr: plant.plantingSeasonAr || '', plantingSeasonEn: plant.plantingSeasonEn || '', preferredClimateAr: plant.preferredClimateAr || '', preferredClimateEn: plant.preferredClimateEn || '', soilTypeAr: plant.soilTypeAr || '', soilTypeEn: plant.soilTypeEn || '' });
     setNotice('');
   };
   const acceptImage = (kind: 'image' | 'landscapeIcon') => (event: ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +65,7 @@ export default function ManagedCatalogPage() {
     if (!draft?.nameAr.trim() || !draft.scientificName.trim()) { setNotice('أدخل الاسم الشائع بالعربية والاسم العلمي قبل الحفظ.'); return; }
     if (!draft.categoryAr.trim()) { setNotice('اختر قسمًا للنبتة.'); return; }
     const current = editingId ? plants.find((plant) => plant.id === editingId) : undefined;
-    const nextPlant: ManagedPlant = { ...current, ...draft, id: editingId || newId(), nameAr: draft.nameAr.trim(), nameEn: draft.nameEn.trim() || draft.nameAr.trim(), scientificName: draft.scientificName.trim(), categoryAr: draft.categoryAr.trim(), categoryEn: draft.categoryAr.trim(), source: 'plant', descriptionAr: draft.descriptionAr.trim(), descriptionEn: draft.descriptionEn.trim() };
+    const nextPlant: ManagedPlant = { ...current, ...draft, id: editingId || newId(), nameAr: draft.nameAr.trim(), nameEn: draft.nameEn.trim() || draft.nameAr.trim(), scientificName: draft.scientificName.trim(), categoryAr: draft.categoryAr.trim(), categoryEn: draft.categoryAr.trim(), source: 'plant', descriptionAr: draft.descriptionAr.trim(), descriptionEn: draft.descriptionEn.trim(), plantingSeasonAr: (draft.plantingSeasonAr || '').trim(), plantingSeasonEn: (draft.plantingSeasonEn || '').trim(), preferredClimateAr: (draft.preferredClimateAr || '').trim(), preferredClimateEn: (draft.preferredClimateEn || '').trim(), soilTypeAr: (draft.soilTypeAr || '').trim(), soilTypeEn: (draft.soilTypeEn || '').trim() };
     persist(editingId ? plants.map((plant) => plant.id === editingId ? nextPlant : plant) : [nextPlant, ...plants]);
     setDraft(null); setEditingId(null);
   };
@@ -88,6 +90,11 @@ export default function ManagedCatalogPage() {
         <label className="field"><span>القسم</span><select value={draft.categoryId} onChange={(event) => { const category = categories.find((item) => item.id === event.target.value); setDraft({ ...draft, categoryId: event.target.value, categoryAr: category?.nameAr || draft.categoryAr }); }}>{categories.map((category) => <option key={category.id} value={category.id}>{category.nameAr}</option>)}{!categories.length && <option value={draft.categoryId}>نباتات</option>}</select><div className="managed-category-add"><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} placeholder="أو اكتب قسمًا جديدًا" /><button type="button" className="btn secondary small" onClick={addCategory} disabled={!newCategory.trim()}><Plus size={13} />إضافة القسم</button></div></label>
         <label className="field full"><span>الوصف بالعربي</span><textarea rows={3} value={draft.descriptionAr} onChange={(event) => updateDraft('descriptionAr', event.target.value)} placeholder="اكتب وصف النبتة بنفسك؛ سيُدرج كما هو في عرض السعر." /></label>
         <label className="field full"><span>Description in English</span><textarea dir="ltr" rows={3} value={draft.descriptionEn} onChange={(event) => updateDraft('descriptionEn', event.target.value)} placeholder="Optional English description" /></label>
+        <div className="managed-plant-care-fields">
+          <div className="managed-care-block"><strong>موعد الزراعة</strong><label><span>العربية</span><input value={draft.plantingSeasonAr || ''} onChange={(event) => updateDraft('plantingSeasonAr', event.target.value)} placeholder="مثال: الخريف المعتدل أو أوائل الربيع" /></label><label><span>English</span><input dir="ltr" value={draft.plantingSeasonEn || ''} onChange={(event) => updateDraft('plantingSeasonEn', event.target.value)} placeholder="Mild autumn or early spring" /></label></div>
+          <div className="managed-care-block"><strong>الطقس والإضاءة</strong><label><span>العربية</span><input value={draft.preferredClimateAr || ''} onChange={(event) => updateDraft('preferredClimateAr', event.target.value)} placeholder="مثال: شمس كاملة أو نصف ظل" /></label><label><span>English</span><input dir="ltr" value={draft.preferredClimateEn || ''} onChange={(event) => updateDraft('preferredClimateEn', event.target.value)} placeholder="Full sun or partial shade" /></label></div>
+          <div className="managed-care-block"><strong>التربة المناسبة</strong><label><span>العربية</span><input value={draft.soilTypeAr || ''} onChange={(event) => updateDraft('soilTypeAr', event.target.value)} placeholder="مثال: تربة جيدة التصريف" /></label><label><span>English</span><input dir="ltr" value={draft.soilTypeEn || ''} onChange={(event) => updateDraft('soilTypeEn', event.target.value)} placeholder="Well-drained soil" /></label></div>
+        </div>
         <div className="managed-upload-panel"><div><strong>صورة النبتة</strong><p>الصورة التعريفية في صفحة الكتالوج.</p></div><input ref={photoInput} type="file" accept="image/*" hidden onChange={acceptImage('image')} /><button className="btn secondary small" onClick={() => photoInput.current?.click()}><Upload size={14} />رفع صورة</button>{draft.image && <div className="managed-upload-preview"><img src={draft.image} alt="معاينة صورة النبتة" /><button className="icon-button" onClick={() => updateDraft('image', '')} aria-label="إزالة صورة النبتة"><Trash2 size={14} /></button></div>}</div>
         <div className="managed-upload-panel"><div><strong>أيقونة Landscape الخاصة بالنبتة</strong><p>ارفع الأيقونة فقط هنا؛ حجمها وشكلها ومساحتها تتحكم بها لاحقًا من محرر الـLandscape لكل عرض سعر.</p></div><input ref={iconInput} type="file" accept="image/*" hidden onChange={acceptImage('landscapeIcon')} /><button className="btn secondary small" onClick={() => iconInput.current?.click()}><Upload size={14} />رفع الأيقونة</button>{draft.landscapeIcon && <div className="managed-upload-preview icon-preview"><img src={draft.landscapeIcon} alt="معاينة أيقونة Landscape" /><button className="icon-button" onClick={() => updateDraft('landscapeIcon', '')} aria-label="إزالة الأيقونة"><Trash2 size={14} /></button></div>}</div>
       </div>{notice && <p className="managed-catalog-status" role="alert">{notice}</p>}<footer><button className="btn secondary" onClick={() => setDraft(null)}>إلغاء</button><button className="btn" onClick={saveDraft}><Plus size={15} />حفظ النبتة</button></footer>
