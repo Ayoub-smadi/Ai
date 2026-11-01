@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import { quoteCatalog, type QuoteCatalogCategory, type QuoteCatalogItem } from '@/data/quote-catalog';
 import { getManagedPlants } from '@/data/managed-plants';
 import { submitQuoteRequest, type QuoteRequestItem } from '@/data/quote-requests';
+import './quote-request-plant-images.css';
 
 type CartItem = QuoteRequestItem & { productId: string };
 const plantSizes = ['صغير', 'متوسط', 'كبير'];
