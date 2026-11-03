@@ -1,69 +1,222 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from 'react';
-import { ArrowRight, Bot, Download, Home, Trash2, TreePine, Undo2, WandSparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Search, Trash2, TreePine } from 'lucide-react';
 import { Link } from 'wouter';
 import { getManagedPlants, type ManagedPlant } from '@/data/managed-plants';
+import LandscapePlan, {
+  type LandscapeDrawing,
+  type LandscapeGlobalShape,
+  type LandscapeQuote,
+  type LandscapeQuoteItem,
+} from '@/pages/landscape-plan';
+import './landscape-editor-unified.css';
 
-type ShapeType = 'building' | 'paving' | 'lawn' | 'parking' | 'planter' | 'pool' | 'path';
-type Tool = 'select' | 'plant' | ShapeType;
-type PlanItem = { id: string; kind: 'plant' | 'shape'; name: string; image?: string; x: number; y: number; size: number; rotation: number; width?: number; height?: number; shapeType?: ShapeType };
 const STORAGE_KEY = 'qadri-site-plan-v1';
-const starterPlants = () => getManagedPlants().slice(0, 12);
-const shapeDetails: Record<ShapeType, { label: string; className: string }> = { building: { label: 'مبنى', className: 'site-shape-building' }, paving: { label: 'ساحة مرصوفة', className: 'site-shape-paving' }, lawn: { label: 'مسطح أخضر', className: 'site-shape-lawn' }, parking: { label: 'مواقف', className: 'site-shape-parking' }, planter: { label: 'حوض زراعي', className: 'site-shape-planter' }, pool: { label: 'ماء', className: 'site-shape-pool' }, path: { label: 'مسار', className: 'site-shape-path' } };
+type LegacyPlanItem = {
+  id?: string;
+  kind?: 'plant' | 'shape';
+  name?: string;
+  image?: string;
+  x?: number;
+  y?: number;
+  size?: number;
+  rotation?: number;
+  width?: number;
+  height?: number;
+  shapeType?: 'building' | 'paving' | 'lawn' | 'parking' | 'planter' | 'pool' | 'path';
+};
+
+const emptyPlan = (): LandscapeQuote => ({
+  number: 'STUDIO',
+  items: [],
+  showScientificNames: true,
+  landscapeDefaultSize: 58,
+  landscapeDefaultShape: 'circle',
+  landscapeAnnotations: [],
+  landscapeDrawings: [],
+  landscapeShowGrid: false,
+});
+const pointFor = (index: number) => ({ x: 34 + (index % 4) * 11, y: 35 + (Math.floor(index / 4) % 4) * 11 });
+
+function migrateLegacyPlan(value: unknown): LandscapeQuote {
+  if (!Array.isArray(value)) return emptyPlan();
+  const items: LandscapeQuoteItem[] = [];
+  const drawings: LandscapeDrawing[] = [];
+  const shapeMap: Record<NonNullable<LegacyPlanItem['shapeType']>, Extract<LandscapeDrawing, { kind: 'rectangle' }>['tool']> = {
+    building: 'building', paving: 'paving', lawn: 'lawn', parking: 'parking', planter: 'planter', pool: 'water', path: 'path-area',
+  };
+  (value as LegacyPlanItem[]).forEach((legacy, index) => {
+    if (legacy.kind === 'plant') {
+      const point = pointFor(index);
+      items.push({
+        id: legacy.id || `legacy-plant-${index}`,
+        name: legacy.name || 'نبات',
+        category: 'نباتات',
+        quantity: 1,
+        image: legacy.image,
+        landscapeIcon: legacy.image,
+        landscapeAdded: true,
+        landscapeX: legacy.x ?? point.x,
+        landscapeY: legacy.y ?? point.y,
+        landscapeSize: legacy.size ?? 58,
+        landscapeShape: 'circle',
+      });
+      return;
+    }
+    if (legacy.kind !== 'shape') return;
+    const shapeType = legacy.shapeType || 'paving';
+    const tool = shapeMap[shapeType];
+    const point = pointFor(index);
+    drawings.push({
+      id: legacy.id || `legacy-shape-${index}`,
+      kind: 'rectangle',
+      tool,
+      x: legacy.x ?? point.x,
+      y: legacy.y ?? point.y,
+      width: legacy.width ?? 12,
+      height: legacy.height ?? 12,
+      rotation: legacy.rotation ?? 0,
+    });
+  });
+  return { ...emptyPlan(), items, landscapeDrawings: drawings };
+}
+
+function readSavedPlan(): LandscapeQuote {
+  if (typeof window === 'undefined') return emptyPlan();
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return emptyPlan();
+    const parsed: unknown = JSON.parse(stored);
+    if (Array.isArray(parsed)) return migrateLegacyPlan(parsed);
+    if (!parsed || typeof parsed !== 'object') return emptyPlan();
+    const saved = parsed as Partial<LandscapeQuote>;
+    return {
+      ...emptyPlan(),
+      ...saved,
+      number: typeof saved.number === 'string' ? saved.number : 'STUDIO',
+      items: Array.isArray(saved.items) ? saved.items : [],
+      landscapeAnnotations: Array.isArray(saved.landscapeAnnotations) ? saved.landscapeAnnotations : [],
+      landscapeDrawings: Array.isArray(saved.landscapeDrawings) ? saved.landscapeDrawings : [],
+    };
+  } catch {
+    return emptyPlan();
+  }
+}
 
 export default function LandscapeEditorPage() {
-  const [plants] = useState<ManagedPlant[]>(starterPlants);
-  const [items, setItems] = useState<PlanItem[]>(() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as PlanItem[]; } catch { return []; } });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [plan, setPlan] = useState<LandscapeQuote>(readSavedPlan);
+  const [plants] = useState<ManagedPlant[]>(getManagedPlants);
   const [search, setSearch] = useState('');
-  const [tool, setTool] = useState<Tool>('select');
-  const [zoom, setZoom] = useState(1);
-  const [prompt, setPrompt] = useState('');
-  const [aiNote, setAiNote] = useState('');
-  const boardRef = useRef<HTMLDivElement>(null);
-  const drawStart = useRef<{ x: number; y: number } | null>(null);
-  const drag = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
-  const selected = items.find((item) => item.id === selectedId);
-  const activeShapes = items.filter((item) => item.kind === 'shape');
+  const filteredPlants = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('ar');
+    return plants.filter((plant) => `${plant.nameAr} ${plant.nameEn} ${plant.scientificName}`.toLocaleLowerCase('ar').includes(query));
+  }, [plants, search]);
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }, [items]);
-  useEffect(() => { const onKey = (event: KeyboardEvent) => { if ((event.key === 'Delete' || event.key === 'Backspace') && selectedId) removeItem(selectedId); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); });
-  const point = (event: { clientX: number; clientY: number }) => { const rect = boardRef.current!.getBoundingClientRect(); return { x: Math.max(2, Math.min(98, (event.clientX - rect.left) / rect.width * 100)), y: Math.max(2, Math.min(98, (event.clientY - rect.top) / rect.height * 100)) }; };
-  const snap = (value: number) => Math.round(value / 2) * 2;
-  const addPlant = (plant: ManagedPlant) => { const id = `plant-${plant.id}-${Date.now()}`; setItems((current) => [...current, { id, kind: 'plant', name: plant.nameAr || plant.nameEn, image: plant.landscapeIcon || plant.image, x: snap(25 + (current.filter((item) => item.kind === 'plant').length * 13) % 60), y: snap(25 + (current.length * 11) % 55), size: 66, rotation: 0 }]); setSelectedId(id); setTool('select'); };
-  const update = (id: string, patch: Partial<PlanItem>) => setItems((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
-  const removeItem = (id: string) => { setItems((current) => current.filter((item) => item.id !== id)); if (selectedId === id) setSelectedId(null); };
-  const clearPlan = () => { setItems([]); setSelectedId(null); };
-  const smartArrange = () => setItems((current) => current.map((item, index) => item.kind === 'plant' ? { ...item, x: snap(18 + (index % 5) * 16), y: snap(22 + Math.floor(index / 5) * 22), rotation: 0 } : item));
-  const loadSamplePlan = () => {
-    const sampleShapes: PlanItem[] = [
-      { id: 'sample-building-main', kind: 'shape', name: 'المبنى الرئيسي', shapeType: 'building', x: 40, y: 58, width: 28, height: 32, size: 1, rotation: 0 },
-      { id: 'sample-building-top', kind: 'shape', name: 'مبنى الخدمات', shapeType: 'building', x: 40, y: 25, width: 18, height: 13, size: 1, rotation: 0 },
-      { id: 'sample-building-right', kind: 'shape', name: 'المبنى الشرقي', shapeType: 'building', x: 78, y: 30, width: 17, height: 16, size: 1, rotation: 0 },
-      { id: 'sample-parking', kind: 'shape', name: 'مواقف السيارات', shapeType: 'parking', x: 14, y: 52, width: 16, height: 68, size: 1, rotation: 0 },
-      { id: 'sample-paving', kind: 'shape', name: 'الساحة الرئيسية', shapeType: 'paving', x: 61, y: 54, width: 16, height: 70, size: 1, rotation: 0 },
-      { id: 'sample-path', kind: 'shape', name: 'المسار الرئيسي', shapeType: 'path', x: 47, y: 51, width: 6, height: 76, size: 1, rotation: 0 },
-      { id: 'sample-lawn-left', kind: 'shape', name: 'مسطح أخضر', shapeType: 'lawn', x: 27, y: 29, width: 20, height: 19, size: 1, rotation: 0 },
-      { id: 'sample-lawn-bottom', kind: 'shape', name: 'مسطح أخضر', shapeType: 'lawn', x: 27, y: 83, width: 23, height: 15, size: 1, rotation: 0 },
-      { id: 'sample-planter-right', kind: 'shape', name: 'حوض زراعي', shapeType: 'planter', x: 85, y: 74, width: 18, height: 28, size: 1, rotation: 0 },
-      { id: 'sample-water', kind: 'shape', name: 'عنصر مائي', shapeType: 'pool', x: 82, y: 59, width: 10, height: 7, size: 1, rotation: 0 }
-    ];
-    const samplePlants: PlanItem[] = plants.slice(0, 12).map((plant, index) => ({ id: `sample-plant-${plant.id}-${index}`, kind: 'plant', name: plant.nameAr || plant.nameEn, image: plant.landscapeIcon || plant.image, x: snap(25 + (index % 6) * 12), y: snap(index < 6 ? 18 : 87), size: 48, rotation: 0 }));
-    setItems([...sampleShapes, ...samplePlants]); setSelectedId(null); setTool('select');
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+  }, [plan]);
+
+  const addPlant = (plant: ManagedPlant) => {
+    const index = plan.items.length;
+    const point = pointFor(index);
+    const shape = plan.landscapeDefaultShape === 'auto' ? 'circle' : plan.landscapeDefaultShape ?? 'circle';
+    const item: LandscapeQuoteItem = {
+      id: `studio-${plant.id}-${Date.now()}`,
+      name: plant.nameAr || plant.nameEn,
+      category: plant.categoryAr || 'نباتات',
+      quantity: 1,
+      scientificName: plant.scientificName,
+      image: plant.image,
+      landscapeIcon: plant.landscapeIcon,
+      landscapeAdded: true,
+      landscapeX: point.x,
+      landscapeY: point.y,
+      landscapeSize: plan.landscapeDefaultSize ?? 58,
+      landscapeShape: shape,
+    };
+    setPlan((current) => ({ ...current, items: [...current.items, item] }));
   };
-  const startDrag = (event: ReactPointerEvent<HTMLDivElement>, item: PlanItem) => { if (event.button !== 0 || tool !== 'select') return; event.stopPropagation(); const p = point(event); drag.current = { id: item.id, offsetX: p.x - item.x, offsetY: p.y - item.y }; setSelectedId(item.id); event.currentTarget.setPointerCapture(event.pointerId); };
-  const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => { if (!drag.current) return; const p = point(event); update(drag.current.id, { x: snap(p.x - drag.current.offsetX), y: snap(p.y - drag.current.offsetY) }); };
-  const endDrag = () => { drag.current = null; };
-  const beginDraw = (event: ReactPointerEvent<HTMLDivElement>) => { if (event.target !== event.currentTarget || tool === 'select' || tool === 'plant') return; drawStart.current = point(event); event.currentTarget.setPointerCapture(event.pointerId); };
-  const finishDraw = (event: ReactPointerEvent<HTMLDivElement>) => { if (!drawStart.current || !shapeDetails[tool as ShapeType]) return; const end = point(event); const start = drawStart.current; const width = Math.max(6, Math.abs(end.x - start.x)); const height = Math.max(5, Math.abs(end.y - start.y)); const id = `shape-${Date.now()}`; setItems((current) => [...current, { id, kind: 'shape', name: shapeDetails[tool as ShapeType].label, shapeType: tool as ShapeType, x: snap(Math.min(start.x, end.x) + width / 2), y: snap(Math.min(start.y, end.y) + height / 2), width: snap(width), height: snap(height), size: 1, rotation: 0 }]); setSelectedId(id); setTool('select'); drawStart.current = null; };
-  const downloadPdf = async () => { const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]); const canvas = await html2canvas(boardRef.current!, { scale: 2, backgroundColor: '#f8fbf8', useCORS: true }); const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }); const width = pdf.internal.pageSize.getWidth() - 20; pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, width, width * canvas.height / canvas.width); pdf.save('qadri-site-landscape-plan.pdf'); };
-  const filtered = plants.filter((plant) => `${plant.nameAr} ${plant.nameEn}`.toLowerCase().includes(search.toLowerCase()));
 
-  return <main className="landscape-editor-page cad-landscape-page landscape-door-opening" dir="rtl">
-    <header className="landscape-editor-header cad-header"><div><Link href="/" className="landscape-back"><ArrowRight size={15} /> العودة للموقع</Link><div className="eyebrow">QADRI AI / SITE PLAN STUDIO</div><h1>مخطط Landscape هندسي</h1><p>وزّع النباتات فوق مخطط الموقع، ثم رتّبها ونزّل نسخة PDF.</p></div><div className="landscape-editor-actions"><button className="btn secondary small" onClick={clearPlan}><Undo2 size={14} />مسح المخطط</button><button className="btn small" onClick={downloadPdf}><Download size={14} />تنزيل PDF</button></div></header>
-    <div className="cad-layout">
-      <aside className="cad-library panel"><div className="cad-library-head"><div><span className="eyebrow">PLANT LIBRARY</span><h2>النباتات</h2><small>اضغط ثم ضعها فوق المخطط</small></div><TreePine size={22} /></div><label className="cad-search"><span>⌕</span><input placeholder="ابحث عن نبتة..." value={search} onChange={(event) => setSearch(event.target.value)} /></label><div className="cad-plant-list">{filtered.map((plant) => <button className="cad-plant-card" key={plant.id} onClick={() => addPlant(plant)}><span className="cad-plant-thumb">{plant.landscapeIcon || plant.image ? <img src={plant.landscapeIcon || plant.image} alt="" /> : <TreePine size={22} />}</span><span><b>{plant.nameAr}</b><small>{plant.nameEn}</small></span><strong>+</strong></button>)}</div></aside>
-      <section className="cad-workspace"><div className="cad-toolbar"><div className="cad-view-group"><button onClick={smartArrange}><WandSparkles size={14} />توزيع النباتات</button></div></div><div className={`cad-board cad-grid ${tool !== 'select' && tool !== 'plant' ? 'cad-drawing' : ''}`} ref={boardRef} onWheel={(event: WheelEvent<HTMLDivElement>) => { event.preventDefault(); setZoom((value) => Math.max(.7, Math.min(1.8, Number((value + (event.deltaY < 0 ? .1 : -.1)).toFixed(1))))); }} onPointerDown={beginDraw} onPointerUp={finishDraw} onPointerMove={moveDrag} onPointerCancel={endDrag} onPointerLeave={endDrag}><div className="cad-scene" style={{ transform: `scale(${zoom})` }}><div className="cad-north">N</div><div className="cad-scale">10 m</div>{items.map((item) => item.kind === 'shape' ? <div key={item.id} className={`cad-shape ${shapeDetails[item.shapeType || 'paving'].className} ${selectedId === item.id ? 'selected' : ''}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, height: `${item.height}%`, transform: `translate(-50%,-50%) rotate(${item.rotation}deg)` }} onPointerDown={(event) => startDrag(event, item)}><span>{item.name}</span>{selectedId === item.id && <button onPointerDown={(event) => { event.stopPropagation(); removeItem(item.id); }} aria-label="حذف العنصر"><Trash2 size={11} /></button>}</div> : <div key={item.id} className={`cad-plant ${selectedId === item.id ? 'selected' : ''}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, transform: `translate(-50%,-50%) rotate(${item.rotation}deg)` }} onPointerDown={(event) => startDrag(event, item)}><span>{item.image ? <img src={item.image} alt={item.name} /> : <TreePine size={38} />}</span><b>{item.name}</b>{selectedId === item.id && <><button className="cad-delete" onPointerDown={(event) => { event.stopPropagation(); removeItem(item.id); }} aria-label="حذف النبات"><Trash2 size={11} /></button><button className="cad-rotate" onClick={(event) => { event.stopPropagation(); update(item.id, { rotation: (item.rotation + 15) % 360 }); }} aria-label="تدوير"><Undo2 size={11} /></button></>}</div>)}{!items.length && <div className="cad-empty"><div><Home size={27} /></div><strong>ابدأ مخطط الموقع</strong><span>أضف نباتًا من المكتبة، ثم اسحبه إلى موقعه المناسب داخل المخطط.</span></div>}</div></div>{selected && <div className="cad-selection panel"><div><span className="eyebrow">SELECTED</span><strong>{selected.name}</strong></div>{selected.kind === 'plant' ? <label>حجم النبات <b>{Math.round(selected.size)}px</b><input type="range" min="38" max="180" value={selected.size} onChange={(event) => update(selected.id, { size: Number(event.target.value) })} /></label> : <><label>العرض <b>{selected.width}%</b><input type="range" min="5" max="90" value={selected.width} onChange={(event) => update(selected.id, { width: Number(event.target.value) })} /></label><label>الارتفاع <b>{selected.height}%</b><input type="range" min="5" max="80" value={selected.height} onChange={(event) => update(selected.id, { height: Number(event.target.value) })} /></label></>}<button onClick={() => removeItem(selected.id)}><Trash2 size={13} />حذف</button></div>}</section>
-      <aside className="cad-ai panel"><div className="cad-ai-mark"><Bot size={21} /></div><span className="eyebrow">SMART SITE PLAN</span><h2>فكرة التصميم الذكية</h2><p>اكتب وصف الموقع، ثم ابنِ المخطط فوق اللوحة. عند ربط AI يمكن تحويل الفكرة إلى توزيع مبدئي.</p><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="مثال: مبنى في الوسط، مواقف يسارًا، مسار دائري، وأحواض نباتية حول الواجهة..." /><button className="btn" onClick={() => setAiNote('تم حفظ فكرة الموقع. جاهزة للتحويل إلى Site Plan عند ربط AI.')}><WandSparkles size={15} />تحليل المخطط</button>{aiNote && <small className="cad-ai-note">{aiNote}</small>}<div className="cad-instructions"><span>1</span><p>أضف نباتًا من المكتبة واسحبه إلى موقعه المناسب في المخطط.</p><span>2</span><p>حرّك النباتات إلى مواقعها، وعدّل حجم النبات المحدد عند الحاجة.</p><span>3</span><p>استخدم توزيع النباتات ثم نزّل PDF.</p></div></aside>
+  const updateItem = (id: string, patch: Partial<LandscapeQuoteItem>) => {
+    setPlan((current) => ({ ...current, items: current.items.map((item) => item.id === id ? { ...item, ...patch } : item) }));
+  };
+  const updateGlobalSettings = (size: number, shape: LandscapeGlobalShape) => {
+    setPlan((current) => ({
+      ...current,
+      landscapeDefaultSize: size,
+      landscapeDefaultShape: shape,
+      items: current.items.map((item) => ({
+        ...item,
+        landscapeSize: size,
+        landscapeShape: shape,
+      })),
+    }));
+  };
+  const addMaterial = (name: string) => {
+    const category = `مواد Landscape / ${name}`;
+    const count = plan.items.length;
+    const point = pointFor(count);
+    const shape = plan.landscapeDefaultShape === 'auto' ? 'circle' : plan.landscapeDefaultShape ?? 'circle';
+    const item: LandscapeQuoteItem = {
+      id: `studio-material-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      category,
+      quantity: 1,
+      landscapeSize: plan.landscapeDefaultSize ?? 58,
+      landscapeShape: shape,
+      landscapeArea: 1,
+      landscapeAdded: true,
+      landscapeX: point.x,
+      landscapeY: point.y,
+    };
+    setPlan((current) => ({ ...current, items: [...current.items, item] }));
+  };
+  const clearPlan = () => {
+    setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeShowGrid: false }));
+  };
+
+  return <main className="landscape-studio-page" dir="rtl">
+    <header className="landscape-studio-header">
+      <div>
+        <Link href="/" className="landscape-studio-back"><ArrowRight size={15} />العودة للموقع</Link>
+        <div className="eyebrow">QADRI AI / LANDSCAPE STUDIO</div>
+        <h1>مخطط Landscape</h1>
+        <p>ابدأ من لوحة بيضاء، وارسم حدود الأرض والعناصر بنفسك. تحفظ تغييراتك تلقائيًا.</p>
+      </div>
+      <div className="landscape-studio-header-actions">
+        <span className="landscape-studio-save-state">يحفظ تلقائيًا</span>
+        <button type="button" onClick={clearPlan}><Trash2 size={14} />مسح المخطط</button>
+      </div>
+    </header>
+
+    <div className="landscape-studio-layout">
+      <aside className="landscape-studio-library">
+        <div className="landscape-studio-library-head">
+          <span className="landscape-studio-library-icon"><TreePine size={19} /></span>
+          <div><span className="eyebrow">PLANT LIBRARY</span><h2>أيقونات النباتات</h2><small>اضغط إضافة ثم حرّك الأيقونة على اللوحة.</small></div>
+        </div>
+        <label className="landscape-studio-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن نبتة أو اسم علمي..." /></label>
+        <div className="landscape-studio-plant-list">
+          {filteredPlants.map((plant) => <button type="button" className="landscape-studio-plant" key={plant.id} onClick={() => addPlant(plant)}>
+            <span className="landscape-studio-plant-image">{plant.landscapeIcon || plant.image ? <img src={plant.landscapeIcon || plant.image} alt="" /> : <TreePine size={20} />}</span>
+            <span className="landscape-studio-plant-names"><strong>{plant.nameAr || plant.nameEn}</strong><small>{plant.nameEn || plant.scientificName}</small></span>
+            <span className="landscape-studio-add">+</span>
+          </button>)}
+          {!filteredPlants.length && <p className="landscape-studio-no-results">لا توجد نباتات مطابقة للبحث.</p>}
+        </div>
+      </aside>
+
+      <div className="landscape-studio-workspace">
+        <LandscapePlan
+          quote={plan}
+          onItemChange={updateItem}
+          onShowScientificNamesChange={(value) => setPlan((current) => ({ ...current, showScientificNames: value }))}
+          onGlobalSettingsChange={updateGlobalSettings}
+          onAnnotationsChange={(landscapeAnnotations) => setPlan((current) => ({ ...current, landscapeAnnotations }))}
+          onDrawingsChange={(landscapeDrawings: LandscapeDrawing[]) => setPlan((current) => ({ ...current, landscapeDrawings }))}
+          onGridChange={(landscapeShowGrid) => setPlan((current) => ({ ...current, landscapeShowGrid }))}
+          onAddMaterial={addMaterial}
+        />
+      </div>
     </div>
   </main>;
 }

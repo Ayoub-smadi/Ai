@@ -1,0 +1,170 @@
+.landscape-board {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(12px, 2vw, 22px);
+  border: 1px solid #e3e9e3;
+  border-radius: 16px;
+  background: #fff;
+  color: #24342a;
+  box-shadow: 0 12px 36px #263c2810;
+}
+
+.landscape-board-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.landscape-heading-copy { min-width: 0; }
+.landscape-heading-copy > .eyebrow { color: #708074; font-size: 9px; letter-spacing: .1em; }
+.landscape-heading-copy h2 { margin: 7px 0 4px; color: #21392a; font-size: clamp(19px, 2vw, 26px); }
+.landscape-heading-copy p { margin: 0; color: #68756b; font-size: 12px; line-height: 1.7; }
+.landscape-heading-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.landscape-view-switch { display: inline-flex; padding: 3px; border: 1px solid #dce5dd; border-radius: 9px; background: #f7f9f7; }
+.landscape-view-switch button { min-height: 30px; padding: 5px 13px; border: 0; border-radius: 6px; background: transparent; color: #647367; font-size: 11px; cursor: pointer; }
+.landscape-view-switch button.active { background: #315c3c; color: #fff; }
+.landscape-pdf-button { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.landscape-pdf-error { display: block; margin-top: 7px; color: #a23932; font-size: 11px; }
+.landscape-science-toggle { display: inline-flex; align-items: center; gap: 7px; flex: none; padding: 9px 11px; border: 1px solid #e2e9e3; border-radius: 9px; color: #56665a; background: #fafcf9; font-size: 10px; }
+.landscape-science-toggle input, .landscape-drawing-hints input { accent-color: #315c3c; }
+
+.landscape-drawing-tools { display: grid; gap: 10px; padding: 12px; border: 1px solid #e1e8e1; border-radius: 12px; background: #fbfcfb; }
+.landscape-drawing-tool-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.landscape-drawing-tool-row button, .landscape-drawing-hints button, .landscape-material-presets button, .landscape-annotation-tools button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 7px 10px;
+  border: 1px solid #d9e2da; border-radius: 8px; background: #fff; color: #44584a; font-size: 10px; cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
+}
+.landscape-drawing-tool-row button:hover, .landscape-drawing-hints button:hover, .landscape-material-presets button:hover, .landscape-annotation-tools button:hover { border-color: #8eaa93; color: #214b2e; }
+.landscape-drawing-tool-row button.active { border-color: #315c3c; background: #315c3c; color: #fff; box-shadow: 0 3px 10px #315c3c20; }
+.landscape-drawing-hints { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: #68766b; }
+.landscape-drawing-hints > small { flex: 1 1 300px; font-size: 10px; line-height: 1.6; }
+.landscape-drawing-hints label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 10px; }
+.landscape-drawing-hints button { min-height: 28px; padding: 5px 8px; font-size: 9px; }
+.landscape-drawing-hints button:disabled { opacity: .45; cursor: not-allowed; }
+
+.landscape-canvas { position: relative; width: 100%; height: min(68vh, 620px); min-height: 420px; overflow: hidden; border: 1px solid #ccd5ce; border-radius: 11px; background-color: #fff; isolation: isolate; touch-action: none; }
+.landscape-board .landscape-canvas-white { height: min(68vh, 620px); min-height: 420px; background-color: #fff !important; background-image: none !important; }
+.landscape-board .landscape-canvas-white:before, .landscape-board .landscape-canvas-white:after { display: none !important; content: none !important; }
+.landscape-board .landscape-canvas-white.has-grid { background-image: linear-gradient(#edf1ed 1px, transparent 1px), linear-gradient(90deg, #edf1ed 1px, transparent 1px) !important; background-size: 32px 32px; }
+.landscape-canvas.is-drawing { cursor: crosshair; }
+.landscape-freehand-layer { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.landscape-freehand-layer g { pointer-events: none; touch-action: none; }
+.landscape-freehand-layer [stroke="transparent"] { pointer-events: stroke; cursor: move; }
+.landscape-freehand-layer g.selected > polygon:not([stroke="transparent"]) { stroke: #315c3c; stroke-dasharray: 2 1; }
+.landscape-freehand-layer g.is-preview { opacity: .58; }
+.landscape-drawn-area { position: absolute; z-index: 2; display: grid; place-items: center; box-sizing: border-box; overflow: hidden; border: 1.5px solid #7d8780; color: #515d54; cursor: move; touch-action: none; user-select: none; opacity: .98; }
+.landscape-drawn-area > span { max-width: 94%; overflow: hidden; color: inherit; font-size: clamp(8px, .85vw, 11px); line-height: 1.3; text-align: center; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.landscape-area-building { border-color: #47534b; background: #fff; box-shadow: inset 0 0 0 4px #f3f5f3; }
+.landscape-area-entrance { border-color: #8b785a; border-style: dashed; background: #f8f4ea; color: #706046; }
+.landscape-area-lawn { border-color: #82a184; background: #eaf3e9d9; color: #4b704f; }
+.landscape-area-parking { border-color: #7b8380; background: repeating-linear-gradient(90deg, #f4f5f4, #f4f5f4 18px, #d9ddda 19px, #d9ddda 20px); color: #515956; }
+.landscape-area-paving { border-color: #98968d; background: repeating-linear-gradient(0deg, #f1f0eb, #f1f0eb 16px, #deddd6 17px, #deddd6 18px); color: #68675e; }
+.landscape-area-water { border-color: #7298a7; background: #e3f0f4; color: #4b7180; }
+.landscape-area-planter { border-color: #77936f; border-radius: 18px; background: #eef4e8; color: #56704d; box-shadow: inset 0 0 0 3px #dfead8; }
+.landscape-area-path-area { border-color: #8e897d; background: repeating-linear-gradient(45deg, #f0eee7, #f0eee7 9px, #dedbd1 10px, #dedbd1 11px); color: #656154; }
+.landscape-drawn-area.selected { z-index: 3; outline: 2px dashed #315c3c; outline-offset: 3px; }
+.landscape-drawn-area.is-preview { pointer-events: none; opacity: .66; }
+
+.landscape-node { position: absolute; z-index: 5; display: grid; justify-items: center; gap: 3px; padding: 0; border: 0; background: transparent; transform: translate(-50%, -50%); cursor: grab; touch-action: none; user-select: none; }
+.landscape-node.is-dragging { z-index: 8; cursor: grabbing; }
+.landscape-node.is-selected { z-index: 7; filter: drop-shadow(0 0 3px #315c3c6b); }
+.landscape-node-art { display: grid; flex: none; place-items: center; overflow: hidden; border-style: solid; border-width: 2px; background: #fff; box-shadow: 0 2px 5px #213b2912; }
+.landscape-node-art img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; }
+.landscape-tree-symbol { display: block; flex: none; }
+.landscape-node strong, .landscape-node small { max-width: 205px; padding: 2px 5px; border: 1px solid #e8ece8; border-radius: 4px; background: #ffffffed; color: #243b2a; box-shadow: 0 1px 3px #1522150a; text-align: center; }
+.landscape-node strong { overflow: hidden; font-size: 9px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.landscape-node small { color: #526458; font-size: 8px; line-height: 1.35; }
+.landscape-kind-road { background: #666d69; }
+.landscape-kind-roundabout { background: #f7f8f4; }
+.landscape-kind-irrigation { background: #eaf3f6; }
+
+.landscape-drawn-line-hitarea { position: absolute; z-index: 6; height: 18px; transform: translateY(-50%); cursor: move; touch-action: none; }
+.landscape-drawn-line-stroke { position: absolute; top: 50%; left: 0; width: 100%; transform-origin: left center; border-radius: 99px; }
+.landscape-drawn-line-hitarea.selected { outline: 1px dashed #315c3c; outline-offset: 4px; }
+.landscape-number-mark { position: absolute; z-index: 6; min-width: 24px; min-height: 24px; display: grid; place-items: center; transform: translate(-50%, -50%); border: 1px solid currentColor; border-radius: 50%; background: #fff; font-weight: 700; cursor: move; touch-action: none; user-select: none; }
+.landscape-number-mark.selected { outline: 2px dashed #315c3c; outline-offset: 3px; }
+
+.landscape-object-properties { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 12px; border: 1px solid #dfe8df; border-radius: 11px; background: #f9fbf9; }
+.landscape-object-properties > div { display: grid; min-width: 120px; gap: 3px; margin-inline-end: auto; }
+.landscape-object-properties > div strong { color: #2c4c34; font-size: 11px; }
+.landscape-object-properties > div small { color: #7b887d; font-size: 9px; }
+.landscape-object-properties label { display: grid; grid-template-columns: auto auto; align-items: center; gap: 4px 9px; min-width: 130px; color: #68766b; font-size: 9px; }
+.landscape-object-properties label b { color: #315c3c; }
+.landscape-object-properties input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #315c3c; }
+.landscape-object-properties input[type="number"] { grid-column: 1 / -1; width: 95px; border: 1px solid #d6e0d7; border-radius: 6px; padding: 5px; }
+.landscape-object-properties > button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 6px 9px; border: 1px solid #e5d4d2; border-radius: 7px; background: #fff; color: #9a4a44; font-size: 9px; cursor: pointer; }
+
+.landscape-item-library, .landscape-material-presets, .landscape-annotation-tools, .landscape-settings-list, .landscape-material-size-list, .landscape-table-scroll { border: 1px solid #e4eae4; border-radius: 12px; background: #fff; }
+.landscape-item-library { padding: 12px; }
+.landscape-item-library-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.landscape-item-library-head > span { display: grid; gap: 3px; }
+.landscape-item-library-head strong { color: #2a4831; font-size: 11px; }
+.landscape-item-library-head small { color: #77847a; font-size: 9px; }
+.landscape-open-plant-picker { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 30px; padding: 5px 9px; border: 1px solid #cfded0; border-radius: 7px; background: #fff; color: #315c3c; font-size: 9px; cursor: pointer; white-space: nowrap; }
+.landscape-open-plant-picker:hover { background: #315c3c; color: #fff; }
+.landscape-item-library-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 7px; }
+.landscape-item-library-card { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px; border: 1px solid #e8ede8; border-radius: 9px; background: #fbfcfb; }
+.landscape-item-library-icon { display: grid; flex: 0 0 34px; place-items: center; width: 34px; height: 34px; overflow: hidden; border: 1px solid #e0e7e0; border-radius: 50%; background: #f4f8f3; color: #46714c; }
+.landscape-item-library-icon img { width: 100%; height: 100%; object-fit: contain; }
+.landscape-item-library-card > span:nth-child(2) { display: grid; flex: 1; min-width: 0; gap: 3px; }
+.landscape-item-library-card strong, .landscape-item-library-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.landscape-item-library-card strong { color: #334c39; font-size: 10px; }
+.landscape-item-library-card small { color: #79857b; font-size: 8px; }
+.landscape-item-library-card button { flex: none; min-height: 28px; padding: 4px 8px; border: 1px solid #cfded0; border-radius: 7px; background: #fff; color: #315c3c; font-size: 9px; cursor: pointer; }
+.landscape-item-library-card button:hover { background: #315c3c; color: #fff; }
+
+.landscape-material-presets { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; padding: 11px; }
+.landscape-material-presets > strong { margin-inline-end: 5px; color: #45624b; font-size: 10px; }
+.landscape-material-presets button { min-height: 30px; padding: 5px 8px; font-size: 9px; }
+.landscape-annotation-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 11px; }
+.landscape-annotation-tools-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.landscape-annotation-tools-head > strong { color: #45624b; font-size: 10px; }
+.landscape-annotation-tools-head > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.landscape-annotation-tools button { min-height: 29px; padding: 5px 8px; font-size: 9px; }
+.landscape-annotation-tools p { margin: 0; color: #7b887d; font-size: 9px; }
+
+.landscape-settings-list, .landscape-material-size-list { padding: 13px; }
+.landscape-settings-list h3, .landscape-material-size-list h3 { margin: 0 0 5px; color: #2c4c34; font-size: 12px; }
+.landscape-global-help, .landscape-material-size-list > p { margin: 0 0 11px; color: #77847a; font-size: 9px; line-height: 1.6; }
+.landscape-global-controls { display: grid; grid-template-columns: minmax(180px, 1.5fr) minmax(130px, .8fr) auto; align-items: end; gap: 12px; }
+.landscape-global-control { display: grid; grid-template-columns: auto auto; align-items: center; gap: 5px 8px; color: #66756a; font-size: 9px; }
+.landscape-global-control b { justify-self: end; color: #315c3c; }
+.landscape-global-control input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #315c3c; }
+.landscape-global-control select { grid-column: 1 / -1; min-height: 32px; border: 1px solid #d6e0d7; border-radius: 7px; padding: 5px 8px; background: #fff; color: #3d5142; font-size: 10px; }
+.landscape-unify-icons { min-height: 34px; padding: 7px 12px; border: 1px solid #315c3c; border-radius: 8px; background: #315c3c; color: #fff; font-size: 10px; cursor: pointer; white-space: nowrap; }
+.landscape-unify-icons:hover { background: #244c30; }
+.landscape-material-size-list { display: grid; gap: 9px; }
+.landscape-material-size-row { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(150px, 2fr); align-items: center; gap: 12px; color: #66756a; font-size: 9px; }
+.landscape-material-size-row > span { display: flex; justify-content: space-between; gap: 10px; }
+.landscape-material-size-row strong { color: #3b5440; font-weight: 600; }
+.landscape-material-size-row b { color: #315c3c; }
+.landscape-material-size-row input { width: 100%; accent-color: #315c3c; }
+
+.landscape-table-scroll { overflow: auto; }
+.landscape-items-table { width: 100%; min-width: 500px; border-collapse: collapse; }
+.landscape-items-table th, .landscape-items-table td { padding: 10px 12px; border-bottom: 1px solid #edf0ed; text-align: right; font-size: 10px; }
+.landscape-items-table th { background: #f5f8f5; color: #405b45; font-weight: 700; }
+.landscape-table-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; overflow: hidden; border: 1px solid #e1e7e1; border-radius: 50%; color: #4d7654; }
+.landscape-table-icon img { width: 100%; height: 100%; object-fit: contain; }
+.landscape-table-empty { padding: 22px !important; color: #7a867c; text-align: center !important; }
+
+@media (max-width: 760px) {
+  .landscape-board { padding: 12px; gap: 11px; }
+  .landscape-board-head { display: grid; gap: 9px; }
+  .landscape-science-toggle { width: fit-content; }
+  .landscape-canvas { height: 58vh; min-height: 360px; }
+  .landscape-drawing-tool-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .landscape-drawing-tool-row button { padding-inline: 5px; font-size: 9px; }
+  .landscape-drawing-hints { align-items: flex-start; }
+  .landscape-global-controls { grid-template-columns: 1fr 1fr; }
+  .landscape-unify-icons { grid-column: 1 / -1; }
+  .landscape-object-properties { align-items: stretch; flex-direction: column; gap: 10px; }
+  .landscape-object-properties label { min-width: 0; }
+  .landscape-material-size-row { grid-template-columns: 1fr; gap: 5px; }
+}
+@media (max-width: 480px) {
+  .landscape-heading-actions { align-items: stretch; flex-direction: column; }
+  .landscape-view-switch { justify-content: center; }
+  .landscape-pdf-button { justify-content: center; }
+  .landscape-canvas { min-height: 320px; }
+  .landscape-drawing-hints > small { flex-basis: 100%; }
+  .landscape-item-library-head { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .landscape-item-library-list { grid-template-columns: 1fr; }
+}
