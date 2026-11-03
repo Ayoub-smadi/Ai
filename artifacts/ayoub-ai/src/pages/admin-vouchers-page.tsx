@@ -217,7 +217,7 @@ export default function AdminVouchersPage({ kind }: { kind: VoucherKind }) {
           <article ref={previewRef} className="voucher-sheet">
             <header className="voucher-brand-row">
               <div className="voucher-brand-en" dir="ltr"><strong>Al-Qadri Agricultural Foundation</strong><span>Jarash - Al-Rashaidah · Jordan</span></div>
-              <div className="voucher-brand-logo"><img src="/chatbot.png" alt="شعار القادري الزراعي" /></div>
+              <div className="voucher-brand-logo"><img src="/alqadri-logo.png" alt="شعار القادري الزراعي" /></div>
               <div className="voucher-brand-ar"><strong>مؤسسة القادري الزراعية</strong><span>جرش - الرشايدة - الأردن</span><small>0777772211 · 0778111155</small></div>
             </header>
             <div className="voucher-blue-rule" />

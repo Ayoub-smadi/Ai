@@ -17,7 +17,7 @@
 .voucher-brand-ar strong{font-size:clamp(15px,1.8vw,24px);font-weight:800;color:var(--voucher-navy)}
 .voucher-brand-ar span,.voucher-brand-ar small{color:#70798a;font-size:11px}
 .voucher-brand-logo{display:grid;place-items:center}
-.voucher-brand-logo img{width:64px;height:64px;object-fit:contain}
+.voucher-brand-logo img{width:60px;height:76px;box-sizing:border-box;padding:4px;border:1px solid #e6ece6;border-radius:11px;background:#fff;box-shadow:0 4px 12px #172b2015;object-fit:contain}
 .voucher-blue-rule{height:3px;margin:5px -22px 12px;background:var(--voucher-navy)}
 .voucher-title-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:0 -22px 18px;padding:14px 22px;background:var(--voucher-soft);color:#7d8491;font-size:12px}
 .voucher-title-row>span:last-child{text-align:left}
