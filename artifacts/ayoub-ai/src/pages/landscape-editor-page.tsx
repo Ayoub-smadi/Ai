@@ -96,6 +96,9 @@ function readSavedPlan(): LandscapeQuote {
       items: Array.isArray(saved.items) ? saved.items : [],
       landscapeAnnotations: Array.isArray(saved.landscapeAnnotations) ? saved.landscapeAnnotations : [],
       landscapeDrawings: Array.isArray(saved.landscapeDrawings) ? saved.landscapeDrawings : [],
+      landscapeCustomTools: Array.isArray(saved.landscapeCustomTools) ? saved.landscapeCustomTools : [],
+      landscapeCustomStamps: Array.isArray(saved.landscapeCustomStamps) ? saved.landscapeCustomStamps : [],
+      landscapeTextNotes: Array.isArray(saved.landscapeTextNotes) ? saved.landscapeTextNotes : [],
     };
   } catch {
     return emptyPlan();
@@ -151,27 +154,8 @@ export default function LandscapeEditorPage() {
       })),
     }));
   };
-  const addMaterial = (name: string) => {
-    const category = `مواد Landscape / ${name}`;
-    const count = plan.items.length;
-    const point = pointFor(count);
-    const shape = plan.landscapeDefaultShape === 'auto' ? 'circle' : plan.landscapeDefaultShape ?? 'circle';
-    const item: LandscapeQuoteItem = {
-      id: `studio-material-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name,
-      category,
-      quantity: 1,
-      landscapeSize: plan.landscapeDefaultSize ?? 58,
-      landscapeShape: shape,
-      landscapeArea: 1,
-      landscapeAdded: true,
-      landscapeX: point.x,
-      landscapeY: point.y,
-    };
-    setPlan((current) => ({ ...current, items: [...current.items, item] }));
-  };
   const clearPlan = () => {
-    setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeShowGrid: false }));
+    setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeCustomStamps: [], landscapeTextNotes: [], landscapeShowGrid: false }));
   };
 
   return <main className="landscape-studio-page" dir="rtl">
@@ -214,7 +198,9 @@ export default function LandscapeEditorPage() {
           onAnnotationsChange={(landscapeAnnotations) => setPlan((current) => ({ ...current, landscapeAnnotations }))}
           onDrawingsChange={(landscapeDrawings: LandscapeDrawing[]) => setPlan((current) => ({ ...current, landscapeDrawings }))}
           onGridChange={(landscapeShowGrid) => setPlan((current) => ({ ...current, landscapeShowGrid }))}
-          onAddMaterial={addMaterial}
+          onCustomToolsChange={(landscapeCustomTools) => setPlan((current) => ({ ...current, landscapeCustomTools }))}
+          onCustomStampsChange={(landscapeCustomStamps) => setPlan((current) => ({ ...current, landscapeCustomStamps }))}
+          onTextNotesChange={(landscapeTextNotes) => setPlan((current) => ({ ...current, landscapeTextNotes }))}
         />
       </div>
     </div>

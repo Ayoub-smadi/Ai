@@ -1,5 +1,5 @@
-import { useRef, useState, type CSSProperties, type PointerEvent } from 'react';
-import { Circle, Download, Droplets, Flower2, Mountain, Package, Route, Sprout, TreePine, Trash2, Undo2 } from 'lucide-react';
+import { useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent } from 'react';
+import { Circle, Download, Droplets, Flower2, ImagePlus, Mountain, Package, Route, Sprout, TreePine, Trash2, Undo2 } from 'lucide-react';
 import './landscape-plan-engineering.css';
 
 export type LandscapeQuoteItem = {
@@ -18,6 +18,9 @@ export type LandscapeQuoteItem = {
   landscapeInstances?: Array<{ x: number; y: number }>;
   landscapeAdded?: boolean;
 };
+export type LandscapeCustomTool = { id: string; name: string; icon?: string };
+export type LandscapeTextNote = { id: string; text: string; x: number; y: number; fontSize: number };
+export type LandscapeCustomStamp = { id: string; toolId: string; x: number; y: number; size?: number };
 export type LandscapeGlobalShape = 'circle' | 'rectangle' | 'square';
 export type LandscapeAnnotation =
   | { id: string; kind: 'line'; x: number; y: number; length: number; thickness: number; angle: number; color: string }
@@ -36,6 +39,9 @@ export type LandscapeQuote = {
   landscapeAnnotations?: LandscapeAnnotation[];
   landscapeDrawings?: LandscapeDrawing[];
   landscapeShowGrid?: boolean;
+  landscapeCustomTools?: LandscapeCustomTool[];
+  landscapeCustomStamps?: LandscapeCustomStamp[];
+  landscapeTextNotes?: LandscapeTextNote[];
 };
 type Props = {
   quote: LandscapeQuote;
@@ -45,24 +51,18 @@ type Props = {
   onAnnotationsChange: (annotations: LandscapeAnnotation[]) => void;
   onDrawingsChange: (drawings: LandscapeDrawing[]) => void;
   onGridChange: (value: boolean) => void;
-  onAddMaterial: (name: string) => void;
+  onCustomToolsChange: (tools: LandscapeCustomTool[]) => void;
+  onCustomStampsChange: (stamps: LandscapeCustomStamp[]) => void;
+  onTextNotesChange: (notes: LandscapeTextNote[]) => void;
   onOpenPlantPicker?: () => void;
 };
 type LandscapeTool = 'select' | LandscapeDrawingTool;
 type DrawSession = { pointerId: number; tool: LandscapeDrawingTool; start: LandscapePoint; points: LandscapePoint[] };
 type ItemDrag = { id: string; instanceIndex: number; pointerId: number; positions: LandscapePoint[] };
+type CustomStampDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
+type TextNoteDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
 type DrawingDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; original: LandscapeDrawing };
 type AnnotationDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
-type Material = { name: string; icon: typeof Sprout };
-
-const materials: Material[] = [
-  { name: 'توف بركاني', icon: Mountain },
-  { name: 'تربة حمراء', icon: Mountain },
-  { name: 'نجيل', icon: Sprout },
-  { name: 'شبكة ري', icon: Droplets },
-  { name: 'شارع', icon: Route },
-  { name: 'دوّار', icon: Circle },
-];
 const drawingTools: Array<{ id: LandscapeDrawingTool; label: string; mode: 'freehand' | 'rectangle' }> = [
   { id: 'boundary', label: 'حدود الأرض', mode: 'freehand' },
   { id: 'building', label: 'مبنى', mode: 'rectangle' },
@@ -148,7 +148,9 @@ export default function LandscapePlan({
   onAnnotationsChange,
   onDrawingsChange,
   onGridChange,
-  onAddMaterial,
+  onCustomToolsChange,
+  onCustomStampsChange,
+  onTextNotesChange,
   onOpenPlantPicker,
 }: Props) {
   const allItems = quote.items.filter((item) => item.name.trim());
@@ -165,6 +167,8 @@ export default function LandscapePlan({
   const itemDrag = useRef<ItemDrag | null>(null);
   const drawingDrag = useRef<DrawingDrag | null>(null);
   const annotationDrag = useRef<AnnotationDrag | null>(null);
+  const customStampDrag = useRef<CustomStampDrag | null>(null);
+  const textNoteDrag = useRef<TextNoteDrag | null>(null);
   const [previewDrawing, setPreviewDrawing] = useState<LandscapeDrawing | null>(null);
   const [activeTool, setActiveTool] = useState<LandscapeTool>('select');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -174,6 +178,21 @@ export default function LandscapePlan({
   const [viewMode, setViewMode] = useState<'plan' | 'table'>('plan');
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState('');
+  const [activeCustomToolId, setActiveCustomToolId] = useState<string | null>(null);
+  const [showCustomToolForm, setShowCustomToolForm] = useState(false);
+  const [customToolName, setCustomToolName] = useState('');
+  const [customToolIcon, setCustomToolIcon] = useState('');
+  const [customToolError, setCustomToolError] = useState('');
+  const [selectedCustomStampId, setSelectedCustomStampId] = useState<string | null>(null);
+  const [showTextComposer, setShowTextComposer] = useState(false);
+  const [draftText, setDraftText] = useState('');
+  const [isPlacingText, setIsPlacingText] = useState(false);
+  const [selectedTextNoteId, setSelectedTextNoteId] = useState<string | null>(null);
+  const customTools = quote.landscapeCustomTools ?? [];
+  const customStamps = quote.landscapeCustomStamps ?? [];
+  const textNotes = quote.landscapeTextNotes ?? [];
+  const selectedCustomStamp = customStamps.find((stamp) => stamp.id === selectedCustomStampId) ?? null;
+  const selectedTextNote = textNotes.find((note) => note.id === selectedTextNoteId) ?? null;
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
   const selectedAnnotation = annotations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null;
@@ -190,6 +209,8 @@ export default function LandscapePlan({
     setSelectedItemId(null);
     setSelectedDrawingId(null);
     setSelectedAnnotationId(null);
+    setSelectedCustomStampId(null);
+    setSelectedTextNoteId(null);
   };
   const updateDrawing = (id: string, changes: Partial<LandscapeDrawing>) => {
     onDrawingsChange(drawings.map((drawing) => drawing.id === id ? { ...drawing, ...changes } as LandscapeDrawing : drawing));
@@ -200,6 +221,16 @@ export default function LandscapePlan({
     setSelectedDrawingId(null);
   };
   const beginDrawing = (event: PointerEvent<HTMLDivElement>) => {
+    if (isPlacingText && event.button === 0 && event.target === event.currentTarget && draftText.trim()) {
+      event.preventDefault();
+      const point = pointFromEvent(event);
+      const note = { id: `text-note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, text: draftText.trim(), x: point.x, y: point.y, fontSize: 20 };
+      clearSelection();
+      onTextNotesChange([...textNotes, note]);
+      setSelectedTextNoteId(note.id); setDraftText(''); setIsPlacingText(false); setShowTextComposer(false);
+      return;
+    }
+    if (activeCustomToolId && event.button === 0 && event.target === event.currentTarget) { addCustomStampAt(event); return; }
     if (activeTool === 'select' || event.button !== 0 || event.target !== event.currentTarget) return;
     event.preventDefault();
     const start = pointFromEvent(event);
@@ -339,6 +370,111 @@ export default function LandscapePlan({
     clearSelection();
     setSelectedAnnotationId(id);
   };
+  const handleCustomToolIconChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setCustomToolError('اختر ملف صورة صالحًا.'); return; }
+    if (file.size > 2 * 1024 * 1024) { setCustomToolError('حجم الصورة يجب ألا يتجاوز 2 ميغابايت.'); return; }
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      const scale = Math.min(1, 256 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) { URL.revokeObjectURL(objectUrl); setCustomToolError('تعذر تجهيز الصورة. حاول مرة أخرى.'); return; }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      setCustomToolIcon(canvas.toDataURL('image/png'));
+      setCustomToolError('');
+      URL.revokeObjectURL(objectUrl);
+    };
+    image.onerror = () => { URL.revokeObjectURL(objectUrl); setCustomToolError('تعذرت قراءة الصورة. حاول مرة أخرى.'); };
+    image.src = objectUrl;
+  };
+  const saveCustomTool = () => {
+    const name = customToolName.trim();
+    if (!name || !customToolIcon) { setCustomToolError('اكتب اسم الزر وأرفق أيقونة.'); return; }
+    const tool: LandscapeCustomTool = { id: `custom-tool-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name, icon: customToolIcon };
+    onCustomToolsChange([...customTools, tool]);
+    setCustomToolName(''); setCustomToolIcon(''); setCustomToolError(''); setShowCustomToolForm(false);
+  };
+  const removeCustomTool = (id: string) => {
+    onCustomToolsChange(customTools.filter((tool) => tool.id !== id));
+    onCustomStampsChange(customStamps.filter((stamp) => stamp.toolId !== id));
+    if (activeCustomToolId === id) setActiveCustomToolId(null);
+  };
+  const addCustomStampAt = (event: PointerEvent<HTMLDivElement>) => {
+    if (!activeCustomToolId || event.button !== 0) return false;
+    event.preventDefault();
+    const point = pointFromEvent(event);
+    const stamp = { id: `custom-stamp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, toolId: activeCustomToolId, x: point.x, y: point.y, size: 44 };
+    onCustomStampsChange([...customStamps, stamp]);
+    setSelectedCustomStampId(stamp.id);
+    return true;
+  };
+  const startCustomStampDrag = (event: PointerEvent<HTMLDivElement>, stamp: LandscapeCustomStamp) => {
+    event.stopPropagation();
+    if (event.button !== 0 || activeTool !== 'select') return;
+    event.preventDefault();
+    customStampDrag.current = { id: stamp.id, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startX: stamp.x, startY: stamp.y };
+    setActiveCustomToolId(null);
+    clearSelection();
+    setSelectedCustomStampId(stamp.id);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moveCustomStampDrag = (event: PointerEvent<HTMLDivElement>, id: string) => {
+    const active = customStampDrag.current;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!active || active.id !== id || active.pointerId !== event.pointerId || !rect) return;
+    onCustomStampsChange(customStamps.map((stamp) => stamp.id === id ? {
+      ...stamp,
+      x: Number(clamp(active.startX + (event.clientX - active.startClientX) / rect.width * 100, 1, 99).toFixed(1)),
+      y: Number(clamp(active.startY + (event.clientY - active.startClientY) / rect.height * 100, 1, 99).toFixed(1)),
+    } : stamp));
+  };
+  const endCustomStampDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (customStampDrag.current?.pointerId !== event.pointerId) return;
+    customStampDrag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const removeSelectedCustomStamp = () => {
+    if (!selectedCustomStampId) return;
+    onCustomStampsChange(customStamps.filter((stamp) => stamp.id !== selectedCustomStampId));
+    setSelectedCustomStampId(null);
+  };
+  const updateTextNote = (id: string, changes: Partial<LandscapeTextNote>) => {
+    onTextNotesChange(textNotes.map((note) => note.id === id ? { ...note, ...changes } : note));
+  };
+  const startTextNoteDrag = (event: PointerEvent<HTMLDivElement>, note: LandscapeTextNote) => {
+    event.stopPropagation();
+    if (event.button !== 0 || activeTool !== 'select') return;
+    event.preventDefault();
+    textNoteDrag.current = { id: note.id, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startX: note.x, startY: note.y };
+    setActiveCustomToolId(null);
+    clearSelection();
+    setSelectedTextNoteId(note.id);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moveTextNoteDrag = (event: PointerEvent<HTMLDivElement>, id: string) => {
+    const active = textNoteDrag.current;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!active || active.id !== id || active.pointerId !== event.pointerId || !rect) return;
+    updateTextNote(id, {
+      x: Number(clamp(active.startX + (event.clientX - active.startClientX) / rect.width * 100, 1, 99).toFixed(1)),
+      y: Number(clamp(active.startY + (event.clientY - active.startClientY) / rect.height * 100, 1, 99).toFixed(1)),
+    });
+  };
+  const endTextNoteDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (textNoteDrag.current?.pointerId !== event.pointerId) return;
+    textNoteDrag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const removeSelectedTextNote = () => {
+    if (!selectedTextNoteId) return;
+    onTextNotesChange(textNotes.filter((note) => note.id !== selectedTextNoteId));
+    setSelectedTextNoteId(null);
+  };
   const addItemToCanvas = (item: LandscapeQuoteItem, index: number) => {
     const columns = 4;
     const x = 32 + (index % columns) * 12;
@@ -475,11 +611,18 @@ export default function LandscapePlan({
 
     {viewMode === 'plan' && <div className="landscape-drawing-tools">
       <div className="landscape-drawing-tool-row" role="toolbar" aria-label="أدوات رسم المخطط">
-        <button type="button" className={activeTool === 'select' ? 'active' : ''} aria-pressed={activeTool === 'select'} onClick={() => setActiveTool('select')}>تحديد / تحريك</button>
-        {drawingTools.map((tool) => <button key={tool.id} type="button" className={activeTool === tool.id ? 'active' : ''} aria-pressed={activeTool === tool.id} onClick={() => { clearSelection(); setActiveTool(tool.id); }}>{tool.label}</button>)}
+        <button type="button" className={activeTool === 'select' && !activeCustomToolId ? 'active' : ''} aria-pressed={activeTool === 'select' && !activeCustomToolId} onClick={() => { setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); }}>تحديد / تحريك</button>
+        {drawingTools.map((tool) => <button key={tool.id} type="button" className={activeTool === tool.id ? 'active' : ''} aria-pressed={activeTool === tool.id} onClick={() => { setIsPlacingText(false); clearSelection(); setActiveCustomToolId(null); setActiveTool(tool.id); }}>{tool.label}</button>)}
+        <button type="button" className={showTextComposer || isPlacingText ? 'active' : ''} aria-pressed={showTextComposer || isPlacingText} onClick={() => { setShowTextComposer((value) => !value); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); clearSelection(); }}>إضافة نص</button>
       </div>
+      <div className="landscape-custom-tool-manager">
+        <div className="landscape-custom-tool-heading"><strong>أدوات مخصصة</strong><button type="button" onClick={() => { setShowCustomToolForm((value) => !value); setCustomToolError(''); }}>+ إضافة زر</button></div>
+        {!!customTools.some((tool) => tool.icon) && <div className="landscape-custom-tool-list">{customTools.filter((tool) => tool.icon).map((tool) => <div className="landscape-custom-tool" key={tool.id}><button type="button" className={activeCustomToolId === tool.id ? 'active' : ''} aria-pressed={activeCustomToolId === tool.id} onClick={() => { setIsPlacingText(false); clearSelection(); setActiveTool('select'); setActiveCustomToolId(activeCustomToolId === tool.id ? null : tool.id); }}>{tool.icon && <img src={tool.icon} alt="" />}<span>{tool.name}</span></button><button type="button" className="landscape-custom-tool-remove" title="حذف الأداة" aria-label={`حذف أداة ${tool.name}`} onClick={() => removeCustomTool(tool.id)}>×</button></div>)}</div>}
+        {showCustomToolForm && <div className="landscape-custom-tool-form"><label>اسم الزر<input value={customToolName} onChange={(event) => setCustomToolName(event.target.value)} placeholder="مثال: نافورة" /></label><label className="landscape-custom-tool-upload"><ImagePlus size={16} />إرفاق الأيقونة<input type="file" accept="image/*" onChange={handleCustomToolIconChange} /></label>{customToolIcon && <img className="landscape-custom-tool-preview" src={customToolIcon} alt="معاينة الأيقونة" />}{customToolError && <small role="alert">{customToolError}</small>}<div><button type="button" onClick={() => { setShowCustomToolForm(false); setCustomToolError(''); }}>إلغاء</button><button type="button" disabled={!customToolName.trim() || !customToolIcon} onClick={saveCustomTool}>حفظ الزر</button></div></div>}
+      </div>
+      {showTextComposer && <div className="landscape-text-note-creator"><label>اكتب النص الذي تريد وضعه على المخطط<textarea rows={2} value={draftText} onChange={(event) => setDraftText(event.target.value)} placeholder="مثال: المسافة 3 م" /></label><div><button type="button" disabled={!draftText.trim()} onClick={() => { setIsPlacingText(true); setActiveTool('select'); setActiveCustomToolId(null); }}>{isPlacingText ? 'انقر على المخطط لوضع النص' : 'اختيار مكان النص'}</button>{isPlacingText && <button type="button" onClick={() => setIsPlacingText(false)}>إلغاء</button>}</div>{isPlacingText && <small>انقر في المكان المطلوب على اللوحة؛ بعد ذلك يمكنك سحب النص وتغيير حجمه.</small>}</div>}
       <div className="landscape-drawing-hints">
-        <small>{activeTool === 'boundary' ? 'اسحب بالماوس حول محيط الأرض؛ يُغلق الحد تلقائيًا.' : activeTool === 'path' ? 'اسحب لرسم مسار حر، ثم حدّده لتغيير حجمه أو سماكته.' : activeTool === 'select' ? 'اسحب أي عنصر لتحريكه. اختر أداة رسم ثم اسحب على المساحة البيضاء للإنشاء.' : `اسحب على اللوحة لتحديد حجم «${drawingLabels[activeTool]}»، ويمكنك تعديله بعد الرسم.`}</small>
+        <small>{isPlacingText ? 'انقر في المكان المطلوب لوضع النص.' : activeCustomToolId ? `انقر على اللوحة لوضع «${customTools.find((tool) => tool.id === activeCustomToolId)?.name || 'الأيقونة'}»، ثم اسحب كل نسخة لموقعها.` : activeTool === 'boundary' ? 'اسحب بالماوس حول محيط الأرض؛ يُغلق الحد تلقائيًا.' : activeTool === 'path' ? 'اسحب لرسم مسار حر، ثم حدّده لتغيير حجمه أو سماكته.' : activeTool === 'select' ? 'اسحب أي عنصر لتحريكه. اختر أداة رسم ثم اسحب على المساحة البيضاء للإنشاء.' : `اسحب على اللوحة لتحديد حجم «${drawingLabels[activeTool]}»، ويمكنك تعديله بعد الرسم.`}</small>
         <label><input type="checkbox" checked={quote.landscapeShowGrid === true} onChange={(event) => onGridChange(event.target.checked)} />شبكة مساعدة</label>
         <button type="button" className="landscape-undo-drawing" disabled={!drawings.length} onClick={() => { onDrawingsChange(drawings.slice(0, -1)); setSelectedDrawingId(null); }}><Undo2 size={13} />تراجع عن آخر رسم</button>
       </div>
@@ -487,7 +630,7 @@ export default function LandscapePlan({
 
     {viewMode === 'plan' ? <div
       ref={canvasRef}
-      className={`landscape-canvas landscape-canvas-white ${quote.landscapeShowGrid ? 'has-grid' : ''} ${activeTool !== 'select' ? 'is-drawing' : ''}`}
+      className={`landscape-canvas landscape-canvas-white ${quote.landscapeShowGrid ? 'has-grid' : ''} ${activeTool !== 'select' || activeCustomToolId || isPlacingText ? 'is-drawing' : ''}`}
       aria-label="لوحة Landscape بيضاء فارغة للرسم والتحرير"
       onPointerDown={beginDrawing}
       onPointerMove={moveDrawing}
@@ -498,6 +641,12 @@ export default function LandscapePlan({
         {[...drawings, ...(previewDrawing ? [previewDrawing] : [])].filter((drawing) => drawing.kind === 'stroke').map((drawing) => renderDrawingShape(drawing, drawing.id === 'preview'))}
       </svg>
       {[...drawings, ...(previewDrawing ? [previewDrawing] : [])].filter((drawing) => drawing.kind === 'rectangle').map((drawing) => renderDrawingShape(drawing, drawing.id === 'preview'))}
+      {customStamps.map((stamp) => {
+        const tool = customTools.find((candidate) => candidate.id === stamp.toolId);
+        if (!tool?.icon) return null;
+        const size = stamp.size ?? 44;
+        return <div key={stamp.id} className={`landscape-custom-stamp ${selectedCustomStampId === stamp.id ? 'selected' : ''}`} style={{ left: `${stamp.x}%`, top: `${stamp.y}%`, width: size, height: size }} title={tool.name} aria-label={tool.name} onPointerDown={(event) => startCustomStampDrag(event, stamp)} onPointerMove={(event) => moveCustomStampDrag(event, stamp.id)} onPointerUp={endCustomStampDrag} onPointerCancel={endCustomStampDrag}><img src={tool.icon} alt="" /></div>;
+      })}
       {items.flatMap((item) => {
         const Icon = iconFor(item.category);
         const size = Math.max(24, Math.min(180, item.landscapeSize ?? globalSize));
@@ -546,15 +695,24 @@ export default function LandscapePlan({
           </div>;
         });
       })}
-      {annotations.map((annotation) => annotation.kind === 'line'
-        ? <div key={annotation.id} className={`landscape-drawn-line-hitarea ${selectedAnnotationId === annotation.id ? 'selected' : ''}`} role="button" tabIndex={0} aria-label="خط قابل للتحريك" style={{ left: `${annotation.x}%`, top: `${annotation.y}%`, width: `${annotation.length}%` }} onPointerDown={(event) => startAnnotationDrag(event, annotation)} onPointerMove={(event) => moveAnnotationDrag(event, annotation.id)} onPointerUp={endAnnotationDrag} onPointerCancel={endAnnotationDrag}><span className="landscape-drawn-line-stroke" style={{ height: annotation.thickness, backgroundColor: annotation.color, transform: `translateY(-50%) rotate(${annotation.angle}deg)` }} /></div>
-        : <div key={annotation.id} className={`landscape-number-mark ${selectedAnnotationId === annotation.id ? 'selected' : ''}`} role="button" tabIndex={0} aria-label={`رقم ${annotation.value} قابل للتحريك`} style={{ left: `${annotation.x}%`, top: `${annotation.y}%`, color: annotation.color, fontSize: annotation.size }} onPointerDown={(event) => startAnnotationDrag(event, annotation)} onPointerMove={(event) => moveAnnotationDrag(event, annotation.id)} onPointerUp={endAnnotationDrag} onPointerCancel={endAnnotationDrag}>{annotation.value}</div>)}
+      {textNotes.map((note) => <div key={note.id} className={`landscape-text-note ${selectedTextNoteId === note.id ? 'selected' : ''}`} style={{ left: `${note.x}%`, top: `${note.y}%`, fontSize: note.fontSize }} role="button" tabIndex={0} aria-label={`نص: ${note.text}`} onPointerDown={(event) => startTextNoteDrag(event, note)} onPointerMove={(event) => moveTextNoteDrag(event, note.id)} onPointerUp={endTextNoteDrag} onPointerCancel={endTextNoteDrag}>{note.text}</div>)}
     </div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.length ? items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
 
     {viewMode === 'plan' && selectedItem && <div className="landscape-object-properties">
       <div><strong>{selectedItem.name.split(' / ')[0]}</strong><small>خصائص الأيقونة المحددة</small></div>
       <label>حجم الأيقونة <b>{selectedItem.landscapeSize ?? globalSize}px</b><input type="range" min="24" max="180" step="2" value={selectedItem.landscapeSize ?? globalSize} onChange={(event) => onItemChange(selectedItem.id, { landscapeSize: Number(event.target.value) })} /></label>
       <button type="button" onClick={() => removeItemFromCanvas(selectedItem)}><Trash2 size={13} />إزالة من المخطط</button>
+    </div>}
+    {viewMode === 'plan' && selectedCustomStamp && <div className="landscape-object-properties">
+      <div><strong>{customTools.find((tool) => tool.id === selectedCustomStamp.toolId)?.name || 'أيقونة مخصصة'}</strong><small>اسحب الأيقونة لتغيير موقعها</small></div>
+      <label>حجم الأيقونة <b>{selectedCustomStamp.size ?? 44}px</b><input type="range" min="24" max="180" step="2" value={selectedCustomStamp.size ?? 44} onChange={(event) => onCustomStampsChange(customStamps.map((stamp) => stamp.id === selectedCustomStamp.id ? { ...stamp, size: Number(event.target.value) } : stamp))} /></label>
+      <button type="button" onClick={removeSelectedCustomStamp}><Trash2 size={13} />إزالة الأيقونة المحددة</button>
+    </div>}
+    {viewMode === 'plan' && selectedTextNote && <div className="landscape-object-properties landscape-text-note-properties">
+      <div><strong>نص على المخطط</strong><small>اسحبه لتغيير موقعه</small></div>
+      <label>النص<textarea rows={2} value={selectedTextNote.text} onChange={(event) => updateTextNote(selectedTextNote.id, { text: event.target.value })} /></label>
+      <label>حجم النص <b>{selectedTextNote.fontSize}px</b><input type="range" min="12" max="72" step="1" value={selectedTextNote.fontSize} onChange={(event) => updateTextNote(selectedTextNote.id, { fontSize: Number(event.target.value) })} /></label>
+      <button type="button" onClick={removeSelectedTextNote}><Trash2 size={13} />حذف النص</button>
     </div>}
     {viewMode === 'plan' && selectedDrawing && <div className="landscape-object-properties">
       <div><strong>{drawingLabels[selectedDrawing.tool]}</strong><small>حرّك العنصر أو غيّر أبعاده</small></div>
@@ -569,29 +727,13 @@ export default function LandscapePlan({
       <button type="button" onClick={removeSelectedDrawing}><Trash2 size={13} />حذف الرسم المحدد</button>
     </div>}
 
-    {viewMode === 'plan' && selectedAnnotation && <div className="landscape-object-properties">
-      <div><strong>{selectedAnnotation.kind === 'line' ? 'خط' : `رقم ${selectedAnnotation.value}`}</strong><small>خصائص العلامة المحددة</small></div>
-      {selectedAnnotation.kind === 'line' ? <>
-        <label>الطول <b>{selectedAnnotation.length}%</b><input type="range" min="3" max="90" value={selectedAnnotation.length} onChange={(event) => updateAnnotation(selectedAnnotation.id, { length: Number(event.target.value) })} /></label>
-        <label>السماكة <b>{selectedAnnotation.thickness}px</b><input type="range" min="1" max="12" value={selectedAnnotation.thickness} onChange={(event) => updateAnnotation(selectedAnnotation.id, { thickness: Number(event.target.value) })} /></label>
-      </> : <label>الرقم<input type="number" min="0" max="99999" value={selectedAnnotation.value} onChange={(event) => updateAnnotation(selectedAnnotation.id, { value: event.target.value })} /></label>}
-      <button type="button" onClick={() => { onAnnotationsChange(annotations.filter((annotation) => annotation.id !== selectedAnnotation.id)); setSelectedAnnotationId(null); }}><Trash2 size={13} />حذف العلامة</button>
-    </div>}
+
 
     {viewMode === 'plan' && (unplacedItems.length > 0 || onOpenPlantPicker) && <div className="landscape-item-library">
       <div className="landscape-item-library-head"><span><strong>إضافة أيقونات للنباتات والعناصر</strong><small>أضف من كتالوج النباتات أو من بنود عرض السعر</small></span>{onOpenPlantPicker && <button type="button" className="landscape-open-plant-picker" onClick={onOpenPlantPicker}><Sprout size={14} />إضافة نبتة من الكتالوج</button>}</div>
       {unplacedItems.length > 0 && <div className="landscape-item-library-list">{unplacedItems.map((item, index) => { const Icon = iconFor(item.category); return <div className="landscape-item-library-card" key={item.id}><span className="landscape-item-library-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : categoryStyle(item.category) === 'plant' ? <TreePlanSymbol size={25} /> : <Icon size={18} />}</span><span><strong>{item.name.split(' / ')[0]}</strong><small>{item.category}{item.scientificName ? ` · ${item.scientificName}` : ''}</small></span><button type="button" onClick={() => addItemToCanvas(item, items.length + index)} aria-label={`إضافة ${item.name} إلى المخطط`}>إضافة</button></div>; })}</div>}
     </div>}
 
-    {viewMode === 'plan' && <div className="landscape-material-presets">
-      <strong>إضافة مادة</strong>
-      {materials.map(({ name, icon: Icon }) => <button key={name} type="button" onClick={() => onAddMaterial(name)}><Icon size={14} />{name}</button>)}
-    </div>}
-
-    {viewMode === 'plan' && <div className="landscape-annotation-tools">
-      <div className="landscape-annotation-tools-head"><strong>علامات إضافية</strong><div><button type="button" onClick={() => addAnnotation('line')}>إضافة خط مستقيم</button><button type="button" onClick={() => addAnnotation('number')}>إضافة رقم</button></div></div>
-      <p>اسحب العلامة داخل المخطط. حدّدها لتعديل أبعادها.</p>
-    </div>}
 
     {viewMode === 'plan' && <div className="landscape-settings-list">
       <h3>إعدادات موحّدة للأيقونات</h3>
