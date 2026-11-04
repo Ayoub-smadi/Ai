@@ -7,6 +7,8 @@
 .landscape-studio-save-state { padding: 8px 10px; border: 1px solid #dce7dc; border-radius: 8px; background: #fff; color: #58705d; font-size: 9px; }
 .landscape-studio-header-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 7px 10px; border: 1px solid #e8d8d6; border-radius: 8px; background: #fff; color: #9a4a44; font-size: 10px; cursor: pointer; }
 .landscape-studio-header-actions button:hover { background: #fff8f7; }
+.landscape-studio-header-actions .landscape-studio-ai-button { border-color: #d5e4d5; background: #f4f9f3; color: #315d3d; }
+.landscape-studio-header-actions .landscape-studio-ai-button:hover { background: #e8f2e7; }
 .landscape-studio-layout { max-width: 1550px; margin: 0 auto; display: grid; grid-template-columns: minmax(220px, 270px) minmax(0, 1fr); align-items: start; gap: 14px; }
 .landscape-studio-library { position: sticky; top: 14px; max-height: calc(100vh - 110px); overflow: hidden; padding: 13px; border: 1px solid #e0e8e0; border-radius: 13px; background: #fff; box-shadow: 0 8px 25px #263c280a; }
 .landscape-studio-library-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
@@ -35,7 +37,7 @@
 @media (max-width: 760px) {
   .landscape-studio-page { padding: 18px 10px 34px; }
   .landscape-studio-header { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .landscape-studio-header-actions { width: 100%; justify-content: space-between; }
+  .landscape-studio-header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
   .landscape-studio-layout { display: flex; flex-direction: column; }
   .landscape-studio-library { position: static; width: 100%; max-height: none; }
   .landscape-studio-plant-list { display: flex; max-height: 190px; overflow: auto; }

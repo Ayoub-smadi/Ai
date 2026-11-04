@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent } from 'react';
-import { Circle, Download, Droplets, Flower2, ImagePlus, Mountain, Package, Route, Sprout, TreePine, Trash2, Undo2 } from 'lucide-react';
+import { Circle, Download, Droplets, Flower2, ImagePlus, Mountain, Package, Route, Sparkles, Sprout, TreePine, Trash2, Undo2 } from 'lucide-react';
+import LandscapeAiChat from './landscape-ai-chat';
 import './landscape-plan-engineering.css';
 
 export type LandscapeQuoteItem = {
@@ -43,6 +44,7 @@ export type LandscapeQuote = {
   landscapeCustomStamps?: LandscapeCustomStamp[];
   landscapeTextNotes?: LandscapeTextNote[];
 };
+export type LandscapeAiPlant = { id: string; name: string; category: string; scientificName?: string; image?: string; landscapeIcon?: string };
 type Props = {
   quote: LandscapeQuote;
   onItemChange: (id: string, patch: Partial<LandscapeQuoteItem>) => void;
@@ -55,6 +57,11 @@ type Props = {
   onCustomStampsChange: (stamps: LandscapeCustomStamp[]) => void;
   onTextNotesChange: (notes: LandscapeTextNote[]) => void;
   onOpenPlantPicker?: () => void;
+  availablePlants?: LandscapeAiPlant[];
+  onAiAddPlant?: (plantId: string, quantity: number, positions: LandscapePoint[], size?: number) => void;
+  aiChatOpen?: boolean;
+  onAiChatOpenChange?: (open: boolean) => void;
+  hideAiChatToggle?: boolean;
 };
 type LandscapeTool = 'select' | LandscapeDrawingTool;
 type DrawSession = { pointerId: number; tool: LandscapeDrawingTool; start: LandscapePoint; points: LandscapePoint[] };
@@ -152,6 +159,11 @@ export default function LandscapePlan({
   onCustomStampsChange,
   onTextNotesChange,
   onOpenPlantPicker,
+  availablePlants,
+  onAiAddPlant,
+  aiChatOpen,
+  onAiChatOpenChange,
+  hideAiChatToggle,
 }: Props) {
   const allItems = quote.items.filter((item) => item.name.trim());
   const items = allItems.filter((item) => item.landscapeAdded || item.landscapeX !== undefined || item.landscapeY !== undefined);
@@ -176,6 +188,8 @@ export default function LandscapePlan({
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'plan' | 'table'>('plan');
+  const [localAiChatOpen, setLocalAiChatOpen] = useState(false);
+  const isAiChatOpen = aiChatOpen ?? localAiChatOpen;
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState('');
   const [activeCustomToolId, setActiveCustomToolId] = useState<string | null>(null);
@@ -196,6 +210,10 @@ export default function LandscapePlan({
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
   const selectedAnnotation = annotations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null;
+  const setAiChatVisibility = (open: boolean) => {
+    setLocalAiChatOpen(open);
+    onAiChatOpenChange?.(open);
+  };
 
   const pointFromEvent = (event: { clientX: number; clientY: number }): LandscapePoint => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -519,7 +537,7 @@ export default function LandscapePlan({
         if (viewMode === 'plan') {
           if (!canvasRef.current) throw new Error('المخطط غير ظاهر للتنزيل.');
           const clone = canvasRef.current.cloneNode(true) as HTMLDivElement;
-          clone.style.cssText += ';width:1120px!important;height:560px!important;max-width:none!important;margin:0!important;overflow:hidden!important;';
+          clone.style.cssText += ';width:1120px!important;height:792px!important;max-width:none!important;margin:0!important;overflow:hidden!important;';
           clone.querySelectorAll('.selected').forEach((element) => element.classList.remove('selected'));
           wrapper.appendChild(clone);
         } else {
@@ -600,6 +618,7 @@ export default function LandscapePlan({
             <button type="button" role="tab" aria-selected={viewMode === 'plan'} className={viewMode === 'plan' ? 'active' : ''} onClick={() => setViewMode('plan')}>مخطط</button>
             <button type="button" role="tab" aria-selected={viewMode === 'table'} className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>جدول</button>
           </div>
+          {!hideAiChatToggle && <button type="button" className="landscape-ai-toggle" aria-expanded={isAiChatOpen} onClick={() => setAiChatVisibility(!isAiChatOpen)}><Sparkles size={14} />مساعد AI</button>}
           <button type="button" className="btn secondary small landscape-pdf-button" onClick={downloadCurrentPdf} disabled={pdfBusy}><Download size={14} />{pdfBusy ? 'جارٍ تجهيز PDF…' : viewMode === 'plan' ? 'تنزيل المخطط PDF' : 'تنزيل الجدول PDF'}</button>
         </div>
         {pdfError && <small className="landscape-pdf-error" role="alert">{pdfError}</small>}
@@ -697,6 +716,21 @@ export default function LandscapePlan({
       })}
       {textNotes.map((note) => <div key={note.id} className={`landscape-text-note ${selectedTextNoteId === note.id ? 'selected' : ''}`} style={{ left: `${note.x}%`, top: `${note.y}%`, fontSize: note.fontSize }} role="button" tabIndex={0} aria-label={`نص: ${note.text}`} onPointerDown={(event) => startTextNoteDrag(event, note)} onPointerMove={(event) => moveTextNoteDrag(event, note.id)} onPointerUp={endTextNoteDrag} onPointerCancel={endTextNoteDrag}>{note.text}</div>)}
     </div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.length ? items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
+    <div className={`landscape-ai-drawer ${isAiChatOpen ? 'is-open' : ''}`} aria-hidden={!isAiChatOpen}>
+      {isAiChatOpen && <button type="button" className="landscape-ai-backdrop" aria-label="إغلاق مساعد AI" onClick={() => setAiChatVisibility(false)} />}
+      <aside className="landscape-ai-drawer-panel" aria-label="مساعد مخطط Landscape" aria-modal={isAiChatOpen} role="dialog">
+        <button type="button" className="landscape-ai-close" aria-label="إغلاق مساعد AI" onClick={() => setAiChatVisibility(false)}>×</button>
+        <LandscapeAiChat
+          quote={quote}
+          onItemChange={onItemChange}
+          onDrawingsChange={onDrawingsChange}
+          onTextNotesChange={onTextNotesChange}
+          onCustomStampsChange={onCustomStampsChange}
+          availablePlants={availablePlants}
+          onAddPlant={onAiAddPlant}
+        />
+      </aside>
+    </div>
 
     {viewMode === 'plan' && selectedItem && <div className="landscape-object-properties">
       <div><strong>{selectedItem.name.split(' / ')[0]}</strong><small>خصائص الأيقونة المحددة</small></div>

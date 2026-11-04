@@ -3,6 +3,7 @@ import agentsRouter from "./agents";
 import channelsRouter from "./channels";
 import dashboardRouter from "./dashboard";
 import healthRouter from "./health";
+import landscapeAiRouter from "./landscape-ai";
 import knowledgeRouter from "./knowledge";
 import productsRouter from "./products";
 import testingRouter from "./testing";
@@ -11,6 +12,7 @@ import workspacesRouter from "./workspaces";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(landscapeAiRouter);
 router.use(workspacesRouter);
 router.use(dashboardRouter);
 router.use(agentsRouter);

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Search, Trash2, TreePine } from 'lucide-react';
+import { ArrowRight, Search, Sparkles, Trash2, TreePine } from 'lucide-react';
 import { Link } from 'wouter';
 import { getManagedPlants, type ManagedPlant } from '@/data/managed-plants';
 import LandscapePlan, {
+  type LandscapeAiPlant,
   type LandscapeDrawing,
   type LandscapeGlobalShape,
+  type LandscapePoint,
   type LandscapeQuote,
   type LandscapeQuoteItem,
 } from '@/pages/landscape-plan';
@@ -107,6 +109,7 @@ function readSavedPlan(): LandscapeQuote {
 
 export default function LandscapeEditorPage() {
   const [plan, setPlan] = useState<LandscapeQuote>(readSavedPlan);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [plants] = useState<ManagedPlant[]>(getManagedPlants);
   const [search, setSearch] = useState('');
   const filteredPlants = useMemo(() => {
@@ -139,6 +142,60 @@ export default function LandscapeEditorPage() {
     setPlan((current) => ({ ...current, items: [...current.items, item] }));
   };
 
+  const addAiPlant = (plantId: string, quantity: number, positions: LandscapePoint[], size?: number) => {
+    const plant = plants.find((candidate) => candidate.id === plantId);
+    if (!plant) return;
+    const name = plant.nameAr || plant.nameEn || 'نبات';
+    const safeQuantity = Math.max(1, Math.min(100, Math.round(quantity)));
+    const safePositions = positions.slice(0, safeQuantity);
+    if (!safePositions.length) return;
+    setPlan((current) => {
+      const existing = current.items.find((item) => item.name.split(' / ')[0].trim() === name.trim());
+      if (existing) {
+        return {
+          ...current,
+          items: current.items.map((item) => item.id === existing.id ? {
+            ...item,
+            quantity: safeQuantity,
+            landscapeAdded: true,
+            landscapeX: safePositions[0].x,
+            landscapeY: safePositions[0].y,
+            landscapeInstances: safePositions,
+            ...(size ? { landscapeSize: size } : {}),
+          } : item),
+        };
+      }
+      const shape = current.landscapeDefaultShape === 'auto' ? 'circle' : current.landscapeDefaultShape ?? 'circle';
+      const item: LandscapeQuoteItem = {
+        id: `studio-ai-${plant.id}-${Date.now()}`,
+        name,
+        category: plant.categoryAr || 'نباتات',
+        quantity: safeQuantity,
+        scientificName: plant.scientificName,
+        image: plant.image,
+        landscapeIcon: plant.landscapeIcon,
+        landscapeAdded: true,
+        landscapeX: safePositions[0].x,
+        landscapeY: safePositions[0].y,
+        landscapeInstances: safePositions,
+        landscapeSize: size ?? current.landscapeDefaultSize ?? 58,
+        landscapeShape: shape,
+      };
+      return { ...current, items: [...current.items, item] };
+    });
+  };
+
+  const aiAvailablePlants = useMemo<LandscapeAiPlant[]>(() => plants
+    .filter((plant) => plant.source === 'plant')
+    .map((plant) => ({
+      id: plant.id,
+      name: plant.nameAr || plant.nameEn || 'نبات',
+      category: plant.categoryAr || 'نباتات',
+      scientificName: plant.scientificName,
+      image: plant.image,
+      landscapeIcon: plant.landscapeIcon,
+    })), [plants]);
+
   const updateItem = (id: string, patch: Partial<LandscapeQuoteItem>) => {
     setPlan((current) => ({ ...current, items: current.items.map((item) => item.id === id ? { ...item, ...patch } : item) }));
   };
@@ -168,6 +225,7 @@ export default function LandscapeEditorPage() {
       </div>
       <div className="landscape-studio-header-actions">
         <span className="landscape-studio-save-state">يحفظ تلقائيًا</span>
+        <button type="button" className="landscape-studio-ai-button" aria-expanded={aiChatOpen} onClick={() => setAiChatOpen((open) => !open)}><Sparkles size={14} />مساعد AI</button>
         <button type="button" onClick={clearPlan}><Trash2 size={14} />مسح المخطط</button>
       </div>
     </header>
@@ -201,6 +259,11 @@ export default function LandscapeEditorPage() {
           onCustomToolsChange={(landscapeCustomTools) => setPlan((current) => ({ ...current, landscapeCustomTools }))}
           onCustomStampsChange={(landscapeCustomStamps) => setPlan((current) => ({ ...current, landscapeCustomStamps }))}
           onTextNotesChange={(landscapeTextNotes) => setPlan((current) => ({ ...current, landscapeTextNotes }))}
+          availablePlants={aiAvailablePlants}
+          onAiAddPlant={addAiPlant}
+          aiChatOpen={aiChatOpen}
+          onAiChatOpenChange={setAiChatOpen}
+          hideAiChatToggle
         />
       </div>
     </div>
