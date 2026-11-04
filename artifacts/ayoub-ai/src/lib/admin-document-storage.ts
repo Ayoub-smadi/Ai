@@ -1,5 +1,5 @@
 export type AdminDocumentKind = 'quote' | 'invoice' | 'receipt' | 'disbursement';
-export type StoredAdminDocument = Record<string, unknown> & { number: string };
+export type StoredAdminDocument = Record<string, unknown> & { number: string; recordId?: string };
 
 export type DeletedAdminDocument = {
   id: string;
@@ -27,28 +27,23 @@ export function localDateString(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export function nextDailyDocumentNumber(prefix: string, date: string, knownNumbers: string[] = []): string {
+export function createAdminDocumentId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function dateBasedDocumentNumber(prefix: string, date: string): string {
   const dateDigits = date.replace(/\D/g, '') || localDateString().replace(/\D/g, '');
-  const storageKey = `qadri-document-sequence:${prefix}:${dateDigits}`;
-  let sequence = 0;
-  try {
-    sequence = Number.parseInt(localStorage.getItem(storageKey) || '0', 10) || 0;
-  } catch {
-    // Continue with the numbers already known in memory if storage is unavailable.
-  }
+  return `${prefix}-${dateDigits}`;
+}
+
+export function migrateLegacyDocumentNumber(number: string, prefix: string, date: string): string {
   const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`^${escapedPrefix}-${dateDigits}-(\\d+)$`);
-  for (const number of knownNumbers) {
-    const match = number.match(pattern);
-    if (match) sequence = Math.max(sequence, Number.parseInt(match[1], 10) || 0);
+  const oldDailySequence = new RegExp(`^${escapedPrefix}-\\d{8}-\\d+$`);
+  const oldOperationsNumber = /^(?:PO|LTR)-\d{4}-\d{5}$/;
+  if (oldDailySequence.test(number) || ((prefix === 'PO' || prefix === 'LTR') && oldOperationsNumber.test(number))) {
+    return dateBasedDocumentNumber(prefix, date);
   }
-  sequence += 1;
-  try {
-    localStorage.setItem(storageKey, String(sequence));
-  } catch {
-    // The returned number is still valid for this draft if storage is unavailable.
-  }
-  return `${prefix}-${dateDigits}-${String(sequence).padStart(3, '0')}`;
+  return number;
 }
 
 function parseRecords<T>(key: string): T[] {
@@ -61,7 +56,18 @@ function parseRecords<T>(key: string): T[] {
 }
 
 export function readDeletedAdminDocuments(): DeletedAdminDocument[] {
-  return parseRecords<DeletedAdminDocument>(ADMIN_DOCUMENT_TRASH_KEY);
+  const stored = parseRecords<DeletedAdminDocument>(ADMIN_DOCUMENT_TRASH_KEY);
+  let changed = false;
+  const prefixes: Record<AdminDocumentKind, string> = { quote: 'Q', invoice: 'INV', receipt: 'RC', disbursement: 'PV' };
+  const records = stored.map((entry) => {
+    const prefix = prefixes[entry.kind];
+    const number = migrateLegacyDocumentNumber(entry.number, prefix, String(entry.document.date || ''));
+    const recordId = typeof entry.document.recordId === 'string' ? entry.document.recordId : `legacy-${entry.kind}-${entry.number}-${entry.document.savedAt || entry.deletedAt}`;
+    if (number !== entry.number || entry.document.recordId !== recordId) changed = true;
+    return { ...entry, number, document: { ...entry.document, number, recordId } };
+  });
+  if (changed) writeTrash(records);
+  return records;
 }
 
 function matchesDocumentKind(document: StoredAdminDocument, kind: AdminDocumentKind): boolean {
@@ -88,8 +94,14 @@ export function moveAdminDocumentToTrash(
   value: StoredAdminDocument,
 ): DeletedAdminDocument[] {
   const number = String(value.number || 'بدون رقم');
+  const recordId = typeof value.recordId === 'string' ? value.recordId : '';
   const active = parseRecords<StoredAdminDocument>(sourceKey);
-  localStorage.setItem(sourceKey, JSON.stringify(active.filter((record) => String(record.number) !== number || !matchesDocumentKind(record, kind))));
+  const remaining = active.filter((record) => {
+    if (!matchesDocumentKind(record, kind)) return true;
+    if (recordId && typeof record.recordId === 'string') return record.recordId !== recordId;
+    return String(record.number) !== number;
+  });
+  localStorage.setItem(sourceKey, JSON.stringify(remaining));
   const trash = readDeletedAdminDocuments();
   const entry: DeletedAdminDocument = {
     id: `${kind}:${number}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
@@ -110,7 +122,13 @@ export function restoreAdminDocument(id: string): DeletedAdminDocument[] {
   const entry = trash.find((item) => item.id === id);
   if (!entry) return trash;
   const active = parseRecords<StoredAdminDocument>(entry.sourceKey);
-  if (!active.some((record) => String(record.number) === entry.number && matchesDocumentKind(record, entry.kind))) {
+  const recordId = typeof entry.document.recordId === 'string' ? entry.document.recordId : '';
+  const alreadyActive = active.some((record) => {
+    if (!matchesDocumentKind(record, entry.kind)) return false;
+    if (recordId) return record.recordId === recordId;
+    return String(record.number) === entry.number;
+  });
+  if (!alreadyActive) {
     localStorage.setItem(entry.sourceKey, JSON.stringify([entry.document, ...active]));
   }
   const next = trash.filter((item) => item.id !== id);

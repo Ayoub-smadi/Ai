@@ -657,3 +657,29 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
   .weather-above-logo .workday-timer{width:108px;flex-basis:108px}
   .workday-timer-count{font-size:15px}
 }
+
+/* Invoice brand mark and vertically aligned customer details for screen and PDF export. */
+.invoice-print-brand{display:flex;align-items:center;gap:12px;min-width:0}
+.invoice-print-brand>div{min-width:0}
+.invoice-print-logo{display:block;flex:0 0 auto;width:68px;height:68px;object-fit:contain}
+.invoice-print-customer>div{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:0}
+.invoice-print-customer>div>small,.invoice-print-customer>div>strong{display:block;align-self:stretch;width:100%;text-align:right}
+.invoice-print-customer-phone>strong{direction:ltr}
+
+/* Keep invoice logo centered between the company information and invoice number. */
+.invoice-print-head{display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr);align-items:start}
+.invoice-print-brand{grid-column:1;grid-row:1;display:block;text-align:right}
+.invoice-print-brand>div{text-align:right}
+.invoice-print-logo{grid-column:2;grid-row:1;justify-self:center;align-self:center;margin:0 auto}
+.invoice-print-number{grid-column:3;grid-row:1;justify-self:start}
+@media(max-width:560px){.invoice-print-head{grid-template-columns:minmax(0,1fr) 58px minmax(0,1fr);gap:8px}.invoice-print-logo{width:52px;height:52px}.invoice-print-head h2{font-size:15px}.invoice-print-head p{font-size:9px}}
+
+/* Quantity-based icon clusters in Landscape plans. */
+.landscape-node.landscape-node-grouped{width:max-content;max-width:none}
+.landscape-node-icons{max-width:min(86vw,560px);padding:3px;border-radius:8px;background:#ffffffa8}
+.landscape-node-icons .landscape-node-art{position:relative}
+
+/* Each Landscape quantity unit is its own draggable canvas object. */
+.landscape-canvas-white .landscape-node.landscape-node-instance{width:max-content;max-width:none;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.landscape-canvas-white .landscape-node.landscape-node-instance.is-dragging{z-index:12;cursor:grabbing}
+.landscape-canvas-white .landscape-node.landscape-node-instance .landscape-node-art{position:relative}

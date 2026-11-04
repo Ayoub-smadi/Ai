@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { FileDown, LayoutDashboard, Plus, Receipt, Search, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
-import { localDateString, moveAdminDocumentToTrash, nextDailyDocumentNumber, readDeletedAdminDocuments, type StoredAdminDocument } from '@/lib/admin-document-storage';
+import { createAdminDocumentId, dateBasedDocumentNumber, localDateString, migrateLegacyDocumentNumber, moveAdminDocumentToTrash, type StoredAdminDocument } from '@/lib/admin-document-storage';
 import './admin-vouchers-page.css';
 
 type VoucherKind = 'receipt' | 'disbursement';
 type PaymentMethod = 'cash' | 'cheque' | 'bank';
 type Voucher = {
+  recordId?: string;
   number: string;
   date: string;
   party: string;
@@ -19,6 +20,8 @@ type Voucher = {
   notes: string;
   createdAt: string;
 };
+
+const sameVoucherRecord = (left: Voucher, right: Voucher) => left.recordId && right.recordId ? left.recordId === right.recordId : left.number === right.number;
 
 const labels = {
   receipt: { title: 'سند قبض', prefix: 'RC', partyLabel: 'استلمنا من السادة:', partyField: 'اسم الدافع / الجهة', signatureLeft: 'توقيع المستلم', signatureRight: 'توقيع الدافع' },
@@ -86,7 +89,20 @@ function storageKey(kind: VoucherKind) {
 function readRecords(kind: VoucherKind): Voucher[] {
   try {
     const value = JSON.parse(localStorage.getItem(storageKey(kind)) || '[]');
-    return Array.isArray(value) ? value as Voucher[] : [];
+    if (!Array.isArray(value)) return [];
+    let changed = false;
+    const records = (value as Voucher[]).map((record, index) => {
+      const number = migrateLegacyDocumentNumber(record.number, labels[kind].prefix, record.date);
+      const recordId = record.recordId || `legacy-${record.number}-${record.createdAt || index}`;
+      if (number !== record.number || recordId !== record.recordId) changed = true;
+      return {
+      ...record,
+      number,
+      recordId,
+      };
+    });
+    if (changed) localStorage.setItem(storageKey(kind), JSON.stringify(records));
+    return records;
   } catch {
     return [];
   }
@@ -95,9 +111,9 @@ function readRecords(kind: VoucherKind): Voucher[] {
 function newVoucher(kind: VoucherKind): Voucher {
   const now = new Date();
   const date = localDateString(now);
-  const existingNumbers = [...readRecords(kind).map((record) => record.number), ...readDeletedAdminDocuments().filter((record) => record.kind === kind).map((record) => record.number)];
   return {
-    number: nextDailyDocumentNumber(labels[kind].prefix, date, existingNumbers),
+    recordId: createAdminDocumentId(),
+    number: dateBasedDocumentNumber(labels[kind].prefix, date),
     date,
     party: '',
     amountJod: '',
@@ -143,8 +159,8 @@ export default function AdminVouchersPage({ kind }: { kind: VoucherKind }) {
 
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const savedVoucher = { ...voucher, amountWords, createdAt: new Date().toISOString() };
-    const next = [savedVoucher, ...records.filter((record) => record.number !== savedVoucher.number)];
+    const savedVoucher = { ...voucher, recordId: voucher.recordId || createAdminDocumentId(), amountWords, createdAt: new Date().toISOString() };
+    const next = [savedVoucher, ...records.filter((record) => !sameVoucherRecord(record, savedVoucher))];
     localStorage.setItem(storageKey(kind), JSON.stringify(next));
     setRecords(next);
     setVoucher(savedVoucher);
@@ -159,9 +175,9 @@ export default function AdminVouchersPage({ kind }: { kind: VoucherKind }) {
 
   const removeRecord = (record: Voucher) => {
     moveAdminDocumentToTrash(kind, storageKey(kind), record as unknown as StoredAdminDocument);
-    const next = records.filter((item) => item.number !== record.number);
+    const next = records.filter((item) => !sameVoucherRecord(item, record));
     setRecords(next);
-    if (voucher.number === record.number) openNew();
+    if (sameVoucherRecord(voucher, record)) openNew();
   };
 
   const downloadPdf = async () => {
@@ -253,7 +269,7 @@ export default function AdminVouchersPage({ kind }: { kind: VoucherKind }) {
             <div className="voucher-form-heading"><div><span className="eyebrow">VOUCHER DETAILS</span><h2>بيانات {config.title}</h2></div><Receipt size={20} /></div>
             <div className="voucher-form-grid">
               <label>رقم السند<input required value={voucher.number} onChange={(event) => update({ number: event.target.value })} /></label>
-              <label>التاريخ<input required type="date" value={voucher.date} onChange={(event) => update({ date: event.target.value })} /></label>
+              <label>التاريخ<input required type="date" value={voucher.date} onChange={(event) => update({ date: event.target.value, number: dateBasedDocumentNumber(config.prefix, event.target.value) })} /></label>
               <label className="voucher-field-wide">{config.partyField}<input required value={voucher.party} onChange={(event) => update({ party: event.target.value })} placeholder="الاسم أو الجهة" /></label>
               <div className="voucher-field-wide voucher-amount-editor">
                 <span className="voucher-field-label">المبلغ</span>
@@ -273,7 +289,7 @@ export default function AdminVouchersPage({ kind }: { kind: VoucherKind }) {
           <section className="panel voucher-history">
             <div className="voucher-history-heading"><h2>السجل المحفوظ</h2><span>{filteredRecords.length}</span></div>
             <label className="voucher-history-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث بالاسم أو الرقم" aria-label="ابحث في السندات بالاسم أو الرقم" /></label>
-            {filteredRecords.length ? filteredRecords.map((record) => <article className={`voucher-record ${record.number === voucher.number ? 'active' : ''}`} key={record.number}>
+            {filteredRecords.length ? filteredRecords.map((record) => <article className={`voucher-record ${sameVoucherRecord(record, voucher) ? 'active' : ''}`} key={record.recordId || record.number}>
               <button className="voucher-record-open" type="button" onClick={() => { setVoucher(record); setSavedNotice(''); }}><strong>{record.number}</strong><span>{record.party}</span><small>{formatDate(record.date)} · {record.amountJod || 0}.{String(record.amountFils || 0).padStart(3, '0')} د.أ</small></button>
               <button className="voucher-record-delete" type="button" aria-label={`حذف ${record.number}`} title="حذف السند" onClick={() => removeRecord(record)}><Trash2 size={14} /></button>
             </article>) : <p className="voucher-empty">{records.length ? 'لا توجد نتائج مطابقة.' : 'لا توجد سندات محفوظة بعد.'}</p>}

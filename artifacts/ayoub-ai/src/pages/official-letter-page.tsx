@@ -1,9 +1,11 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { FileDown, FileText, LayoutDashboard, RotateCcw, Save } from 'lucide-react';
 import { Link } from 'wouter';
+import { createAdminDocumentId, dateBasedDocumentNumber, migrateLegacyDocumentNumber } from '@/lib/admin-document-storage';
 import './official-letter-page.css';
 
 type OfficialLetterDraft = {
+  number: string;
   date: string;
   institution: string;
   title: string;
@@ -26,6 +28,7 @@ type SavedOfficialLetter = OfficialLetterDraft & {
 
 const STORAGE_KEY = 'qadri-official-letters';
 const DEFAULT_LETTER: OfficialLetterDraft = {
+  number: dateBasedDocumentNumber('LTR', '2026-11-05'),
   date: '2026-11-05',
   institution: 'مؤسسة القادري الزراعية',
   title: 'إشعار المباشرة بتنفيذ الأعمال',
@@ -45,11 +48,14 @@ function readSavedLetters(): SavedOfficialLetter[] {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     if (!Array.isArray(value)) return [];
-    return value.map((item, index) => {
+    const records = value.map((item, index) => {
       const old = item as Partial<SavedOfficialLetter> & { recipient?: string; subject?: string; body?: string };
+      const date = old.date || DEFAULT_LETTER.date;
+      const number = old.number ? migrateLegacyDocumentNumber(old.number, 'LTR', date) : dateBasedDocumentNumber('LTR', date);
       return {
         ...DEFAULT_LETTER,
         ...old,
+        number,
         title: old.title || old.subject || DEFAULT_LETTER.title,
         recipient: old.recipient || DEFAULT_LETTER.recipient,
         body: old.body || DEFAULT_LETTER.body,
@@ -57,6 +63,10 @@ function readSavedLetters(): SavedOfficialLetter[] {
         savedAt: old.savedAt || '',
       };
     });
+    if (records.some((record, index) => record.number !== (value[index] as Partial<SavedOfficialLetter>).number || !((value[index] as Partial<SavedOfficialLetter>).id))) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+    return records;
   } catch {
     return [];
   }
@@ -74,13 +84,17 @@ export default function OfficialLetterPage() {
   const paperRef = useRef<HTMLElement>(null);
 
   const update = (key: keyof OfficialLetterDraft, value: string) => {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === 'date' ? { number: dateBasedDocumentNumber('LTR', value) } : {}),
+    }));
     setStatus('');
   };
 
   const saveLetter = (event: FormEvent) => {
     event.preventDefault();
-    const record: SavedOfficialLetter = { ...form, id: `${Date.now()}`, savedAt: new Date().toISOString() };
+    const record: SavedOfficialLetter = { ...form, id: createAdminDocumentId(), savedAt: new Date().toISOString() };
     const next = [record, ...saved];
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -182,7 +196,7 @@ export default function OfficialLetterPage() {
             {saved.length ? saved.map((record) => (
               <button type="button" className="official-letter-record" key={record.id} onClick={() => openSaved(record)}>
                 <span className="official-letter-record-icon"><FileText size={15} /></span>
-                <span className="official-letter-record-copy"><strong>{record.title || 'كتاب رسمي'}</strong><small>{record.recipient || 'بدون جهة'} · {formattedDate(record.date)}</small></span>
+                <span className="official-letter-record-copy"><strong>{record.title || 'كتاب رسمي'}</strong><small>{record.number} · {record.recipient || 'بدون جهة'} · {formattedDate(record.date)}</small></span>
                 <span className="official-letter-open">فتح</span>
               </button>
             )) : <p className="operations-empty">لا توجد كتب محفوظة بعد.</p>}

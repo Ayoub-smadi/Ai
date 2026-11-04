@@ -15,6 +15,7 @@ export type LandscapeQuoteItem = {
   landscapeArea?: number;
   landscapeX?: number;
   landscapeY?: number;
+  landscapeInstances?: Array<{ x: number; y: number }>;
   landscapeAdded?: boolean;
 };
 export type LandscapeGlobalShape = 'circle' | 'rectangle' | 'square';
@@ -49,7 +50,7 @@ type Props = {
 };
 type LandscapeTool = 'select' | LandscapeDrawingTool;
 type DrawSession = { pointerId: number; tool: LandscapeDrawingTool; start: LandscapePoint; points: LandscapePoint[] };
-type ItemDrag = { id: string; pointerId: number };
+type ItemDrag = { id: string; instanceIndex: number; pointerId: number; positions: LandscapePoint[] };
 type DrawingDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; original: LandscapeDrawing };
 type AnnotationDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
 type Material = { name: string; icon: typeof Sprout };
@@ -250,20 +251,22 @@ export default function LandscapePlan({
     setPreviewDrawing(null);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  const startItemDrag = (event: PointerEvent<HTMLDivElement>, id: string) => {
+  const startItemDrag = (event: PointerEvent<HTMLDivElement>, id: string, instanceIndex: number, positions: LandscapePoint[]) => {
     event.stopPropagation();
     if (event.button !== 0 || activeTool !== 'select') return;
     event.preventDefault();
-    itemDrag.current = { id, pointerId: event.pointerId };
-    setDraggingId(id);
+    itemDrag.current = { id, instanceIndex, pointerId: event.pointerId, positions: positions.map((position) => ({ ...position })) };
+    setDraggingId(`${id}-${instanceIndex}`);
     clearSelection();
     setSelectedItemId(id);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
-  const moveItemDrag = (event: PointerEvent<HTMLDivElement>, id: string) => {
-    if (!itemDrag.current || itemDrag.current.id !== id || itemDrag.current.pointerId !== event.pointerId) return;
+  const moveItemDrag = (event: PointerEvent<HTMLDivElement>, id: string, instanceIndex: number) => {
+    const current = itemDrag.current;
+    if (!current || current.id !== id || current.instanceIndex !== instanceIndex || current.pointerId !== event.pointerId) return;
     const point = pointFromEvent(event);
-    onItemChange(id, { landscapeX: point.x, landscapeY: point.y });
+    current.positions = current.positions.map((position, index) => index === instanceIndex ? point : position);
+    onItemChange(id, { landscapeInstances: current.positions });
   };
   const endItemDrag = (event: PointerEvent<HTMLDivElement>) => {
     if (itemDrag.current?.pointerId !== event.pointerId) return;
@@ -495,37 +498,53 @@ export default function LandscapePlan({
         {[...drawings, ...(previewDrawing ? [previewDrawing] : [])].filter((drawing) => drawing.kind === 'stroke').map((drawing) => renderDrawingShape(drawing, drawing.id === 'preview'))}
       </svg>
       {[...drawings, ...(previewDrawing ? [previewDrawing] : [])].filter((drawing) => drawing.kind === 'rectangle').map((drawing) => renderDrawingShape(drawing, drawing.id === 'preview'))}
-      {items.map((item) => {
+      {items.flatMap((item) => {
         const Icon = iconFor(item.category);
-        const size = Math.max(24, Math.min(180, item.category.includes('مواد Landscape /') ? (item.landscapeSize ?? globalSize) : (item.landscapeSize ?? globalSize)));
+        const size = Math.max(24, Math.min(180, item.landscapeSize ?? globalSize));
+        const quantity = Math.max(0, Math.round(Number(item.quantity) || 0));
+        const iconSize = quantity > 1 ? Math.min(size, 42) : size;
+        const columns = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, quantity))));
+        const rows = Math.ceil(quantity / columns);
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        const xStep = canvasRect?.width ? ((iconSize + 12) / canvasRect.width) * 100 : 6;
+        const yStep = canvasRect?.height ? ((iconSize + 18) / canvasRect.height) * 100 : 12;
+        const centerX = item.landscapeX ?? 50;
+        const centerY = item.landscapeY ?? 50;
+        const defaultPositions = Array.from({ length: quantity }, (_, instanceIndex) => ({
+          x: clamp(centerX + (instanceIndex % columns - (columns - 1) / 2) * xStep, 1, 99),
+          y: clamp(centerY + (Math.floor(instanceIndex / columns) - (rows - 1) / 2) * yStep, 1, 99),
+        }));
+        const positions = defaultPositions.map((position, index) => item.landscapeInstances?.[index] ?? position);
         const kind = categoryStyle(item.category);
         const wide = kind === 'road' || kind === 'turf' || kind === 'irrigation';
         const width = wide ? Math.max(kind === 'road' ? 110 : 70, Math.round(size * (kind === 'road' ? 2.8 : 1.8))) : size;
         const shape = item.landscapeShape && item.landscapeShape !== 'auto' ? item.landscapeShape : globalShape;
-        const positionStyle: CSSProperties = {
-          left: `${item.landscapeX ?? 50}%`, top: `${item.landscapeY ?? 50}%`,
-        };
         const artStyle: CSSProperties = {
-          width, height: size, borderRadius: shapeRadius[shape],
+          width: quantity > 1 ? iconSize : width, height: quantity > 1 ? iconSize : size, borderRadius: shapeRadius[shape],
           borderColor: kind === 'road' ? '#59605c' : kind === 'roundabout' ? '#b4c1ad' : item.landscapeIcon || item.image ? '#d9e1da' : '#3c7953',
           color: kind === 'road' ? '#fff' : '#3c7953',
         };
-        return <div
-          className={`landscape-node landscape-node-${shape} ${draggingId === item.id ? 'is-dragging' : ''} ${selectedItemId === item.id ? 'is-selected' : ''}`}
-          key={item.id}
-          style={positionStyle}
-          onPointerDown={(event) => startItemDrag(event, item.id)}
-          onPointerMove={(event) => moveItemDrag(event, item.id)}
-          onPointerUp={endItemDrag}
-          onPointerCancel={endItemDrag}
-          title="اسحب العنصر لتغيير موقعه"
-        >
-          <div className={`landscape-node-art landscape-art-${shape} landscape-kind-${kind}`} style={artStyle}>
-            {item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : kind === 'plant' ? <TreePlanSymbol size={Math.max(24, size - 4)} /> : <Icon size={kind === 'road' ? 24 : Math.max(18, Math.min(size - 14, 42))} />}
-          </div>
-          <strong>{item.name.split(' / ')[0]}</strong>
-          <small>{quote.showScientificNames !== false && item.scientificName ? <>{item.scientificName} · </> : null}{item.quantity} ×{item.landscapeArea ? ` · ${item.landscapeArea}م²` : ''}</small>
-        </div>;
+        return positions.map((position, instanceIndex) => {
+          const instanceKey = `${item.id}-${instanceIndex}`;
+          const showLabel = instanceIndex === 0;
+          return <div
+            className={`landscape-node landscape-node-${shape} landscape-node-instance ${draggingId === instanceKey ? 'is-dragging' : ''} ${selectedItemId === item.id && draggingId === instanceKey ? 'is-selected' : ''}`}
+            key={instanceKey}
+            style={{ left: `${position.x}%`, top: `${position.y}%` }}
+            onPointerDown={(event) => startItemDrag(event, item.id, instanceIndex, positions)}
+            onPointerMove={(event) => moveItemDrag(event, item.id, instanceIndex)}
+            onPointerUp={endItemDrag}
+            onPointerCancel={endItemDrag}
+            title={`${item.name.split(' / ')[0]} · ${instanceIndex + 1} من ${quantity}`}
+            aria-label={`${item.name.split(' / ')[0]}، أيقونة ${instanceIndex + 1} من ${quantity}`}
+          >
+            <div className={`landscape-node-art landscape-art-${shape} landscape-kind-${kind}`} style={artStyle}>
+              {item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : kind === 'plant' ? <TreePlanSymbol size={Math.max(24, iconSize - 4)} /> : <Icon size={kind === 'road' ? 24 : Math.max(18, Math.min(iconSize - 14, 42))} />}
+            </div>
+            {showLabel && <strong>{item.name.split(' / ')[0]}</strong>}
+            {showLabel && (quote.showScientificNames !== false && item.scientificName || item.landscapeArea) && <small>{quote.showScientificNames !== false && item.scientificName ? item.scientificName : null}{item.landscapeArea ? ` · ${item.landscapeArea}م²` : ''}</small>}
+          </div>;
+        });
       })}
       {annotations.map((annotation) => annotation.kind === 'line'
         ? <div key={annotation.id} className={`landscape-drawn-line-hitarea ${selectedAnnotationId === annotation.id ? 'selected' : ''}`} role="button" tabIndex={0} aria-label="خط قابل للتحريك" style={{ left: `${annotation.x}%`, top: `${annotation.y}%`, width: `${annotation.length}%` }} onPointerDown={(event) => startAnnotationDrag(event, annotation)} onPointerMove={(event) => moveAnnotationDrag(event, annotation.id)} onPointerUp={endAnnotationDrag} onPointerCancel={endAnnotationDrag}><span className="landscape-drawn-line-stroke" style={{ height: annotation.thickness, backgroundColor: annotation.color, transform: `translateY(-50%) rotate(${annotation.angle}deg)` }} /></div>
