@@ -42,6 +42,7 @@ import AdminProjectsPage from '@/pages/admin-projects-page';
 import AdminStorePage from '@/pages/admin-store-page';
 import AdminVouchersPage from '@/pages/admin-vouchers-page';
 import AdminDeletedDocumentsPage from '@/pages/admin-deleted-documents-page';
+import OfficialLetterPage from '@/pages/official-letter-page';
 import { localDateString, moveAdminDocumentToTrash, nextDailyDocumentNumber, readDeletedAdminDocuments, type StoredAdminDocument } from '@/lib/admin-document-storage';
 import OrderAlertControl, { activateOrderAlertsFromUserGesture } from '@/components/order-alert-control';
 import { getQuoteRequests, saveQuoteRequests } from '@/data/quote-requests';
@@ -1237,7 +1238,7 @@ function PublicPreviewRouter() {
     <Route path="/admin/disbursements"><AdminGuard><AdminVouchersPage kind="disbursement" /></AdminGuard></Route>
     <Route path="/admin/deleted-documents"><AdminGuard><AdminDeletedDocumentsPage /></AdminGuard></Route>
     <Route path="/admin/purchase-orders"><AdminGuard><AdminOperationsPage kind="purchase" /></AdminGuard></Route>
-    <Route path="/admin/official-letters"><AdminGuard><AdminOperationsPage kind="letter" /></AdminGuard></Route>
+    <Route path="/admin/official-letters"><AdminGuard><OfficialLetterPage /></AdminGuard></Route>
     <Route path="/admin/catalog"><AdminGuard><ManagedCatalogPage /></AdminGuard></Route>
     <Route path="/sign-up/*?" component={AuthSetupPage} />
     <Route component={NotFound} />
@@ -1269,6 +1270,7 @@ function Router() {
     <Route path="/admin/receipts"><AdminGuard><AdminVouchersPage kind="receipt" /></AdminGuard></Route>
     <Route path="/admin/disbursements"><AdminGuard><AdminVouchersPage kind="disbursement" /></AdminGuard></Route>
     <Route path="/admin/deleted-documents"><AdminGuard><AdminDeletedDocumentsPage /></AdminGuard></Route>
+    <Route path="/admin/official-letters"><AdminGuard><OfficialLetterPage /></AdminGuard></Route>
     <Route path="/admin/catalog"><AdminGuard><ManagedCatalogPage /></AdminGuard></Route>
     <Route path="/dashboard"><ProtectedRoute><DashboardPage /></ProtectedRoute></Route>
     <Route path="/agents"><ProtectedRoute><AgentsPage /></ProtectedRoute></Route>
