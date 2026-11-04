@@ -17,6 +17,7 @@ export type QuoteRequest = {
   items: QuoteRequestItem[];
   status: 'pending' | 'priced';
   quoteNumber?: string;
+  quoteRecordId?: string;
   quoteTotal?: number;
 };
 
