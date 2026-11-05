@@ -165,6 +165,13 @@ export default function LandscapePlan({
 }: Props) {
   const allItems = quote.items.filter((item) => item.name.trim());
   const items = allItems.filter((item) => item.landscapeAdded || item.landscapeX !== undefined || item.landscapeY !== undefined);
+  const scheduleItems = items.reduce<LandscapeQuoteItem[]>((grouped, item) => {
+    const identity = (item.scientificName || item.name.split(' / ')[0]).trim().toLocaleLowerCase('ar').replace(/\s+/g, ' ');
+    const existing = grouped.find((candidate) => (candidate.scientificName || candidate.name.split(' / ')[0]).trim().toLocaleLowerCase('ar').replace(/\s+/g, ' ') === identity);
+    if (existing) existing.quantity += Math.max(0, Math.round(Number(item.quantity) || 0));
+    else grouped.push({ ...item, quantity: Math.max(0, Math.round(Number(item.quantity) || 0)) });
+    return grouped;
+  }, []);
   const unplacedItems = allItems.filter((item) => !items.some((placed) => placed.id === item.id));
   const globalSize = quote.landscapeDefaultSize ?? 58;
   const globalShape: LandscapeGlobalShape = quote.landscapeDefaultShape === 'rectangle' || quote.landscapeDefaultShape === 'square' ? quote.landscapeDefaultShape : 'circle';
@@ -551,18 +558,19 @@ export default function LandscapePlan({
       for (let pageIndex = 0; pageIndex < chunks.length; pageIndex++) {
         wrapper.replaceChildren();
         const heading = document.createElement('div');
-        heading.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #315c3c;padding:0 0 14px;margin:0 0 18px;';
+        heading.style.cssText = 'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:end;width:100%;direction:rtl;border-bottom:2px solid #315c3c;padding:0 0 14px;margin:0 0 18px;box-sizing:border-box;';
         const title = document.createElement('div');
+        title.style.cssText = 'min-width:0;overflow:visible;text-align:right;';
         const eyebrow = document.createElement('div');
         eyebrow.style.cssText = 'font-size:12px;color:#607564;letter-spacing:.08em';
         eyebrow.textContent = `LANDSCAPE PLAN / ${quote.number}`;
-        const pdfTitle = document.createElement('h1');
-        pdfTitle.style.cssText = 'font-size:24px;margin:7px 0 0;color:#203a29';
+        const pdfTitle = document.createElement('div');
+        pdfTitle.style.cssText = 'display:block;width:100%;height:42px;min-height:42px;overflow:visible;font-family:Arial,sans-serif;font-size:19px;line-height:42px;white-space:nowrap;margin:0;color:#203a29;direction:rtl;text-align:right;';
         pdfTitle.textContent = viewMode === 'plan' ? 'مخطط تنسيق مقترح' : 'جدول عناصر المخطط';
         title.append(eyebrow, pdfTitle);
         const meta = document.createElement('div');
-        meta.style.cssText = 'font-size:12px;color:#526354;text-align:left;';
-        meta.textContent = viewMode === 'table' ? `صفحة ${pageIndex + 1} من ${chunks.length}` : `${items.length} عناصر`;
+        meta.style.cssText = 'font-size:11px;color:#526354;text-align:left;white-space:nowrap;direction:rtl;';
+        meta.textContent = viewMode === 'table' ? `صفحة ${pageIndex + 1} من ${chunks.length}` : `${scheduleItems.reduce((total, item) => total + item.quantity, 0)} وحدة · ${scheduleItems.length} أصناف`;
         heading.append(title, meta);
         wrapper.appendChild(heading);
         if (viewMode === 'plan') {
@@ -588,7 +596,25 @@ export default function LandscapePlan({
           wrapper.appendChild(table);
         }
         const images = Array.from(wrapper.querySelectorAll('img'));
-        await Promise.all(images.map((image) => image.decode().catch(() => undefined)));
+        await Promise.all(images.map(async (image) => {
+          await image.decode().catch(() => undefined);
+          if (image.naturalWidth > 0) return;
+          const fallbackCanvas = document.createElement('canvas');
+          fallbackCanvas.width = 96;
+          fallbackCanvas.height = 96;
+          const context = fallbackCanvas.getContext('2d');
+          if (!context) return;
+          context.fillStyle = '#f1f7ee'; context.strokeStyle = '#8eaf87'; context.lineWidth = 3;
+          context.beginPath(); context.arc(48, 48, 45, 0, Math.PI * 2); context.fill(); context.stroke();
+          context.strokeStyle = '#92714f'; context.lineWidth = 6; context.lineCap = 'round';
+          context.beginPath(); context.moveTo(48, 72); context.lineTo(48, 40); context.stroke();
+          context.fillStyle = '#5a9155';
+          context.beginPath(); context.ellipse(37, 38, 13, 8, -0.6, 0, Math.PI * 2); context.fill();
+          context.beginPath(); context.ellipse(58, 30, 12, 8, -0.65, 0, Math.PI * 2); context.fill();
+          image.style.display = 'block';
+          image.src = fallbackCanvas.toDataURL('image/png');
+          await image.decode().catch(() => undefined);
+        }));
         const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false, windowWidth: 1280 });
         if (pageIndex > 0) pdf.addPage('a4', 'landscape');
         const pageWidth = pdf.internal.pageSize.getWidth();
@@ -745,7 +771,7 @@ export default function LandscapePlan({
         });
       })}
       {textNotes.map((note) => <div key={note.id} className={`landscape-text-note ${selectedTextNoteId === note.id ? 'selected' : ''}`} style={{ left: `${note.x}%`, top: `${note.y}%`, fontSize: note.fontSize }} role="button" tabIndex={0} aria-label={`نص: ${note.text}`} onPointerDown={(event) => startTextNoteDrag(event, note)} onPointerMove={(event) => moveTextNoteDrag(event, note.id)} onPointerUp={endTextNoteDrag} onPointerCancel={endTextNoteDrag}>{note.text}</div>)}
-    </div></div><aside className="landscape-plan-schedule" aria-label="جدول عناصر المخطط"><header className="landscape-schedule-heading"><div><small>LANDSCAPE SCHEDULE</small><strong>قائمة العناصر</strong></div><span>{items.length} أصناف</span></header><div className="landscape-schedule-total"><span>إجمالي الوحدات</span><strong>{items.reduce((total, item) => total + Math.max(0, Math.round(Number(item.quantity) || 0)), 0)}</strong></div><div className="landscape-schedule-scroll">{items.length ? <table className="landscape-schedule-table"><colgroup><col className="landscape-schedule-name-col" /><col className="landscape-schedule-quantity-col" /><col className="landscape-schedule-icon-col" /></colgroup><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td title={item.name.split(' / ')[0]}>{item.name.split(' / ')[0]}</td><td className="landscape-schedule-quantity">{Math.max(0, Math.round(Number(item.quantity) || 0))}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; })}</tbody></table> : <div className="landscape-schedule-empty">أضف عنصرًا للمخطط ليظهر اسمه وكميته وأيقونته هنا.</div>}</div></aside></div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.length ? items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
+    </div></div><aside className="landscape-plan-schedule" aria-label="جدول عناصر المخطط"><header className="landscape-schedule-heading"><div><small>LANDSCAPE SCHEDULE</small><strong>قائمة العناصر</strong></div><span>{scheduleItems.length} أصناف</span></header><div className="landscape-schedule-total"><span>إجمالي الوحدات</span><strong>{scheduleItems.reduce((total, item) => total + item.quantity, 0)}</strong></div><div className="landscape-schedule-scroll">{scheduleItems.length ? <table className="landscape-schedule-table"><colgroup><col className="landscape-schedule-name-col" /><col className="landscape-schedule-quantity-col" /><col className="landscape-schedule-icon-col" /></colgroup><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{scheduleItems.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td title={item.name.split(' / ')[0]}>{item.name.split(' / ')[0]}</td><td className="landscape-schedule-quantity">{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; })}</tbody></table> : <div className="landscape-schedule-empty">أضف عنصرًا للمخطط ليظهر اسمه وكميته وأيقونته هنا.</div>}</div></aside></div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{scheduleItems.length ? scheduleItems.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
     <div className={`landscape-ai-drawer ${isAiChatOpen ? 'is-open' : ''}`} aria-hidden={!isAiChatOpen}>
       {isAiChatOpen && <button type="button" className="landscape-ai-backdrop" aria-label="إغلاق مساعد AI" onClick={() => setAiChatVisibility(false)} />}
       <aside className="landscape-ai-drawer-panel" aria-label="مساعد مخطط Landscape" aria-modal={isAiChatOpen} role="dialog">
