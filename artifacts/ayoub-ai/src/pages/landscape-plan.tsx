@@ -48,7 +48,6 @@ export type LandscapeAiPlant = { id: string; name: string; category: string; sci
 type Props = {
   quote: LandscapeQuote;
   onItemChange: (id: string, patch: Partial<LandscapeQuoteItem>) => void;
-  onShowScientificNamesChange: (value: boolean) => void;
   onGlobalSettingsChange: (size: number, shape: LandscapeGlobalShape) => void;
   onAnnotationsChange: (annotations: LandscapeAnnotation[]) => void;
   onDrawingsChange: (drawings: LandscapeDrawing[]) => void;
@@ -150,7 +149,6 @@ function makeStroke(tool: 'boundary' | 'path', points: LandscapePoint[], id: str
 export default function LandscapePlan({
   quote,
   onItemChange,
-  onShowScientificNamesChange,
   onGlobalSettingsChange,
   onAnnotationsChange,
   onDrawingsChange,
@@ -174,6 +172,7 @@ export default function LandscapePlan({
   const annotations = quote.landscapeAnnotations ?? [];
   const drawings = quote.landscapeDrawings ?? [];
   const canvasRef = useRef<HTMLDivElement>(null);
+  const planExportRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const drawSession = useRef<DrawSession | null>(null);
   const itemDrag = useRef<ItemDrag | null>(null);
@@ -181,13 +180,14 @@ export default function LandscapePlan({
   const annotationDrag = useRef<AnnotationDrag | null>(null);
   const customStampDrag = useRef<CustomStampDrag | null>(null);
   const textNoteDrag = useRef<TextNoteDrag | null>(null);
+  const [boundaryPoints, setBoundaryPoints] = useState<LandscapePoint[]>([]);
   const [previewDrawing, setPreviewDrawing] = useState<LandscapeDrawing | null>(null);
   const [activeTool, setActiveTool] = useState<LandscapeTool>('select');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'plan' | 'table'>('plan');
+  const [viewMode] = useState<'plan' | 'table'>('plan');
   const [localAiChatOpen, setLocalAiChatOpen] = useState(false);
   const isAiChatOpen = aiChatOpen ?? localAiChatOpen;
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -251,10 +251,11 @@ export default function LandscapePlan({
     if (activeCustomToolId && event.button === 0 && event.target === event.currentTarget) { addCustomStampAt(event); return; }
     if (activeTool === 'select' || event.button !== 0 || event.target !== event.currentTarget) return;
     event.preventDefault();
-    const start = pointFromEvent(event);
+    const point = pointFromEvent(event);
+    const start = activeTool === 'boundary' && boundaryPoints.length ? boundaryPoints[boundaryPoints.length - 1] : point;
     const current: DrawSession = { pointerId: event.pointerId, tool: activeTool, start, points: [start] };
     drawSession.current = current;
-    setPreviewDrawing(rectangleTools.has(activeTool) ? makeRectangle(activeTool, start, start, 'preview') : makeStroke(activeTool as 'boundary' | 'path', [start], 'preview'));
+    setPreviewDrawing(rectangleTools.has(activeTool) ? makeRectangle(activeTool, start, start, 'preview') : makeStroke('path', activeTool === 'boundary' && boundaryPoints.length ? [...boundaryPoints, point] : [start], 'preview'));
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moveDrawing = (event: PointerEvent<HTMLDivElement>) => {
@@ -263,6 +264,11 @@ export default function LandscapePlan({
     const end = pointFromEvent(event);
     if (rectangleTools.has(current.tool)) {
       setPreviewDrawing(makeRectangle(current.tool, current.start, end, 'preview'));
+      return;
+    }
+    if (current.tool === 'boundary') {
+      const points = boundaryPoints.length ? [...boundaryPoints, end] : [current.start, end];
+      setPreviewDrawing(points.length > 1 ? makeStroke('path', points, 'preview') : null);
       return;
     }
     const last = current.points[current.points.length - 1];
@@ -276,6 +282,12 @@ export default function LandscapePlan({
     let drawing: LandscapeDrawing | null = null;
     if (rectangleTools.has(current.tool)) {
       drawing = makeRectangle(current.tool, current.start, end, `drawing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
+    } else if (current.tool === 'boundary') {
+      const points = boundaryPoints.length ? [...boundaryPoints] : [current.start];
+      const last = points[points.length - 1];
+      if (Math.hypot(end.x - last.x, end.y - last.y) > 0.25) points.push(end);
+      setBoundaryPoints(points);
+      setPreviewDrawing(points.length > 1 ? makeStroke('path', points, 'preview') : null);
     } else {
       const points = [...current.points];
       const last = points[points.length - 1];
@@ -290,9 +302,28 @@ export default function LandscapePlan({
       setSelectedDrawingId(drawing.id);
     }
     drawSession.current = null;
+    if (current.tool !== 'boundary') {
+      setPreviewDrawing(null);
+      setActiveTool('select');
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const finishBoundary = () => {
+    if (boundaryPoints.length >= 3) {
+      const drawing = makeStroke('boundary', boundaryPoints, `drawing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
+      onDrawingsChange([...drawings, drawing]);
+      clearSelection();
+      setSelectedDrawingId(drawing.id);
+    }
+    setBoundaryPoints([]);
     setPreviewDrawing(null);
     setActiveTool('select');
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const cancelBoundary = () => {
+    drawSession.current = null;
+    setBoundaryPoints([]);
+    setPreviewDrawing(null);
+    setActiveTool('select');
   };
   const cancelDrawing = (event: PointerEvent<HTMLDivElement>) => {
     if (drawSession.current?.pointerId !== event.pointerId) return;
@@ -535,9 +566,15 @@ export default function LandscapePlan({
         heading.append(title, meta);
         wrapper.appendChild(heading);
         if (viewMode === 'plan') {
-          if (!canvasRef.current) throw new Error('المخطط غير ظاهر للتنزيل.');
-          const clone = canvasRef.current.cloneNode(true) as HTMLDivElement;
-          clone.style.cssText += ';width:1120px!important;height:792px!important;max-width:none!important;margin:0!important;overflow:hidden!important;';
+          if (!planExportRef.current) throw new Error('المخطط غير ظاهر للتنزيل.');
+          const clone = planExportRef.current.cloneNode(true) as HTMLDivElement;
+          clone.style.cssText += ';width:1120px!important;height:auto!important;max-width:none!important;margin:0!important;overflow:visible!important;';
+          const clonedCanvas = clone.querySelector('.landscape-canvas') as HTMLDivElement | null;
+          if (clonedCanvas) clonedCanvas.style.cssText += ';width:100%!important;height:auto!important;aspect-ratio:297/210!important;max-width:none!important;overflow:hidden!important;';
+          const clonedSchedule = clone.querySelector('.landscape-plan-schedule') as HTMLDivElement | null;
+          if (clonedSchedule) clonedSchedule.style.cssText += ';height:100%!important;max-height:none!important;overflow:visible!important;';
+          const clonedScheduleScroll = clone.querySelector('.landscape-schedule-scroll') as HTMLDivElement | null;
+          if (clonedScheduleScroll) clonedScheduleScroll.style.cssText += ';max-height:none!important;overflow:visible!important;';
           clone.querySelectorAll('.selected').forEach((element) => element.classList.remove('selected'));
           wrapper.appendChild(clone);
         } else {
@@ -614,24 +651,19 @@ export default function LandscapePlan({
       <div className="landscape-heading-copy">
         <div className="eyebrow">LANDSCAPE PLAN / {quote.number}</div>
         <div className="landscape-heading-actions">
-          <div className="landscape-view-switch" role="tablist" aria-label="طريقة عرض عناصر Landscape">
-            <button type="button" role="tab" aria-selected={viewMode === 'plan'} className={viewMode === 'plan' ? 'active' : ''} onClick={() => setViewMode('plan')}>مخطط</button>
-            <button type="button" role="tab" aria-selected={viewMode === 'table'} className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>جدول</button>
-          </div>
           {!hideAiChatToggle && <button type="button" className="landscape-ai-toggle" aria-expanded={isAiChatOpen} onClick={() => setAiChatVisibility(!isAiChatOpen)}><Sparkles size={14} />مساعد AI</button>}
-          <button type="button" className="btn secondary small landscape-pdf-button" onClick={downloadCurrentPdf} disabled={pdfBusy}><Download size={14} />{pdfBusy ? 'جارٍ تجهيز PDF…' : viewMode === 'plan' ? 'تنزيل المخطط PDF' : 'تنزيل الجدول PDF'}</button>
+          <button type="button" className="btn secondary small landscape-pdf-button" onClick={downloadCurrentPdf} disabled={pdfBusy}><Download size={14} />{pdfBusy ? 'جارٍ تجهيز PDF…' : 'تنزيل المخطط PDF'}</button>
         </div>
         {pdfError && <small className="landscape-pdf-error" role="alert">{pdfError}</small>}
-        <h2>{viewMode === 'plan' ? 'مخطط Landscape' : 'جدول عناصر المخطط'}</h2>
-        <p>{viewMode === 'plan' ? 'لوحة بيضاء تبدأ فارغة. اختر أداة ثم ارسم حدود أرضك ومبانيك واسحب رموز النباتات إلى مواقعها.' : 'عرض منظم لعناصر Landscape التي أضفتها إلى الرسم.'}</p>
+        <h2>مخطط Landscape</h2>
+        <p>لوحة بيضاء تبدأ فارغة. اختر أداة ثم ارسم حدود أرضك ومبانيك واسحب رموز النباتات إلى مواقعها.</p>
       </div>
-      {viewMode === 'plan' && <label className="landscape-science-toggle"><input type="checkbox" checked={quote.showScientificNames !== false} onChange={(event) => onShowScientificNamesChange(event.target.checked)} />إظهار الاسم العلمي تحت الأيقونة</label>}
     </div>
 
     {viewMode === 'plan' && <div className="landscape-drawing-tools">
       <div className="landscape-drawing-tool-row" role="toolbar" aria-label="أدوات رسم المخطط">
-        <button type="button" className={activeTool === 'select' && !activeCustomToolId ? 'active' : ''} aria-pressed={activeTool === 'select' && !activeCustomToolId} onClick={() => { setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); }}>تحديد / تحريك</button>
-        {drawingTools.map((tool) => <button key={tool.id} type="button" className={activeTool === tool.id ? 'active' : ''} aria-pressed={activeTool === tool.id} onClick={() => { setIsPlacingText(false); clearSelection(); setActiveCustomToolId(null); setActiveTool(tool.id); }}>{tool.label}</button>)}
+        <button type="button" className={activeTool === 'select' && !activeCustomToolId ? 'active' : ''} aria-pressed={activeTool === 'select' && !activeCustomToolId} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); }}>تحديد / تحريك</button>
+        {drawingTools.map((tool) => <button key={tool.id} type="button" className={activeTool === tool.id ? 'active' : ''} aria-pressed={activeTool === tool.id} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); if (tool.id === 'boundary') { setBoundaryPoints([]); setPreviewDrawing(null); } setIsPlacingText(false); clearSelection(); setActiveCustomToolId(null); setActiveTool(tool.id); }}>{tool.label}</button>)}
         <button type="button" className={showTextComposer || isPlacingText ? 'active' : ''} aria-pressed={showTextComposer || isPlacingText} onClick={() => { setShowTextComposer((value) => !value); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); clearSelection(); }}>إضافة نص</button>
       </div>
       <div className="landscape-custom-tool-manager">
@@ -641,13 +673,14 @@ export default function LandscapePlan({
       </div>
       {showTextComposer && <div className="landscape-text-note-creator"><label>اكتب النص الذي تريد وضعه على المخطط<textarea rows={2} value={draftText} onChange={(event) => setDraftText(event.target.value)} placeholder="مثال: المسافة 3 م" /></label><div><button type="button" disabled={!draftText.trim()} onClick={() => { setIsPlacingText(true); setActiveTool('select'); setActiveCustomToolId(null); }}>{isPlacingText ? 'انقر على المخطط لوضع النص' : 'اختيار مكان النص'}</button>{isPlacingText && <button type="button" onClick={() => setIsPlacingText(false)}>إلغاء</button>}</div>{isPlacingText && <small>انقر في المكان المطلوب على اللوحة؛ بعد ذلك يمكنك سحب النص وتغيير حجمه.</small>}</div>}
       <div className="landscape-drawing-hints">
-        <small>{isPlacingText ? 'انقر في المكان المطلوب لوضع النص.' : activeCustomToolId ? `انقر على اللوحة لوضع «${customTools.find((tool) => tool.id === activeCustomToolId)?.name || 'الأيقونة'}»، ثم اسحب كل نسخة لموقعها.` : activeTool === 'boundary' ? 'اسحب بالماوس حول محيط الأرض؛ يُغلق الحد تلقائيًا.' : activeTool === 'path' ? 'اسحب لرسم مسار حر، ثم حدّده لتغيير حجمه أو سماكته.' : activeTool === 'select' ? 'اسحب أي عنصر لتحريكه. اختر أداة رسم ثم اسحب على المساحة البيضاء للإنشاء.' : `اسحب على اللوحة لتحديد حجم «${drawingLabels[activeTool]}»، ويمكنك تعديله بعد الرسم.`}</small>
+        <small>{isPlacingText ? 'انقر في المكان المطلوب لوضع النص.' : activeCustomToolId ? `انقر على اللوحة لوضع «${customTools.find((tool) => tool.id === activeCustomToolId)?.name || 'الأيقونة'}»، ثم اسحب كل نسخة لموقعها.` : activeTool === 'boundary' ? 'اسحب من نقطة البداية إلى نهاية الضلع ثم أفلت؛ كرر لكل ضلع مستقيم، ثم اضغط إنهاء حدود الأرض.' : activeTool === 'path' ? 'اسحب لرسم مسار حر، ثم حدّده لتغيير حجمه أو سماكته.' : activeTool === 'select' ? 'اسحب أي عنصر لتحريكه. اختر أداة رسم ثم اسحب على المساحة البيضاء للإنشاء.' : `اسحب على اللوحة لتحديد حجم «${drawingLabels[activeTool]}»، ويمكنك تعديله بعد الرسم.`}</small>
+        {activeTool === 'boundary' && <><button type="button" className="landscape-finish-boundary" disabled={boundaryPoints.length < 3 || !!drawSession.current} onClick={finishBoundary}>إنهاء حدود الأرض{boundaryPoints.length > 0 ? ` (${boundaryPoints.length} نقاط)` : ''}</button><button type="button" className="landscape-cancel-boundary" onClick={cancelBoundary}>إلغاء</button></>}
         <label><input type="checkbox" checked={quote.landscapeShowGrid === true} onChange={(event) => onGridChange(event.target.checked)} />شبكة مساعدة</label>
         <button type="button" className="landscape-undo-drawing" disabled={!drawings.length} onClick={() => { onDrawingsChange(drawings.slice(0, -1)); setSelectedDrawingId(null); }}><Undo2 size={13} />تراجع عن آخر رسم</button>
       </div>
     </div>}
 
-    {viewMode === 'plan' ? <div
+    {viewMode === 'plan' ? <div className="landscape-plan-composition" ref={planExportRef}><div className="landscape-plan-canvas-column"><div
       ref={canvasRef}
       className={`landscape-canvas landscape-canvas-white ${quote.landscapeShowGrid ? 'has-grid' : ''} ${activeTool !== 'select' || activeCustomToolId || isPlacingText ? 'is-drawing' : ''}`}
       aria-label="لوحة Landscape بيضاء فارغة للرسم والتحرير"
@@ -694,7 +727,6 @@ export default function LandscapePlan({
         };
         return positions.map((position, instanceIndex) => {
           const instanceKey = `${item.id}-${instanceIndex}`;
-          const showLabel = instanceIndex === 0;
           return <div
             className={`landscape-node landscape-node-${shape} landscape-node-instance ${draggingId === instanceKey ? 'is-dragging' : ''} ${selectedItemId === item.id && draggingId === instanceKey ? 'is-selected' : ''}`}
             key={instanceKey}
@@ -709,13 +741,11 @@ export default function LandscapePlan({
             <div className={`landscape-node-art landscape-art-${shape} landscape-kind-${kind}`} style={artStyle}>
               {item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : kind === 'plant' ? <TreePlanSymbol size={Math.max(24, iconSize - 4)} /> : <Icon size={kind === 'road' ? 24 : Math.max(18, Math.min(iconSize - 14, 42))} />}
             </div>
-            {showLabel && <strong>{item.name.split(' / ')[0]}</strong>}
-            {showLabel && (quote.showScientificNames !== false && item.scientificName || item.landscapeArea) && <small>{quote.showScientificNames !== false && item.scientificName ? item.scientificName : null}{item.landscapeArea ? ` · ${item.landscapeArea}م²` : ''}</small>}
           </div>;
         });
       })}
       {textNotes.map((note) => <div key={note.id} className={`landscape-text-note ${selectedTextNoteId === note.id ? 'selected' : ''}`} style={{ left: `${note.x}%`, top: `${note.y}%`, fontSize: note.fontSize }} role="button" tabIndex={0} aria-label={`نص: ${note.text}`} onPointerDown={(event) => startTextNoteDrag(event, note)} onPointerMove={(event) => moveTextNoteDrag(event, note.id)} onPointerUp={endTextNoteDrag} onPointerCancel={endTextNoteDrag}>{note.text}</div>)}
-    </div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.length ? items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
+    </div></div><aside className="landscape-plan-schedule" aria-label="جدول عناصر المخطط"><header className="landscape-schedule-heading"><div><small>LANDSCAPE SCHEDULE</small><strong>قائمة العناصر</strong></div><span>{items.length} أصناف</span></header><div className="landscape-schedule-total"><span>إجمالي الوحدات</span><strong>{items.reduce((total, item) => total + Math.max(0, Math.round(Number(item.quantity) || 0)), 0)}</strong></div><div className="landscape-schedule-scroll">{items.length ? <table className="landscape-schedule-table"><colgroup><col className="landscape-schedule-name-col" /><col className="landscape-schedule-quantity-col" /><col className="landscape-schedule-icon-col" /></colgroup><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td title={item.name.split(' / ')[0]}>{item.name.split(' / ')[0]}</td><td className="landscape-schedule-quantity">{Math.max(0, Math.round(Number(item.quantity) || 0))}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; })}</tbody></table> : <div className="landscape-schedule-empty">أضف عنصرًا للمخطط ليظهر اسمه وكميته وأيقونته هنا.</div>}</div></aside></div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{items.length ? items.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
     <div className={`landscape-ai-drawer ${isAiChatOpen ? 'is-open' : ''}`} aria-hidden={!isAiChatOpen}>
       {isAiChatOpen && <button type="button" className="landscape-ai-backdrop" aria-label="إغلاق مساعد AI" onClick={() => setAiChatVisibility(false)} />}
       <aside className="landscape-ai-drawer-panel" aria-label="مساعد مخطط Landscape" aria-modal={isAiChatOpen} role="dialog">

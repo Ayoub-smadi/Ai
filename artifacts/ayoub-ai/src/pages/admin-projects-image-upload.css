@@ -1,0 +1,61 @@
+.project-admin-form { width: min(100%, 760px); }
+.project-image-field {
+  display: grid;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid #dce8dc;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fbfdfb 0%, #f1f7f0 100%);
+}
+.project-image-field-heading { display: flex; align-items: center; gap: 10px; }
+.project-image-field-icon { display: grid; flex: none; width: 34px; height: 34px; place-items: center; border: 1px solid #dce9dc; border-radius: 10px; background: #fff; color: #3b7046; }
+.project-image-field-heading > div { display: grid; gap: 3px; }
+.project-image-field-heading strong { color: #2c4932; font-size: 12px; }
+.project-image-field-heading small { color: #78867a; font-size: 10px; }
+.project-image-file-input { display: none !important; }
+.project-image-dropzone {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 210px;
+  place-items: center;
+  overflow: hidden;
+  padding: 0;
+  border: 1.5px dashed #b6cbb8;
+  border-radius: 13px;
+  background: radial-gradient(ellipse at 50% 0%, #e6f1e4 0%, #f8fbf7 66%);
+  color: #416849;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.project-image-dropzone:hover, .project-image-dropzone.is-dragging { border-color: #43834e; background-color: #edf6ea; box-shadow: inset 0 0 0 3px #78a77b24; }
+.project-image-dropzone.is-dragging { transform: scale(.995); }
+.project-image-dropzone.has-image { border-style: solid; border-color: #d4e0d5; background: #203827; }
+.project-image-dropzone:disabled { opacity: .7; cursor: wait; }
+.project-image-dropzone > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.project-image-empty { display: grid; justify-items: center; gap: 7px; padding: 22px; text-align: center; }
+.project-image-empty-icon { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid #d5e4d5; border-radius: 15px; background: #fff; color: #3a7746; box-shadow: 0 5px 15px #23452c0c; }
+.project-image-empty strong { color: #34543a; font-size: 12px; }
+.project-image-empty small { color: #879489; font-size: 10px; }
+.project-image-preview-shade { position: absolute; inset: 35% 0 0; background: linear-gradient(180deg, transparent 0%, #102217c9 100%); }
+.project-image-preview-copy { position: absolute; inset-inline: 16px; bottom: 14px; display: grid; gap: 4px; color: #fff; text-align: right; }
+.project-image-preview-copy strong { font-size: 12px; text-shadow: 0 1px 8px #0008; }
+.project-image-preview-copy small { color: #f2f6f0; font-size: 9px; }
+.project-image-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.project-image-controls > span { margin-inline-start: auto; color: #78867a; font-size: 9px; }
+.project-admin-form > footer .btn:disabled { opacity: .55; cursor: wait; }
+@media (max-width: 620px) {
+  .project-image-field { padding: 11px; }
+  .project-image-dropzone { min-height: 175px; }
+  .project-image-controls > span { flex-basis: 100%; margin: 2px 0 0; line-height: 1.6; }
+}
+
+.project-gallery-admin { display: flex; flex-wrap: wrap; gap: 9px; padding-top: 3px; }
+.project-gallery-admin__item { position: relative; flex: 0 0 78px; width: 78px; height: 70px; }
+.project-gallery-admin__cover { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; padding: 0; border: 2px solid transparent; border-radius: 10px; background: #e7eee6; cursor: pointer; }
+.project-gallery-admin__cover img { width: 100%; height: 100%; object-fit: cover; }
+.project-gallery-admin__item.is-cover .project-gallery-admin__cover { border-color: #477b4d; box-shadow: 0 0 0 2px #477b4d22; }
+.project-gallery-admin__cover span { position: absolute; right: 3px; bottom: 3px; padding: 3px 5px; border-radius: 5px; background: #24452bd9; color: white; font-size: 8px; }
+.project-gallery-admin__remove { position: absolute; top: -6px; left: -6px; display: grid; width: 21px; height: 21px; place-items: center; border: 1px solid white; border-radius: 50%; background: #99493e; color: white; font-size: 16px; line-height: 1; cursor: pointer; box-shadow: 0 2px 6px #0002; }
+.project-gallery-admin__remove:disabled { opacity: .5; cursor: wait; }
+.project-image-dropzone:disabled { cursor: not-allowed; }

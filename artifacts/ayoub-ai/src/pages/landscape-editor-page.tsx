@@ -13,6 +13,7 @@ import LandscapePlan, {
 import './landscape-editor-unified.css';
 
 const STORAGE_KEY = 'qadri-site-plan-v1';
+const CUSTOM_TOOLS_STORAGE_KEY = 'qadri-landscape-custom-tools-v1';
 type LegacyPlanItem = {
   id?: string;
   kind?: 'plant' | 'shape';
@@ -86,10 +87,13 @@ function readSavedPlan(): LandscapeQuote {
   if (typeof window === 'undefined') return emptyPlan();
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return emptyPlan();
+    const separateTools = localStorage.getItem(CUSTOM_TOOLS_STORAGE_KEY);
+    const savedTools = separateTools ? JSON.parse(separateTools) : null;
+    const tools = Array.isArray(savedTools) ? savedTools : undefined;
+    if (!stored) return { ...emptyPlan(), landscapeCustomTools: tools ?? [] };
     const parsed: unknown = JSON.parse(stored);
-    if (Array.isArray(parsed)) return migrateLegacyPlan(parsed);
-    if (!parsed || typeof parsed !== 'object') return emptyPlan();
+    if (Array.isArray(parsed)) return { ...migrateLegacyPlan(parsed), landscapeCustomTools: tools ?? [] };
+    if (!parsed || typeof parsed !== 'object') return { ...emptyPlan(), landscapeCustomTools: tools ?? [] };
     const saved = parsed as Partial<LandscapeQuote>;
     return {
       ...emptyPlan(),
@@ -98,7 +102,7 @@ function readSavedPlan(): LandscapeQuote {
       items: Array.isArray(saved.items) ? saved.items : [],
       landscapeAnnotations: Array.isArray(saved.landscapeAnnotations) ? saved.landscapeAnnotations : [],
       landscapeDrawings: Array.isArray(saved.landscapeDrawings) ? saved.landscapeDrawings : [],
-      landscapeCustomTools: Array.isArray(saved.landscapeCustomTools) ? saved.landscapeCustomTools : [],
+      landscapeCustomTools: tools ?? (Array.isArray(saved.landscapeCustomTools) ? saved.landscapeCustomTools : []),
       landscapeCustomStamps: Array.isArray(saved.landscapeCustomStamps) ? saved.landscapeCustomStamps : [],
       landscapeTextNotes: Array.isArray(saved.landscapeTextNotes) ? saved.landscapeTextNotes : [],
     };
@@ -109,6 +113,7 @@ function readSavedPlan(): LandscapeQuote {
 
 export default function LandscapeEditorPage() {
   const [plan, setPlan] = useState<LandscapeQuote>(readSavedPlan);
+  const [saveError, setSaveError] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [plants] = useState<ManagedPlant[]>(getManagedPlants);
   const [search, setSearch] = useState('');
@@ -118,7 +123,16 @@ export default function LandscapeEditorPage() {
   }, [plants, search]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+    try {
+      const customTools = plan.landscapeCustomTools ?? [];
+      localStorage.setItem(CUSTOM_TOOLS_STORAGE_KEY, JSON.stringify(customTools));
+      const { landscapeCustomTools: _storedSeparately, ...planWithoutCustomTools } = plan;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(planWithoutCustomTools));
+      setSaveError(false);
+    } catch (error) {
+      console.error('Landscape auto-save failed:', error);
+      setSaveError(true);
+    }
   }, [plan]);
 
   const addPlant = (plant: ManagedPlant) => {
@@ -224,7 +238,7 @@ export default function LandscapeEditorPage() {
         <p>ابدأ من لوحة بيضاء، وارسم حدود الأرض والعناصر بنفسك. تحفظ تغييراتك تلقائيًا.</p>
       </div>
       <div className="landscape-studio-header-actions">
-        <span className="landscape-studio-save-state">يحفظ تلقائيًا</span>
+        <span className={`landscape-studio-save-state${saveError ? ' has-error' : ''}`} role="status">{saveError ? 'تعذر الحفظ؛ مساحة التخزين ممتلئة' : 'يحفظ تلقائيًا على هذا الجهاز'}</span>
         <button type="button" className="landscape-studio-ai-button" aria-expanded={aiChatOpen} onClick={() => setAiChatOpen((open) => !open)}><Sparkles size={14} />مساعد AI</button>
         <button type="button" onClick={clearPlan}><Trash2 size={14} />مسح المخطط</button>
       </div>
@@ -251,7 +265,6 @@ export default function LandscapeEditorPage() {
         <LandscapePlan
           quote={plan}
           onItemChange={updateItem}
-          onShowScientificNamesChange={(value) => setPlan((current) => ({ ...current, showScientificNames: value }))}
           onGlobalSettingsChange={updateGlobalSettings}
           onAnnotationsChange={(landscapeAnnotations) => setPlan((current) => ({ ...current, landscapeAnnotations }))}
           onDrawingsChange={(landscapeDrawings: LandscapeDrawing[]) => setPlan((current) => ({ ...current, landscapeDrawings }))}

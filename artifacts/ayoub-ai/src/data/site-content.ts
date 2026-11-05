@@ -17,6 +17,7 @@ export type PortfolioProject = {
   category: string;
   description: string;
   image: string;
+  images?: string[];
   location: string;
   date: string;
 };

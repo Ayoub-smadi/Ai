@@ -38,6 +38,9 @@
 .landscape-drawing-hints label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 10px; }
 .landscape-drawing-hints button { min-height: 28px; padding: 5px 8px; font-size: 9px; }
 .landscape-drawing-hints button:disabled { opacity: .45; cursor: not-allowed; }
+.landscape-drawing-hints .landscape-finish-boundary { border-color: #315c3c; background: #315c3c; color: #fff; font-weight: 700; }
+.landscape-drawing-hints .landscape-finish-boundary:hover:not(:disabled) { border-color: #244a30; background: #244a30; color: #fff; }
+.landscape-drawing-hints .landscape-cancel-boundary { border-color: #e4d9d5; color: #8a5549; }
 
 .landscape-canvas { position: relative; width: 100%; height: auto; aspect-ratio: 297 / 210; min-height: 0; overflow: hidden; border: 1px solid #ccd5ce; border-radius: 11px; background-color: #fff; isolation: isolate; touch-action: none; }
 .landscape-board .landscape-canvas-white { height: auto; aspect-ratio: 297 / 210; min-height: 0; background-color: #fff !important; background-image: none !important; }
@@ -167,4 +170,55 @@
   .landscape-drawing-hints > small { flex-basis: 100%; }
   .landscape-item-library-head { align-items: flex-start; flex-direction: column; gap: 3px; }
   .landscape-item-library-list { grid-template-columns: 1fr; }
+}
+
+
+/* Compact right-side schedule paired with the landscape drawing. */
+.landscape-plan-composition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 248px;
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+  direction: ltr;
+}
+.landscape-plan-canvas-column { min-width: 0; }
+.landscape-plan-canvas-column .landscape-canvas { width: 100%; height: auto; min-height: 0; aspect-ratio: 297 / 210; }
+.landscape-plan-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 11px;
+  border: 1px solid #dce6dc;
+  border-radius: 12px;
+  background: linear-gradient(155deg, #fff 0%, #f6faf5 100%);
+  box-shadow: 0 7px 20px #1f40270b;
+  direction: rtl;
+}
+.landscape-schedule-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.landscape-schedule-heading > div { display: grid; gap: 3px; }
+.landscape-schedule-heading small { color: #829184; font: 8px var(--app-font-mono, monospace); letter-spacing: .08em; }
+.landscape-schedule-heading strong { color: #264630; font-size: 12px; }
+.landscape-schedule-heading > span { flex: none; padding: 4px 7px; border: 1px solid #e2ebe0; border-radius: 99px; background: #fff; color: #647468; font-size: 8px; }
+.landscape-schedule-total { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid #e3ecdf; border-radius: 9px; background: #edf5e9; color: #526a54; font-size: 9px; }
+.landscape-schedule-total strong { color: #295d37; font-size: 17px; font-variant-numeric: tabular-nums; }
+.landscape-schedule-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; border: 1px solid #e5ebe4; border-radius: 9px; background: #fff; }
+.landscape-schedule-table { width: 100%; table-layout: fixed; border-collapse: collapse; text-align: right; }
+.landscape-schedule-name-col { width: auto; }
+.landscape-schedule-quantity-col { width: 54px; }
+.landscape-schedule-icon-col { width: 52px; }
+.landscape-schedule-table th { padding: 8px 5px; border-bottom: 1px solid #dce6dc; background: #f2f7f1; color: #506854; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.landscape-schedule-table td { height: 43px; padding: 5px; border-bottom: 1px solid #edf1ed; color: #394d3d; font-size: 9px; vertical-align: middle; }
+.landscape-schedule-table tbody tr:last-child td { border-bottom: 0; }
+.landscape-schedule-table tbody tr:nth-child(even) { background: #fbfcfa; }
+.landscape-schedule-table td:first-child { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.landscape-schedule-table .landscape-schedule-quantity { color: #285d38; text-align: center; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.landscape-plan-schedule .landscape-table-icon { display: grid; width: 30px; height: 30px; margin: auto; }
+.landscape-schedule-empty { display: grid; min-height: 110px; place-items: center; padding: 14px; color: #778579; font-size: 9px; line-height: 1.8; text-align: center; }
+@media (max-width: 760px) {
+  .landscape-plan-composition { grid-template-columns: minmax(0, 1fr); }
+  .landscape-plan-schedule { max-height: 340px; }
 }

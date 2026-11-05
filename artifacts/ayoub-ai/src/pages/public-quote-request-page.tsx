@@ -45,6 +45,7 @@ export default function PublicQuoteRequestPage() {
   const [fulfillment, setFulfillment] = useState<'delivery' | 'pickup' | ''>('');
   const [region, setRegion] = useState('');
   const [submittedId, setSubmittedId] = useState('');
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const normalized = search.trim().toLocaleLowerCase();
   const visibleCategories = categories.map((category) => ({ ...category, items: category.items.filter((item) => !normalized || `${item.nameAr} ${item.nameEn} ${item.categoryAr}`.toLocaleLowerCase().includes(normalized)) })).filter((category) => category.items.length > 0);
@@ -69,18 +70,22 @@ export default function PublicQuoteRequestPage() {
     setCart([]);
   };
 
-  return <main className="customer-quote-page" dir="rtl">
+  return <main className={`customer-quote-page${cart.length > 0 ? ' has-cart' : ''}`} dir="rtl">
     <header className="customer-quote-header"><Link className="btn secondary small" href="/"><ArrowLeft size={15} />العودة للموقع</Link><div className="customer-quote-brand">قادري <span>AI</span></div><span className="customer-quote-label">طلب عرض سعر</span></header>
     {submittedId ? <section className="quote-success-card"><div className="quote-success-icon"><Check size={25} /></div><div className="eyebrow">تم استلام طلبك</div><h1>شكرًا لك، وصلنا طلب عرض السعر</h1><p>سيقوم فريق المشتل بمراجعته والتواصل معك على رقم الهاتف المسجّل.</p><div className="quote-request-reference">رقم الطلب <strong dir="ltr">{submittedId.slice(0, 8).toUpperCase()}</strong></div><Link className="btn" href="/">العودة للموقع</Link></section> : <>
       <section className="customer-quote-intro"><div className="eyebrow">QADRI NURSERY / QUOTE REQUEST</div><h1>اختر نباتاتك واطلب تسعيرها</h1><p>أضف النباتات التي ترغب بها، حدّد الحجم والكمية، ثم أرسل بيانات التواصل وطريقة الاستلام.</p></section>
-      <div className="customer-quote-layout">
+      {!checkoutOpen ? <div className="customer-quote-layout">
         <section className="customer-quote-catalog panel">
           <div className="customer-quote-toolbar"><label className="customer-quote-search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن نبتة أو منتج..." /></label><span>{categories.reduce((total, category) => total + category.items.length, 0)} منتج</span></div>
           <div className="customer-quote-browser">
             <aside className="customer-quote-categories">{visibleCategories.map((category) => <button key={category.id} className={category.id === (currentCategory?.id || activeCategory) ? 'active' : ''} onClick={() => setActiveCategory(category.id)}><span className="quote-category-mark"><Sprout size={17} /></span><span><strong>{category.nameAr}</strong><small>{category.items.length} منتج</small></span><ChevronRight size={15} /></button>)}</aside>
-            <div className="customer-quote-products">{currentCategory ? <><div className="customer-quote-category-title"><div><span className="eyebrow">{currentCategory.nameEn}</span><h2>{currentCategory.nameAr}</h2></div><span>{currentCategory.items.length} منتج</span></div><div className="customer-quote-product-grid">{currentCategory.items.map((item) => <button type="button" className="customer-quote-product" key={item.id} onClick={() => { setSelectedProduct(item); setSelectedSize('متوسط'); setSelectedQuantity(1); }}><span className="customer-quote-product-image">{item.image ? <img src={resolveCatalogImage(item.image)} alt={item.nameAr} loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <Sprout size={25} />}</span><span className="customer-quote-product-name">{item.nameAr}</span><small>{item.categoryAr}</small><span className="customer-quote-add"><Plus size={14} /> أضف للطلب</span></button>)}</div></> : <div className="customer-quote-empty">لا توجد نتائج مطابقة. جرّب اسمًا آخر.</div>}</div>
+            <div className="customer-quote-products">{currentCategory ? <><div className="customer-quote-category-title"><div><span className="eyebrow">{currentCategory.nameEn}</span><h2>{currentCategory.nameAr}</h2></div><span>{currentCategory.items.length} منتج</span></div><div className="customer-quote-product-grid">{currentCategory.items.map((item) => <button type="button" className="customer-quote-product" key={item.id} onClick={() => { setSelectedProduct(item); setSelectedSize('متوسط'); setSelectedQuantity(1); }}><span className="customer-quote-product-image">{item.image ? <img src={resolveCatalogImage(item.image)} alt={item.nameAr} loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <Sprout size={25} />}</span><span className="customer-quote-product-name">{item.nameAr}</span><small>{item.categoryAr}</small><span className="customer-quote-add"><Plus size={14} /> أضف للطلب</span></button>)}</div></> : <div className="customer-quote-empty">لا توجد نتائج مطابقة. جرّب اسمًا آخر.</div>}
+              {cart.length > 0 && <div className="customer-quote-continue-row"><span>أضفت {cart.reduce((total, item) => total + item.quantity, 0)} إلى الطلب</span><button type="button" className="btn customer-quote-continue" onClick={() => setCheckoutOpen(true)}>متابعة الطلب <ArrowLeft size={16} /></button></div>}
+            </div>
           </div>
         </section>
+      </div> : <section className="customer-quote-checkout">
+        <button type="button" className="btn secondary customer-quote-back" onClick={() => setCheckoutOpen(false)}><ArrowLeft size={15} />العودة إلى الكتالوج</button>
         <aside className="customer-quote-order">
           <section className="panel customer-quote-cart"><div className="customer-quote-panel-heading"><div><span className="eyebrow">YOUR SELECTION</span><h2>النباتات المختارة</h2></div><span className="customer-quote-cart-count">{cart.reduce((total, item) => total + item.quantity, 0)}</span></div>
             {cart.length ? <div className="customer-quote-cart-list">{cart.map((item) => <div className="customer-quote-cart-item" key={item.productId}><div className="customer-quote-cart-info"><strong>{item.name}</strong><span>الحجم: {item.size}</span><label>الكمية <input type="number" min="1" value={item.quantity} onChange={(event) => setQuantity(item.productId, Number(event.target.value))} /></label></div><button type="button" className="icon-button" aria-label={`حذف ${item.name}`} onClick={() => setCart((items) => items.filter((entry) => entry.productId !== item.productId))}><Trash2 size={15} /></button></div>)}</div> : <div className="customer-quote-cart-empty"><ShoppingBag size={20} /><span>لم تختر أي نبات بعد. اضغط على النباتات لإضافتها.</span></div>}
@@ -95,8 +100,26 @@ export default function PublicQuoteRequestPage() {
             <p className="customer-quote-required-note">جميع البيانات المطلوبة مميّزة بنجمة (*)</p>
           </form>
         </aside>
-      </div>
+      </section>}
     </>}
-    {selectedProduct && <div className="customer-quote-modal-backdrop" onClick={() => setSelectedProduct(null)}><section className="customer-quote-modal" onClick={(event) => event.stopPropagation()}><button type="button" className="icon-button customer-quote-modal-close" onClick={() => setSelectedProduct(null)} aria-label="إغلاق"><X size={18} /></button><div className="customer-quote-modal-picture">{selectedProduct.image ? <img src={resolveCatalogImage(selectedProduct.image)} alt={selectedProduct.nameAr} loading="lazy" decoding="async" /> : <Sprout size={30} />}</div><span className="eyebrow">{selectedProduct.categoryAr}</span><h2>{selectedProduct.nameAr}</h2><p>{selectedProduct.descriptionAr}</p><label className="customer-quote-field">الحجم <span>*</span><select value={selectedSize} onChange={(event) => setSelectedSize(event.target.value)}>{plantSizes.map((size) => <option key={size}>{size}</option>)}</select></label><label className="customer-quote-field">الكمية <span>*</span><div className="customer-quote-quantity"><button type="button" onClick={() => setSelectedQuantity((value) => Math.max(1, value - 1))} aria-label="تقليل الكمية"><Minus size={15} /></button><input type="number" min="1" value={selectedQuantity} onChange={(event) => setSelectedQuantity(Math.max(1, Number(event.target.value)))} /><button type="button" onClick={() => setSelectedQuantity((value) => value + 1)} aria-label="زيادة الكمية"><Plus size={15} /></button></div></label><div className="customer-quote-modal-actions"><button type="button" className="btn" onClick={addProduct}><Plus size={15} />إضافة إلى الطلب</button><button type="button" className="btn secondary" onClick={() => setSelectedProduct(null)}>إلغاء</button></div></section></div>}
+    {selectedProduct && <div className="customer-quote-modal-backdrop" onClick={() => setSelectedProduct(null)}>
+      <section className="customer-quote-modal" onClick={(event) => event.stopPropagation()}>
+        <button type="button" className="icon-button customer-quote-modal-close" onClick={() => setSelectedProduct(null)} aria-label="إغلاق"><X size={18} /></button>
+        <div className="customer-quote-modal-picture">
+          {selectedProduct.image ? <img src={resolveCatalogImage(selectedProduct.image)} alt={selectedProduct.nameAr} loading="lazy" decoding="async" /> : <Sprout size={30} />}
+          <div className="customer-quote-modal-shade" />
+          <div className="customer-quote-modal-hero-copy"><span><Sprout size={14} />{selectedProduct.categoryAr}</span><h2>{selectedProduct.nameAr}</h2></div>
+        </div>
+        <div className="customer-quote-modal-content">
+          <p className="customer-quote-modal-description">{selectedProduct.descriptionAr}</p>
+          <div className="customer-quote-modal-options">
+            <label className="customer-quote-field">الحجم <span>*</span><select value={selectedSize} onChange={(event) => setSelectedSize(event.target.value)}>{plantSizes.map((size) => <option key={size}>{size}</option>)}</select></label>
+            <label className="customer-quote-field">الكمية <span>*</span><div className="customer-quote-quantity"><button type="button" onClick={() => setSelectedQuantity((value) => Math.max(1, value - 1))} aria-label="تقليل الكمية"><Minus size={15} /></button><input type="number" min="1" value={selectedQuantity} onChange={(event) => setSelectedQuantity(Math.max(1, Number(event.target.value)))} /><button type="button" onClick={() => setSelectedQuantity((value) => value + 1)} aria-label="زيادة الكمية"><Plus size={15} /></button></div></label>
+          </div>
+          <div className="customer-quote-modal-actions"><button type="button" className="btn customer-quote-modal-primary" onClick={() => { addProduct(); setCheckoutOpen(true); }}><ArrowLeft size={16} />متابعة الطلب</button><button type="button" className="btn secondary" onClick={() => setSelectedProduct(null)}>متابعة التصفح</button></div>
+          <div className="customer-quote-modal-note"><Check size={14} /> السعر النهائي يؤكد بعد مراجعة الطلب</div>
+        </div>
+      </section>
+    </div>}
   </main>;
 }

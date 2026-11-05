@@ -9,11 +9,12 @@
 .voucher-preview-toolbar strong,.voucher-history-heading h2{margin:0;color:var(--voucher-navy);font-size:14px}
 .voucher-preview-toolbar span{color:var(--voucher-muted);font-size:11px}
 .voucher-sheet{width:100%;min-height:680px;padding:20px 22px 0;border:1px solid #e0e4ee;border-radius:12px;background:#fff;box-shadow:0 12px 30px #16264a12;color:#18223b;font-family:Arial,Tahoma,sans-serif}
-.voucher-brand-row{display:grid;grid-template-columns:1fr 76px 1fr;gap:12px;align-items:center;min-height:83px}
+.voucher-brand-row{display:grid;grid-template-columns:1fr 76px 1fr;gap:12px;align-items:center;min-height:83px;direction:ltr}
 .voucher-brand-en,.voucher-brand-ar{display:grid;gap:4px}
+.voucher-brand-en{direction:ltr;text-align:left}
 .voucher-brand-en strong{font-size:clamp(11px,1.15vw,16px);color:var(--voucher-navy)}
 .voucher-brand-en span{color:#7c8290;font-size:11px}
-.voucher-brand-ar{text-align:right}
+.voucher-brand-ar{direction:rtl;text-align:right}
 .voucher-brand-ar strong{font-size:clamp(15px,1.8vw,24px);font-weight:800;color:var(--voucher-navy)}
 .voucher-brand-ar span,.voucher-brand-ar small{color:#70798a;font-size:11px}
 .voucher-brand-logo{display:grid;place-items:center}
