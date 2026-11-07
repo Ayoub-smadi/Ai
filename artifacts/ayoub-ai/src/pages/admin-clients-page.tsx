@@ -1,57 +1,138 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Building2, Check, CreditCard, Download, FileText, Mail, Paperclip, Phone, Plus, Search, Trash2, UserRound, Users, X } from 'lucide-react';
+import { Building2, Check, Copy, Mail, MapPin, MessageCircle, Pencil, Phone, Plus, Search, Trash2, UserRound, Users, X, Globe2, Download } from 'lucide-react';
 import './admin-clients-page.css';
 
 type ClientKind = 'individual' | 'company';
-type PaymentStatus = 'paid' | 'due' | 'partial';
-type TransactionItem = { id: string; name: string; quantity: number; unit: string; unitPrice: number };
-type TransactionAttachment = { id: string; name: string; mime: string; dataUrl: string; size: number };
-type ClientTransaction = { id: string; title: string; type: 'sale' | 'invoice'; amount: number; status: PaymentStatus; date: string; note: string; items: TransactionItem[]; attachments?: TransactionAttachment[] };
-export type ClientRecord = { id: string; kind: ClientKind; name: string; phone: string; email: string; address: string; taxNumber: string; notes: string; createdAt: string; transactions: ClientTransaction[] };
+export type ClientRecord = {
+  id: string;
+  kind: ClientKind;
+  name: string;
+  contactPerson?: string;
+  phone: string;
+  email: string;
+  address: string;
+  website?: string;
+  taxNumber?: string;
+  notes: string;
+  createdAt: string;
+  // Older versions stored financial entries here. Keep them in localStorage for compatibility,
+  // but this contact book deliberately never displays or edits them.
+  transactions?: unknown[];
+};
 
 const STORAGE_KEY = 'qadri-admin-clients-v1';
-const today = () => new Date().toISOString().slice(0, 10);
 const newId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-const emptyTransactionItem = (): TransactionItem => ({ id: newId(), name: '', quantity: 1, unit: 'وحدة', unitPrice: 0 });
-const readClients = (): ClientRecord[] => { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } };
-const money = (value: number) => `${value.toLocaleString('ar-JO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.أ`;
-const statusText: Record<PaymentStatus, string> = { paid: 'مدفوع', due: 'ذمم / غير مدفوع', partial: 'مدفوع جزئيًا' };
+const blankDraft = () => ({ kind: 'individual' as ClientKind, name: '', contactPerson: '', phone: '', email: '', address: '', website: '', taxNumber: '', notes: '' });
+const readClients = (): ClientRecord[] => {
+  try {
+    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return Array.isArray(value) ? value.map((client) => ({
+      ...client,
+      contactPerson: client.contactPerson || '',
+      website: client.website || '',
+      transactions: Array.isArray(client.transactions) ? client.transactions : [],
+    })) : [];
+  } catch { return []; }
+};
 
 export default function AdminClientsPage() {
   const [clients, setClients] = useState<ClientRecord[]>(readClients);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState<'all' | ClientKind>('all');
-  const [showClientForm, setShowClientForm] = useState(false);
-  const [showTransactionForm, setShowTransactionForm] = useState(false);
-  const [clientDraft, setClientDraft] = useState({ kind: 'individual' as ClientKind, name: '', phone: '', email: '', address: '', taxNumber: '', notes: '' });
-  const [transactionDraft, setTransactionDraft] = useState({ title: '', type: 'invoice' as ClientTransaction['type'], status: 'due' as PaymentStatus, date: today(), note: '', items: [emptyTransactionItem()], attachments: [] as TransactionAttachment[] });
-  const [attachmentStatus, setAttachmentStatus] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState(blankDraft);
+  const [notice, setNotice] = useState('');
 
-  const persist = (next: ClientRecord[]) => { setClients(next); localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); };
+  const persist = (next: ClientRecord[]) => {
+    setClients(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  };
   const selected = clients.find((client) => client.id === selectedId) || null;
-  const filtered = useMemo(() => { const query = search.trim().toLocaleLowerCase('ar'); return clients.filter((client) => { const matchesKind = kindFilter === 'all' || client.kind === kindFilter; const haystack = `${client.name} ${client.phone} ${client.email} ${client.taxNumber}`.toLocaleLowerCase('ar'); return matchesKind && (!query || haystack.includes(query)); }); }, [clients, search, kindFilter]);
-  const totals = useMemo(() => clients.reduce((result, client) => { client.transactions.forEach((item) => { result.total += item.amount; if (item.status === 'paid') result.paid += item.amount; else result.due += item.status === 'partial' ? item.amount / 2 : item.amount; }); return result; }, { total: 0, paid: 0, due: 0 }), [clients]);
+  const filtered = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('ar');
+    return clients.filter((client) => {
+      const matchesKind = kindFilter === 'all' || client.kind === kindFilter;
+      const haystack = [client.name, client.contactPerson, client.phone, client.email, client.address, client.website, client.taxNumber, client.notes].join(' ').toLocaleLowerCase('ar');
+      return matchesKind && (!query || haystack.includes(query));
+    });
+  }, [clients, search, kindFilter]);
 
-  const addClient = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!clientDraft.name.trim()) return; const client: ClientRecord = { id: newId(), ...clientDraft, name: clientDraft.name.trim(), createdAt: new Date().toISOString(), transactions: [] }; persist([client, ...clients]); setSelectedId(client.id); setClientDraft({ kind: 'individual', name: '', phone: '', email: '', address: '', taxNumber: '', notes: '' }); setShowClientForm(false); };
-  const addTransaction = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const validItems = transactionDraft.items.filter((item) => item.name.trim() && item.quantity > 0 && item.unitPrice >= 0); const amount = validItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0); if (!selected || !transactionDraft.title.trim() || !validItems.length || !amount) return; const transaction: ClientTransaction = { id: newId(), title: transactionDraft.title.trim(), type: transactionDraft.type, amount, status: transactionDraft.status, date: transactionDraft.date, note: transactionDraft.note.trim(), items: validItems.map((item) => ({ ...item, name: item.name.trim() })), attachments: transactionDraft.attachments }; persist(clients.map((client) => client.id === selected.id ? { ...client, transactions: [transaction, ...client.transactions] } : client)); setTransactionDraft({ title: '', type: 'invoice', status: 'due', date: today(), note: '', items: [emptyTransactionItem()], attachments: [] }); setAttachmentStatus(''); setShowTransactionForm(false); };
-  const updateTransactionItem = (id: string, patch: Partial<TransactionItem>) => setTransactionDraft((current) => ({ ...current, items: current.items.map((item) => item.id === id ? { ...item, ...patch } : item) }));
-  const addTransactionItem = () => setTransactionDraft((current) => ({ ...current, items: [...current.items, emptyTransactionItem()] }));
-  const removeTransactionItem = (id: string) => setTransactionDraft((current) => ({ ...current, items: current.items.length === 1 ? current.items : current.items.filter((item) => item.id !== id) }));
-  const addAttachment = (file?: File) => { if (!file) return; if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setAttachmentStatus('ارفق PDF أو صورة JPG أو PNG أو WEBP فقط.'); return; } if (file.size > 5 * 1024 * 1024) { setAttachmentStatus('حجم المرفق يجب أن يكون أقل من 5 ميجابايت.'); return; } const reader = new FileReader(); reader.onload = () => { const attachment: TransactionAttachment = { id: newId(), name: file.name, mime: file.type, dataUrl: String(reader.result), size: file.size }; setTransactionDraft((current) => ({ ...current, attachments: [...current.attachments, attachment] })); setAttachmentStatus('تم تجهيز المرفق للحفظ مع الفاتورة.'); }; reader.readAsDataURL(file); };
-  const removeAttachment = (id: string) => setTransactionDraft((current) => ({ ...current, attachments: current.attachments.filter((item) => item.id !== id) }));
-  const updateTransactionStatus = (transactionId: string, status: PaymentStatus) => { if (!selected) return; persist(clients.map((client) => client.id === selected.id ? { ...client, transactions: client.transactions.map((item) => item.id === transactionId ? { ...item, status } : item) } : client)); };
-  const deleteClient = () => { if (!selected || !window.confirm(`حذف ملف ${selected.name}؟`)) return; const next = clients.filter((client) => client.id !== selected.id); persist(next); setSelectedId(next[0]?.id || null); };
-  const deleteTransaction = (transactionId: string) => { if (!selected) return; persist(clients.map((client) => client.id === selected.id ? { ...client, transactions: client.transactions.filter((item) => item.id !== transactionId) } : client)); };
-  const clientPaid = selected?.transactions.filter((item) => item.status === 'paid').reduce((sum, item) => sum + item.amount, 0) || 0;
-  const clientDue = selected?.transactions.filter((item) => item.status !== 'paid').reduce((sum, item) => sum + (item.status === 'partial' ? item.amount / 2 : item.amount), 0) || 0;
+  const openNew = () => { setEditingId(null); setDraft(blankDraft()); setShowForm(true); };
+  const openEdit = (client: ClientRecord) => {
+    setEditingId(client.id);
+    setDraft({ kind: client.kind, name: client.name, contactPerson: client.contactPerson || '', phone: client.phone || '', email: client.email || '', address: client.address || '', website: client.website || '', taxNumber: client.taxNumber || '', notes: client.notes || '' });
+    setShowForm(true);
+  };
+  const saveClient = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const name = draft.name.trim();
+    if (!name) return;
+    if (editingId) {
+      const next = clients.map((client) => client.id === editingId ? { ...client, ...draft, name, createdAt: client.createdAt } : client);
+      persist(next);
+      setSelectedId(editingId);
+      setNotice(`تم تحديث بيانات ${name}`);
+      window.setTimeout(() => setNotice(''), 2500);
+    } else {
+      const client: ClientRecord = { id: newId(), ...draft, name, createdAt: new Date().toISOString(), transactions: [] };
+      persist([client, ...clients]);
+      setSelectedId(client.id);
+      setNotice(`تم حفظ ${name} في دليل العملاء`);
+      window.setTimeout(() => setNotice(''), 2500);
+    }
+    setShowForm(false);
+    setEditingId(null);
+  };
+  const deleteClient = () => {
+    if (!selected || !window.confirm(`حذف جهة الاتصال «${selected.name}»؟`)) return;
+    const next = clients.filter((client) => client.id !== selected.id);
+    persist(next);
+    setSelectedId(next[0]?.id || null);
+  };
+  const copyContact = async () => {
+    if (!selected) return;
+    const text = [selected.name, selected.contactPerson && `جهة التواصل: ${selected.contactPerson}`, selected.phone && `الهاتف: ${selected.phone}`, selected.email && `البريد: ${selected.email}`, selected.address && `العنوان: ${selected.address}`, selected.website && `الموقع: ${selected.website}`, selected.notes && `ملاحظات: ${selected.notes}`].filter(Boolean).join('\n');
+    try { await navigator.clipboard.writeText(text); setNotice('تم نسخ بيانات جهة الاتصال'); window.setTimeout(() => setNotice(''), 2500); }
+    catch { setNotice('تعذر النسخ من هذا المتصفح'); window.setTimeout(() => setNotice(''), 2500); }
+  };
+  const exportCsv = () => {
+    const header = ['النوع', 'الاسم', 'جهة التواصل', 'الهاتف', 'البريد الإلكتروني', 'العنوان', 'الموقع الإلكتروني', 'رقم التسجيل', 'ملاحظات'];
+    const rows = clients.map((client) => [client.kind === 'company' ? 'شركة' : 'فرد', client.name, client.contactPerson || '', client.phone, client.email, client.address, client.website || '', client.taxNumber || '', client.notes]);
+    const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value || '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'دليل-عملاء-القادري.csv'; anchor.click(); URL.revokeObjectURL(url);
+  };
 
   return <main className="admin-clients-page" dir="rtl">
-    <header className="admin-clients-head"><div><div className="eyebrow">QADRI AI / CUSTOMER BOOK</div><h1>عملاؤنا</h1><p>ملف واحد لكل عميل — شركة أو فرد — مع سجل ما اشترى، الفواتير، والمدفوعات والذمم.</p></div><button className="btn" onClick={() => setShowClientForm(true)}><Plus size={16} />عميل جديد</button></header>
-    <div className="client-metrics"><section><Users size={17} /><span>إجمالي العملاء</span><strong>{clients.length}</strong></section><section><Building2 size={17} /><span>الشركات</span><strong>{clients.filter((client) => client.kind === 'company').length}</strong></section><section><Check size={17} /><span>إجمالي المدفوع</span><strong>{money(totals.paid)}</strong></section><section><CreditCard size={17} /><span>إجمالي الذمم</span><strong>{money(totals.due)}</strong></section></div>
-    <div className="clients-layout"><section className="clients-list-panel"><div className="clients-toolbar"><label><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث بالاسم أو الهاتف أو البريد" /></label><select value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)}><option value="all">الكل</option><option value="individual">أفراد</option><option value="company">شركات</option></select></div>{filtered.length ? <div className="clients-list">{filtered.map((client) => <button type="button" className={`client-list-row ${client.id === selected?.id ? 'is-active' : ''}`} key={client.id} onClick={() => setSelectedId(client.id)}><span className="client-avatar">{client.kind === 'company' ? <Building2 size={17} /> : <UserRound size={17} />}</span><span><strong>{client.name}</strong><small>{client.kind === 'company' ? 'شركة' : 'فرد'} · {client.phone || 'لا يوجد هاتف'}</small></span><b>{client.transactions.length}</b></button>)}</div> : <div className="clients-empty"><Users size={25} /><h2>لا يوجد عملاء بعد</h2><p>أنشئ أول ملف عميل وابدأ بتسجيل معاملاته.</p><button className="btn small" onClick={() => setShowClientForm(true)}><Plus size={14} />إضافة أول عميل</button></div>}</section>
-      <section className="client-detail-panel">{selected ? <><div className="client-detail-head"><div className="client-title"><span className="client-avatar large">{selected.kind === 'company' ? <Building2 size={21} /> : <UserRound size={21} />}</span><div><span className="client-kind">{selected.kind === 'company' ? 'ملف شركة' : 'ملف فرد'}</span><h2>{selected.name}</h2></div></div><div className="client-detail-actions"><button className="icon-button" title="حذف العميل" onClick={deleteClient}><Trash2 size={15} /></button><button className="btn small" onClick={() => setShowTransactionForm(true)}><Plus size={14} />تسجيل معاملة</button></div></div><div className="client-contact-grid"><span><Phone size={14} /><b>{selected.phone || 'غير مضاف'}</b></span><span><Mail size={14} /><b>{selected.email || 'غير مضاف'}</b></span><span><Building2 size={14} /><b>{selected.address || 'العنوان غير مضاف'}</b></span>{selected.taxNumber && <span><FileText size={14} /><b>الرقم الضريبي: {selected.taxNumber}</b></span>}</div><div className="client-balance"><div><span>مدفوع</span><strong className="paid">{money(clientPaid)}</strong></div><div><span>متبقي / ذمم</span><strong className="due">{money(clientDue)}</strong></div><div><span>عدد المعاملات</span><strong>{selected.transactions.length}</strong></div></div><div className="transactions-heading"><div><h3>سجل العميل</h3><p>كل فاتورة أو بيع أو ذمة محفوظة باسم هذا العميل.</p></div><button className="btn secondary small" onClick={() => setShowTransactionForm(true)}><Plus size={14} />إضافة سجل</button></div>{selected.transactions.length ? <div className="transactions-table"><div className="transactions-row transactions-header"><span>المعاملة</span><span>التاريخ</span><span>المبلغ</span><span>الحالة</span><span /></div>{selected.transactions.map((item) => <div className="transactions-row" key={item.id}><span><strong>{item.title}</strong><small>{item.type === 'invoice' ? 'فاتورة' : 'بيع مباشر'}{item.items?.length ? ` · ${item.items.length} بنود` : ''}{item.attachments?.length ? ` · ${item.attachments.length} مرفق` : ''}{item.note ? ` · ${item.note}` : ''}</small></span><span>{item.date}</span><b>{money(item.amount)}</b><select value={item.status} onChange={(event) => updateTransactionStatus(item.id, event.target.value as PaymentStatus)} className={`status-select ${item.status}`}><option value="paid">{statusText.paid}</option><option value="partial">{statusText.partial}</option><option value="due">{statusText.due}</option></select><button className="transaction-delete" onClick={() => deleteTransaction(item.id)} aria-label="حذف المعاملة"><X size={14} /></button></div>)}</div> : <div className="transaction-empty"><CreditCard size={22} /><p>لم تُسجّل معاملات على هذا العميل بعد.</p><button className="btn small" onClick={() => setShowTransactionForm(true)}><Plus size={14} />سجّل أول فاتورة أو بيع</button></div>}</> : <div className="client-detail-empty"><Users size={34} /><h2>اختر عميلاً</h2><p>ستظهر هنا بياناته، فواتيره، والمدفوعات والذمم الخاصة به.</p></div>}</section></div>
-    {showClientForm && <div className="client-modal-backdrop" onClick={() => setShowClientForm(false)}><form className="client-modal" onSubmit={addClient} onClick={(event) => event.stopPropagation()}><header><div><span className="eyebrow">NEW CUSTOMER PROFILE</span><h2>إضافة عميل</h2></div><button type="button" className="icon-button" onClick={() => setShowClientForm(false)}><X size={16} /></button></header><div className="client-kind-toggle"><button type="button" className={clientDraft.kind === 'individual' ? 'active' : ''} onClick={() => setClientDraft({ ...clientDraft, kind: 'individual' })}><UserRound size={15} />فرد</button><button type="button" className={clientDraft.kind === 'company' ? 'active' : ''} onClick={() => setClientDraft({ ...clientDraft, kind: 'company' })}><Building2 size={15} />شركة</button></div><div className="client-form-grid"><label><span>{clientDraft.kind === 'company' ? 'اسم الشركة' : 'اسم العميل'} *</span><input required value={clientDraft.name} onChange={(event) => setClientDraft({ ...clientDraft, name: event.target.value })} /></label><label><span>رقم الهاتف</span><input dir="ltr" value={clientDraft.phone} onChange={(event) => setClientDraft({ ...clientDraft, phone: event.target.value })} /></label><label><span>البريد الإلكتروني</span><input dir="ltr" type="email" value={clientDraft.email} onChange={(event) => setClientDraft({ ...clientDraft, email: event.target.value })} /></label><label><span>{clientDraft.kind === 'company' ? 'الرقم الضريبي / السجل' : 'العنوان'}</span><input value={clientDraft.kind === 'company' ? clientDraft.taxNumber : clientDraft.address} onChange={(event) => setClientDraft({ ...clientDraft, ...(clientDraft.kind === 'company' ? { taxNumber: event.target.value } : { address: event.target.value }) })} /></label><label className="wide"><span>العنوان</span><input value={clientDraft.address} onChange={(event) => setClientDraft({ ...clientDraft, address: event.target.value })} /></label><label className="wide"><span>ملاحظات</span><textarea rows={3} value={clientDraft.notes} onChange={(event) => setClientDraft({ ...clientDraft, notes: event.target.value })} /></label></div><footer><button type="button" className="btn secondary" onClick={() => setShowClientForm(false)}>إلغاء</button><button className="btn" type="submit"><Check size={15} />حفظ العميل</button></footer></form></div>}
-    {showTransactionForm && selected && <div className="client-modal-backdrop" onClick={() => setShowTransactionForm(false)}><form className="client-modal transaction-modal" onSubmit={addTransaction} onClick={(event) => event.stopPropagation()}><header><div><span className="eyebrow">CUSTOMER LEDGER / MULTI-LINE INVOICE</span><h2>فاتورة جديدة لـ {selected.name}</h2><p className="transaction-modal-subtitle">أضف كل المواد أو الخدمات التي أخذها العميل، وسيحسب النظام الإجمالي ويحفظها كبنود.</p></div><button type="button" className="icon-button" onClick={() => setShowTransactionForm(false)}><X size={16} /></button></header><div className="client-form-grid"><label className="wide"><span>عنوان الفاتورة *</span><input required value={transactionDraft.title} onChange={(event) => setTransactionDraft({ ...transactionDraft, title: event.target.value })} placeholder="مثال: فاتورة توريد مستلزمات زراعية" /></label><label><span>نوع السجل</span><select value={transactionDraft.type} onChange={(event) => setTransactionDraft({ ...transactionDraft, type: event.target.value as ClientTransaction['type'] })}><option value="invoice">فاتورة</option><option value="sale">بيع مباشر</option></select></label><label><span>حالة الدفع</span><select value={transactionDraft.status} onChange={(event) => setTransactionDraft({ ...transactionDraft, status: event.target.value as PaymentStatus })}><option value="paid">مدفوع</option><option value="partial">مدفوع جزئيًا</option><option value="due">ذمم / غير مدفوع</option></select></label><label><span>التاريخ</span><input type="date" value={transactionDraft.date} onChange={(event) => setTransactionDraft({ ...transactionDraft, date: event.target.value })} /></label></div><section className="invoice-items-editor"><div className="invoice-items-heading"><div><h3>بنود الفاتورة</h3><p>المادة · الكمية · الوحدة · سعر الوحدة</p></div><button type="button" className="btn secondary small" onClick={addTransactionItem}><Plus size={14} />إضافة بند</button></div><div className="invoice-line-list">{transactionDraft.items.map((item, index) => <div className="invoice-line" key={item.id}><span className="invoice-line-number">{index + 1}</span><input required value={item.name} onChange={(event) => updateTransactionItem(item.id, { name: event.target.value })} placeholder="اسم المادة أو الخدمة" /><input required min="0.01" step="0.01" type="number" value={item.quantity} onChange={(event) => updateTransactionItem(item.id, { quantity: Number(event.target.value) })} placeholder="الكمية" /><input value={item.unit} onChange={(event) => updateTransactionItem(item.id, { unit: event.target.value })} placeholder="وحدة" /><input required min="0" step="0.01" type="number" value={item.unitPrice || ''} onChange={(event) => updateTransactionItem(item.id, { unitPrice: Number(event.target.value) })} placeholder="سعر الوحدة" /><strong>{money(item.quantity * item.unitPrice)}</strong><button type="button" className="invoice-line-delete" onClick={() => removeTransactionItem(item.id)} aria-label="حذف البند"><Trash2 size={14} /></button></div>)}</div><div className="invoice-live-total"><span>الإجمالي المتوقع</span><strong>{money(transactionDraft.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0))}</strong></div></section><label className="client-form-grid-note"><span>ملاحظات الدفع أو الاستحقاق</span><textarea rows={3} value={transactionDraft.note} onChange={(event) => setTransactionDraft({ ...transactionDraft, note: event.target.value })} placeholder="رقم الفاتورة، موعد الدفع، طريقة التحصيل، أو أي ملاحظة..." /></label><section className="invoice-attachments"><div className="invoice-items-heading"><div><h3><Paperclip size={15} /> مرفقات الفاتورة</h3><p>ارفق نسخة PDF أو صورة الفاتورة الأصلية للرجوع إليها لاحقًا.</p></div><label className="btn secondary small attachment-upload"><Paperclip size={14} />إرفاق PDF / صورة<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => { addAttachment(event.target.files?.[0]); event.target.value = ''; }} /></label></div>{transactionDraft.attachments.length ? <div className="attachment-list">{transactionDraft.attachments.map((attachment) => <div className="attachment-row" key={attachment.id}><Paperclip size={15} /><span><strong>{attachment.name}</strong><small>{(attachment.size / 1024 / 1024).toFixed(2)} MB · {attachment.mime === 'application/pdf' ? 'PDF' : 'صورة'}</small></span><a href={attachment.dataUrl} target="_blank" rel="noreferrer" className="attachment-open">فتح</a><a href={attachment.dataUrl} download={attachment.name} className="attachment-download" aria-label="تنزيل المرفق"><Download size={14} /></a><button type="button" className="invoice-line-delete" onClick={() => removeAttachment(attachment.id)} aria-label="حذف المرفق"><Trash2 size={14} /></button></div>)}</div> : <div className="attachment-empty"><Paperclip size={18} /><span>لم يتم إرفاق مستند بعد</span></div>}{attachmentStatus && <p className="attachment-status">{attachmentStatus}</p>}</section><footer><button type="button" className="btn secondary" onClick={() => setShowTransactionForm(false)}>إلغاء</button><button className="btn" type="submit"><Check size={15} />حفظ الفاتورة والبنود</button></footer></form></div>}
+    <header className="admin-clients-head">
+      <div><div className="eyebrow">QADRI / CONTACT BOOK</div><h1>عملاؤنا</h1><p>دفتر بسيط لمعلومات الأفراد والشركات كي تعود إليها وقت الحاجة. لا فواتير ولا حسابات مالية.</p></div>
+      <div className="contact-book-actions"><button className="btn secondary" onClick={exportCsv} disabled={!clients.length}><Download size={15} />تصدير الدليل</button><button className="btn" onClick={openNew}><Plus size={16} />إضافة جهة اتصال</button></div>
+    </header>
+    <div className="client-metrics contact-metrics"><section><Users size={17} /><span>كل جهات الاتصال</span><strong>{clients.length}</strong></section><section><Building2 size={17} /><span>الشركات</span><strong>{clients.filter((client) => client.kind === 'company').length}</strong></section><section><UserRound size={17} /><span>الأفراد</span><strong>{clients.filter((client) => client.kind === 'individual').length}</strong></section></div>
+    <div className="clients-layout"><section className="clients-list-panel"><div className="clients-toolbar"><label><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث بالاسم أو الهاتف أو البريد" /></label><select value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)}><option value="all">الكل</option><option value="individual">أفراد</option><option value="company">شركات</option></select></div>
+      {filtered.length ? <div className="clients-list">{filtered.map((client) => <button type="button" className={`client-list-row ${client.id === selected?.id ? 'is-active' : ''}`} key={client.id} onClick={() => setSelectedId(client.id)}><span className="client-avatar">{client.kind === 'company' ? <Building2 size={17} /> : <UserRound size={17} />}</span><span><strong>{client.name}</strong><small>{client.kind === 'company' ? 'شركة' : 'فرد'}{client.contactPerson ? ` · ${client.contactPerson}` : ''}{client.phone ? ` · ${client.phone}` : ''}</small></span><span className="contact-row-arrow">←</span></button>)}</div> : <div className="clients-empty"><Users size={25} /><h2>{search ? 'لا توجد نتائج' : 'دليلك يبدأ من هنا'}</h2><p>{search ? 'جرّب كلمة بحث مختلفة.' : 'أضف معلومات عميل أو شركة لتعود إليها بسهولة لاحقًا.'}</p>{!search && <button className="btn small" onClick={openNew}><Plus size={14} />إضافة أول جهة اتصال</button>}</div>}
+    </section>
+    <section className="client-detail-panel">{selected ? <>
+      <div className="client-detail-head"><div className="client-title"><span className="client-avatar large">{selected.kind === 'company' ? <Building2 size={21} /> : <UserRound size={21} />}</span><div><span className="client-kind">{selected.kind === 'company' ? 'شركة' : 'فرد'}</span><h2>{selected.name}</h2></div></div><div className="client-detail-actions"><button className="icon-button" title="نسخ بيانات الاتصال" aria-label="نسخ بيانات الاتصال" onClick={() => void copyContact()}><Copy size={15} /></button><button className="icon-button" title="تعديل بيانات الاتصال" aria-label="تعديل بيانات الاتصال" onClick={() => openEdit(selected)}><Pencil size={15} /></button><button className="icon-button" title="حذف جهة الاتصال" aria-label="حذف جهة الاتصال" onClick={deleteClient}><Trash2 size={15} /></button></div></div>
+      <div className="contact-details-grid">
+        {selected.contactPerson && <div className="contact-info-card"><UserRound size={16} /><span><small>الشخص المسؤول</small><strong>{selected.contactPerson}</strong></span></div>}
+        {selected.phone && <div className="contact-info-card"><Phone size={16} /><span><small>رقم الهاتف</small><strong dir="ltr">{selected.phone}</strong></span><a href={`tel:${selected.phone.replace(/[^+\d]/g, '')}`} aria-label="اتصال" title="اتصال"><Phone size={14} /></a></div>}
+        {selected.email && <div className="contact-info-card"><Mail size={16} /><span><small>البريد الإلكتروني</small><strong dir="ltr">{selected.email}</strong></span><a href={`mailto:${selected.email}`} aria-label="إرسال بريد" title="إرسال بريد"><Mail size={14} /></a></div>}
+        {selected.address && <div className="contact-info-card"><MapPin size={16} /><span><small>العنوان</small><strong>{selected.address}</strong></span></div>}
+        {selected.website && <div className="contact-info-card"><Globe2 size={16} /><span><small>الموقع الإلكتروني</small><strong dir="ltr">{selected.website}</strong></span><a href={/^https?:\/\//.test(selected.website) ? selected.website : `https://${selected.website}`} target="_blank" rel="noreferrer" aria-label="فتح الموقع" title="فتح الموقع"><Globe2 size={14} /></a></div>}
+        {selected.taxNumber && <div className="contact-info-card"><Building2 size={16} /><span><small>رقم التسجيل / الضريبة</small><strong>{selected.taxNumber}</strong></span></div>}
+      </div>
+      {selected.phone && <a className="contact-whatsapp" href={`https://wa.me/${selected.phone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer"><MessageCircle size={17} />فتح محادثة واتساب</a>}
+      {selected.notes && <div className="contact-notes"><span>ملاحظات خاصة</span><p>{selected.notes}</p></div>}
+      <div className="contact-saved-note"><Check size={15} /><span>بيانات الاتصال محفوظة في هذا المتصفح للرجوع إليها.</span></div>
+    </> : <div className="client-detail-empty"><Users size={34} /><h2>دليل علاقاتك، مرتب بمكان واحد</h2><p>اختر اسمًا من القائمة لعرض تفاصيله أو أضف جهة اتصال جديدة.</p><button className="btn small" onClick={openNew}><Plus size={14} />إضافة جهة اتصال</button></div>}</section></div>
+    {notice && <div className="contact-toast" role="status">{notice}</div>}
+    {showForm && <div className="client-modal-backdrop" onClick={() => setShowForm(false)}><form className="client-modal contact-modal" onSubmit={saveClient} onClick={(event) => event.stopPropagation()}><header><div><span className="eyebrow">QADRI / CONTACT DETAILS</span><h2>{editingId ? 'تعديل جهة الاتصال' : 'إضافة جهة اتصال'}</h2><p>أدخل ما تحتاجه لتتواصل مع العميل أو الشركة لاحقًا.</p></div><button type="button" className="icon-button" onClick={() => setShowForm(false)} aria-label="إغلاق"><X size={16} /></button></header>
+      <div className="client-kind-toggle"><button type="button" className={draft.kind === 'individual' ? 'active' : ''} onClick={() => setDraft({ ...draft, kind: 'individual' })}><UserRound size={15} />فرد</button><button type="button" className={draft.kind === 'company' ? 'active' : ''} onClick={() => setDraft({ ...draft, kind: 'company' })}><Building2 size={15} />شركة</button></div>
+      <div className="client-form-grid"><label><span>{draft.kind === 'company' ? 'اسم الشركة' : 'اسم العميل'} *</span><input required autoFocus value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder={draft.kind === 'company' ? 'مثال: شركة البستان' : 'الاسم الكامل'} /></label><label><span>{draft.kind === 'company' ? 'اسم الشخص المسؤول' : 'صفة / جهة التواصل'}</span><input value={draft.contactPerson} onChange={(event) => setDraft({ ...draft, contactPerson: event.target.value })} placeholder="اختياري" /></label><label><span>رقم الهاتف</span><input dir="ltr" type="tel" value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+962 ..." /></label><label><span>البريد الإلكتروني</span><input dir="ltr" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="name@example.com" /></label><label className="wide"><span>العنوان</span><input value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} placeholder="المدينة، المنطقة، أو العنوان" /></label><label><span>الموقع الإلكتروني</span><input dir="ltr" value={draft.website} onChange={(event) => setDraft({ ...draft, website: event.target.value })} placeholder="example.com" /></label>{draft.kind === 'company' && <label><span>رقم التسجيل / الضريبة</span><input value={draft.taxNumber} onChange={(event) => setDraft({ ...draft, taxNumber: event.target.value })} /></label>}<label className="wide"><span>ملاحظات تساعدك عند التواصل</span><textarea rows={3} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} placeholder="موعد مناسب للاتصال، مجال الشركة، أو أي معلومة مفيدة…" /></label></div>
+      <footer><button type="button" className="btn secondary" onClick={() => setShowForm(false)}>إلغاء</button><button className="btn" type="submit"><Check size={15} />{editingId ? 'حفظ التعديلات' : 'حفظ جهة الاتصال'}</button></footer>
+    </form></div>}
   </main>;
 }
