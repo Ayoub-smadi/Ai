@@ -184,22 +184,6 @@
 }
 .landscape-plan-canvas-column { min-width: 0; }
 .landscape-plan-canvas-column .landscape-canvas { width: 100%; height: auto; min-height: 0; aspect-ratio: 297 / 210; }
-.landscape-plan-canvas-viewport { position: relative; width: 100%; height: clamp(430px, 72vh, 760px); min-height: 430px; overflow: hidden; border: 1px solid #dce5dc; border-radius: 14px; background-color: #f7f9f7; background-image: linear-gradient(#e9eee9 1px, transparent 1px), linear-gradient(90deg, #e9eee9 1px, transparent 1px); background-size: 24px 24px; isolation: isolate; touch-action: none; }
-.landscape-plan-canvas-viewport .landscape-canvas { position: absolute; top: 0; left: 0; max-width: none; min-height: 0; margin: 0; transform-origin: top left; box-shadow: 0 8px 26px #243c281a; }
-.landscape-plan-canvas-viewport .landscape-canvas.is-pan-mode { cursor: grab; }
-.landscape-plan-canvas-viewport .landscape-canvas.is-pan-mode:active { cursor: grabbing; }
-.landscape-plan-canvas-viewport .landscape-canvas-white.has-grid { background-size: 256px 256px !important; }
-.landscape-plan-canvas-viewport .landscape-drawn-area { border-width: 12px; }
-.landscape-plan-canvas-viewport .landscape-drawn-area > span { font-size: clamp(64px, 6.8vw, 88px); }
-.landscape-plan-canvas-viewport .landscape-custom-stamp { padding: 16px; border-width: 8px; border-radius: 64px; }
-.landscape-plan-canvas-viewport .landscape-custom-stamp.selected { box-shadow: 0 0 0 24px #4f805522; }
-.landscape-plan-canvas-viewport .landscape-text-note { max-width: 2560px; padding: 24px 48px; border-width: 8px; border-radius: 32px; }
-.landscape-plan-canvas-viewport .landscape-text-note.selected { box-shadow: 0 0 0 24px #4f805522; }
-.landscape-canvas-viewport-controls { position: absolute; z-index: 25; top: 10px; left: 10px; display: flex; align-items: center; gap: 5px; padding: 5px; border: 1px solid #dce5dc; border-radius: 10px; background: #ffffffed; box-shadow: 0 4px 14px #243c2817; direction: rtl; }
-.landscape-canvas-viewport-controls button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 30px; min-height: 30px; padding: 5px 7px; border: 1px solid #e1e8e1; border-radius: 7px; background: #fff; color: #49634d; font-size: 9px; cursor: pointer; touch-action: manipulation; }
-.landscape-canvas-viewport-controls button:hover, .landscape-canvas-viewport-controls button.active { border-color: #315c3c; background: #315c3c; color: #fff; }
-.landscape-canvas-viewport-controls button.landscape-canvas-fit-button { padding-inline: 9px; }
-.landscape-canvas-viewport-controls strong { min-width: 39px; color: #405a45; font-size: 9px; font-variant-numeric: tabular-nums; text-align: center; }
 .landscape-plan-schedule {
   display: flex;
   flex-direction: column;
@@ -239,7 +223,4 @@
   .landscape-plan-composition { grid-template-columns: minmax(0, 1fr); }
   .landscape-studio-layout.is-expanded .landscape-plan-composition { grid-template-columns: minmax(0, 1fr); }
   .landscape-plan-schedule { max-height: 340px; }
-  .landscape-plan-canvas-viewport { height: clamp(330px, 64vh, 560px); min-height: 330px; }
-  .landscape-canvas-viewport-controls { top: 7px; left: 7px; max-width: calc(100% - 14px); flex-wrap: wrap; gap: 3px; padding: 4px; }
-  .landscape-canvas-viewport-controls button { min-width: 28px; min-height: 28px; padding: 4px 6px; }
 }

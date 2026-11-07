@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent } from 'react';
-import { Circle, Download, Droplets, Flower2, ImagePlus, Maximize2, Mountain, Move, Package, Route, Sparkles, Sprout, TreePine, Trash2, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent } from 'react';
+import { Circle, Download, Droplets, Flower2, ImagePlus, Mountain, Package, Route, Sparkles, Sprout, TreePine, Trash2, Undo2 } from 'lucide-react';
 import LandscapeAiChat from './landscape-ai-chat';
 import './landscape-plan-engineering.css';
 
@@ -69,10 +69,6 @@ type CustomStampDrag = { id: string; pointerId: number; startClientX: number; st
 type TextNoteDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
 type DrawingDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; original: LandscapeDrawing };
 type AnnotationDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
-type CanvasPanDrag = { pointerId: number; startClientX: number; startClientY: number; startOffsetX: number; startOffsetY: number };
-const CANVAS_WORLD_WIDTH = 8400;
-const CANVAS_WORLD_HEIGHT = CANVAS_WORLD_WIDTH * 210 / 297;
-const CANVAS_ART_SCALE = 8;
 const drawingTools: Array<{ id: LandscapeDrawingTool; label: string; mode: 'freehand' | 'rectangle' }> = [
   { id: 'boundary', label: 'حدود الأرض', mode: 'freehand' },
   { id: 'building', label: 'مبنى', mode: 'rectangle' },
@@ -183,12 +179,9 @@ export default function LandscapePlan({
   const annotations = quote.landscapeAnnotations ?? [];
   const drawings = quote.landscapeDrawings ?? [];
   const canvasRef = useRef<HTMLDivElement>(null);
-  const canvasViewportRef = useRef<HTMLDivElement>(null);
   const planExportRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const drawSession = useRef<DrawSession | null>(null);
-  const canvasPanDrag = useRef<CanvasPanDrag | null>(null);
-  const manualCanvasView = useRef(false);
   const itemDrag = useRef<ItemDrag | null>(null);
   const drawingDrag = useRef<DrawingDrag | null>(null);
   const annotationDrag = useRef<AnnotationDrag | null>(null);
@@ -206,10 +199,6 @@ export default function LandscapePlan({
   const isAiChatOpen = aiChatOpen ?? localAiChatOpen;
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState('');
-  const [canvasZoom, setCanvasZoom] = useState(0.18);
-  const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 });
-  const [canvasViewportSize, setCanvasViewportSize] = useState({ width: 0, height: 0 });
-  const [isCanvasPanMode, setIsCanvasPanMode] = useState(false);
   const [activeCustomToolId, setActiveCustomToolId] = useState<string | null>(null);
   const [showCustomToolForm, setShowCustomToolForm] = useState(false);
   const [customToolName, setCustomToolName] = useState('');
@@ -228,44 +217,9 @@ export default function LandscapePlan({
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
   const selectedAnnotation = annotations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null;
-  useEffect(() => {
-    const viewport = canvasViewportRef.current;
-    if (!viewport) return;
-    const observer = new ResizeObserver(() => {
-      const rect = viewport.getBoundingClientRect();
-      setCanvasViewportSize({ width: rect.width, height: rect.height });
-    });
-    observer.observe(viewport);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    const { width, height } = canvasViewportSize;
-    if (manualCanvasView.current || !width || !height) return;
-    const zoom = Math.max(0.04, Math.min(1, (width - 48) / CANVAS_WORLD_WIDTH, (height - 48) / CANVAS_WORLD_HEIGHT));
-    setCanvasZoom(zoom);
-    setCanvasPan({ x: (width - CANVAS_WORLD_WIDTH * zoom) / 2, y: (height - CANVAS_WORLD_HEIGHT * zoom) / 2 });
-  }, [canvasViewportSize]);
   const setAiChatVisibility = (open: boolean) => {
     setLocalAiChatOpen(open);
     onAiChatOpenChange?.(open);
-  };
-  const fitCanvasToViewport = () => {
-    const rect = canvasViewportRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    manualCanvasView.current = false;
-    const zoom = Math.max(0.04, Math.min(1, (rect.width - 48) / CANVAS_WORLD_WIDTH, (rect.height - 48) / CANVAS_WORLD_HEIGHT));
-    setCanvasZoom(zoom);
-    setCanvasPan({ x: (rect.width - CANVAS_WORLD_WIDTH * zoom) / 2, y: (rect.height - CANVAS_WORLD_HEIGHT * zoom) / 2 });
-  };
-  const changeCanvasZoom = (factor: number) => {
-    const nextZoom = Math.max(0.04, Math.min(1.35, canvasZoom * factor));
-    const centerX = canvasViewportSize.width / 2;
-    const centerY = canvasViewportSize.height / 2;
-    const worldX = (centerX - canvasPan.x) / canvasZoom;
-    const worldY = (centerY - canvasPan.y) / canvasZoom;
-    manualCanvasView.current = true;
-    setCanvasZoom(nextZoom);
-    setCanvasPan({ x: centerX - worldX * nextZoom, y: centerY - worldY * nextZoom });
   };
 
   const pointFromEvent = (event: { clientX: number; clientY: number }): LandscapePoint => {
@@ -292,14 +246,6 @@ export default function LandscapePlan({
     setSelectedDrawingId(null);
   };
   const beginDrawing = (event: PointerEvent<HTMLDivElement>) => {
-    if (isCanvasPanMode) {
-      if (event.button !== 0 || event.target !== event.currentTarget) return;
-      event.preventDefault();
-      manualCanvasView.current = true;
-      canvasPanDrag.current = { pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startOffsetX: canvasPan.x, startOffsetY: canvasPan.y };
-      event.currentTarget.setPointerCapture(event.pointerId);
-      return;
-    }
     if (isPlacingText && event.button === 0 && event.target === event.currentTarget && draftText.trim()) {
       event.preventDefault();
       const point = pointFromEvent(event);
@@ -320,11 +266,6 @@ export default function LandscapePlan({
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moveDrawing = (event: PointerEvent<HTMLDivElement>) => {
-    const panDrag = canvasPanDrag.current;
-    if (panDrag?.pointerId === event.pointerId) {
-      setCanvasPan({ x: panDrag.startOffsetX + event.clientX - panDrag.startClientX, y: panDrag.startOffsetY + event.clientY - panDrag.startClientY });
-      return;
-    }
     const current = drawSession.current;
     if (!current || current.pointerId !== event.pointerId) return;
     const end = pointFromEvent(event);
@@ -342,11 +283,6 @@ export default function LandscapePlan({
     setPreviewDrawing(makeStroke(current.tool as 'boundary' | 'path', current.points, 'preview'));
   };
   const endDrawing = (event: PointerEvent<HTMLDivElement>) => {
-    if (canvasPanDrag.current?.pointerId === event.pointerId) {
-      canvasPanDrag.current = null;
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-      return;
-    }
     const current = drawSession.current;
     if (!current || current.pointerId !== event.pointerId) return;
     const end = pointFromEvent(event);
@@ -363,7 +299,7 @@ export default function LandscapePlan({
       const points = [...current.points];
       const last = points[points.length - 1];
       if (Math.hypot(end.x - last.x, end.y - last.y) > 0.25) points.push(end);
-      if (points.length >= 2) {
+      if (points.length >= (current.tool === 'boundary' ? 3 : 2)) {
         drawing = makeStroke(current.tool as 'boundary' | 'path', points, `drawing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
       }
     }
@@ -397,11 +333,6 @@ export default function LandscapePlan({
     setActiveTool('select');
   };
   const cancelDrawing = (event: PointerEvent<HTMLDivElement>) => {
-    if (canvasPanDrag.current?.pointerId === event.pointerId) {
-      canvasPanDrag.current = null;
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-      return;
-    }
     if (drawSession.current?.pointerId !== event.pointerId) return;
     drawSession.current = null;
     setPreviewDrawing(null);
@@ -409,7 +340,7 @@ export default function LandscapePlan({
   };
   const startItemDrag = (event: PointerEvent<HTMLDivElement>, id: string, instanceIndex: number, positions: LandscapePoint[]) => {
     event.stopPropagation();
-    if (event.button !== 0 || activeTool !== 'select' || isCanvasPanMode) return;
+    if (event.button !== 0 || activeTool !== 'select') return;
     event.preventDefault();
     itemDrag.current = { id, instanceIndex, pointerId: event.pointerId, positions: positions.map((position) => ({ ...position })) };
     setDraggingId(`${id}-${instanceIndex}`);
@@ -432,7 +363,7 @@ export default function LandscapePlan({
   };
   const startDrawingDrag = (event: PointerEvent<SVGElement | HTMLDivElement>, drawing: LandscapeDrawing) => {
     event.stopPropagation();
-    if (event.button !== 0 || activeTool !== 'select' || isCanvasPanMode) return;
+    if (event.button !== 0 || activeTool !== 'select') return;
     event.preventDefault();
     drawingDrag.current = { id: drawing.id, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, original: drawing };
     clearSelection();
@@ -465,7 +396,7 @@ export default function LandscapePlan({
   };
   const startAnnotationDrag = (event: PointerEvent<HTMLDivElement>, annotation: LandscapeAnnotation) => {
     event.stopPropagation();
-    if (event.button !== 0 || isCanvasPanMode) return;
+    if (event.button !== 0) return;
     event.preventDefault();
     annotationDrag.current = { id: annotation.id, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startX: annotation.x, startY: annotation.y };
     clearSelection();
@@ -540,7 +471,7 @@ export default function LandscapePlan({
   };
   const startCustomStampDrag = (event: PointerEvent<HTMLDivElement>, stamp: LandscapeCustomStamp) => {
     event.stopPropagation();
-    if (event.button !== 0 || activeTool !== 'select' || isCanvasPanMode) return;
+    if (event.button !== 0 || activeTool !== 'select') return;
     event.preventDefault();
     customStampDrag.current = { id: stamp.id, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startX: stamp.x, startY: stamp.y };
     setActiveCustomToolId(null);
@@ -573,7 +504,7 @@ export default function LandscapePlan({
   };
   const startTextNoteDrag = (event: PointerEvent<HTMLDivElement>, note: LandscapeTextNote) => {
     event.stopPropagation();
-    if (event.button !== 0 || activeTool !== 'select' || isCanvasPanMode) return;
+    if (event.button !== 0 || activeTool !== 'select') return;
     event.preventDefault();
     textNoteDrag.current = { id: note.id, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startX: note.x, startY: note.y };
     setActiveCustomToolId(null);
@@ -646,19 +577,14 @@ export default function LandscapePlan({
           if (!planExportRef.current) throw new Error('المخطط غير ظاهر للتنزيل.');
           const clone = planExportRef.current.cloneNode(true) as HTMLDivElement;
           clone.style.cssText += ';width:1120px!important;height:auto!important;max-width:none!important;margin:0!important;overflow:visible!important;';
-          wrapper.appendChild(clone);
-          clone.querySelector('.landscape-canvas-viewport-controls')?.remove();
-          const clonedViewport = clone.querySelector('.landscape-plan-canvas-viewport') as HTMLDivElement | null;
-          const canvasColumn = clone.querySelector('.landscape-plan-canvas-column') as HTMLDivElement | null;
-          const exportScale = (canvasColumn?.clientWidth || 880) / CANVAS_WORLD_WIDTH;
-          if (clonedViewport) clonedViewport.style.cssText += `;position:relative!important;width:100%!important;height:${CANVAS_WORLD_HEIGHT * exportScale}px!important;min-height:0!important;overflow:hidden!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;`;
           const clonedCanvas = clone.querySelector('.landscape-canvas') as HTMLDivElement | null;
-          if (clonedCanvas) clonedCanvas.style.cssText += `;position:absolute!important;left:0!important;top:0!important;transform:translate(0,0) scale(${exportScale})!important;transform-origin:top left!important;width:${CANVAS_WORLD_WIDTH}px!important;height:${CANVAS_WORLD_HEIGHT}px!important;aspect-ratio:unset!important;max-width:none!important;overflow:hidden!important;`;
+          if (clonedCanvas) clonedCanvas.style.cssText += ';width:100%!important;height:auto!important;aspect-ratio:297/210!important;max-width:none!important;overflow:hidden!important;';
           const clonedSchedule = clone.querySelector('.landscape-plan-schedule') as HTMLDivElement | null;
           if (clonedSchedule) clonedSchedule.style.cssText += ';height:100%!important;max-height:none!important;overflow:visible!important;';
           const clonedScheduleScroll = clone.querySelector('.landscape-schedule-scroll') as HTMLDivElement | null;
           if (clonedScheduleScroll) clonedScheduleScroll.style.cssText += ';max-height:none!important;overflow:visible!important;';
           clone.querySelectorAll('.selected').forEach((element) => element.classList.remove('selected'));
+          wrapper.appendChild(clone);
         } else {
           if (!tableRef.current) throw new Error('الجدول غير ظاهر للتنزيل.');
           const table = tableRef.current.cloneNode(false) as HTMLTableElement;
@@ -756,19 +682,19 @@ export default function LandscapePlan({
         </div>
         {pdfError && <small className="landscape-pdf-error" role="alert">{pdfError}</small>}
         <h2>مخطط Landscape</h2>
-        <p>مساحة عمل واسعة قابلة للتكبير والتحريك؛ استخدم «عرض كامل» لمشاهدة المساحة كلها، ويصدّر PDF المخطط كاملًا.</p>
+        <p>لوحة بيضاء تبدأ فارغة. اختر أداة ثم ارسم حدود أرضك ومبانيك واسحب رموز النباتات إلى مواقعها.</p>
       </div>
     </div>
 
     {viewMode === 'plan' && <div className="landscape-drawing-tools">
       <div className="landscape-drawing-tool-row" role="toolbar" aria-label="أدوات رسم المخطط">
-        <button type="button" className={activeTool === 'select' && !activeCustomToolId ? 'active' : ''} aria-pressed={activeTool === 'select' && !activeCustomToolId} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); setIsCanvasPanMode(false); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); }}>تحديد / تحريك</button>
-        {drawingTools.map((tool) => <button key={tool.id} type="button" className={activeTool === tool.id ? 'active' : ''} aria-pressed={activeTool === tool.id} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); if (tool.id === 'boundary') { setBoundaryPoints([]); setPreviewDrawing(null); } setIsCanvasPanMode(false); setIsPlacingText(false); clearSelection(); setActiveCustomToolId(null); setActiveTool(tool.id); }}>{tool.label}</button>)}
-        <button type="button" className={showTextComposer || isPlacingText ? 'active' : ''} aria-pressed={showTextComposer || isPlacingText} onClick={() => { setIsCanvasPanMode(false); setShowTextComposer((value) => !value); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); clearSelection(); }}>إضافة نص</button>
+        <button type="button" className={activeTool === 'select' && !activeCustomToolId ? 'active' : ''} aria-pressed={activeTool === 'select' && !activeCustomToolId} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); }}>تحديد / تحريك</button>
+        {drawingTools.map((tool) => <button key={tool.id} type="button" className={activeTool === tool.id ? 'active' : ''} aria-pressed={activeTool === tool.id} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); if (tool.id === 'boundary') { setBoundaryPoints([]); setPreviewDrawing(null); } setIsPlacingText(false); clearSelection(); setActiveCustomToolId(null); setActiveTool(tool.id); }}>{tool.label}</button>)}
+        <button type="button" className={showTextComposer || isPlacingText ? 'active' : ''} aria-pressed={showTextComposer || isPlacingText} onClick={() => { setShowTextComposer((value) => !value); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); clearSelection(); }}>إضافة نص</button>
       </div>
       <div className="landscape-custom-tool-manager">
         <div className="landscape-custom-tool-heading"><strong>أدوات مخصصة</strong><button type="button" onClick={() => { setShowCustomToolForm((value) => !value); setCustomToolError(''); }}>+ إضافة زر</button></div>
-        {!!customTools.some((tool) => tool.icon) && <div className="landscape-custom-tool-list">{customTools.filter((tool) => tool.icon).map((tool) => <div className="landscape-custom-tool" key={tool.id}><button type="button" className={activeCustomToolId === tool.id ? 'active' : ''} aria-pressed={activeCustomToolId === tool.id} onClick={() => { setIsCanvasPanMode(false); setIsPlacingText(false); clearSelection(); setActiveTool('select'); setActiveCustomToolId(activeCustomToolId === tool.id ? null : tool.id); }}>{tool.icon && <img src={tool.icon} alt="" />}<span>{tool.name}</span></button><button type="button" className="landscape-custom-tool-remove" title="حذف الأداة" aria-label={`حذف أداة ${tool.name}`} onClick={() => removeCustomTool(tool.id)}>×</button></div>)}</div>}
+        {!!customTools.some((tool) => tool.icon) && <div className="landscape-custom-tool-list">{customTools.filter((tool) => tool.icon).map((tool) => <div className="landscape-custom-tool" key={tool.id}><button type="button" className={activeCustomToolId === tool.id ? 'active' : ''} aria-pressed={activeCustomToolId === tool.id} onClick={() => { setIsPlacingText(false); clearSelection(); setActiveTool('select'); setActiveCustomToolId(activeCustomToolId === tool.id ? null : tool.id); }}>{tool.icon && <img src={tool.icon} alt="" />}<span>{tool.name}</span></button><button type="button" className="landscape-custom-tool-remove" title="حذف الأداة" aria-label={`حذف أداة ${tool.name}`} onClick={() => removeCustomTool(tool.id)}>×</button></div>)}</div>}
         {showCustomToolForm && <div className="landscape-custom-tool-form"><label>اسم الزر<input value={customToolName} onChange={(event) => setCustomToolName(event.target.value)} placeholder="مثال: نافورة" /></label><label className="landscape-custom-tool-upload"><ImagePlus size={16} />إرفاق الأيقونة<input type="file" accept="image/*" onChange={handleCustomToolIconChange} /></label>{customToolIcon && <img className="landscape-custom-tool-preview" src={customToolIcon} alt="معاينة الأيقونة" />}{customToolError && <small role="alert">{customToolError}</small>}<div><button type="button" onClick={() => { setShowCustomToolForm(false); setCustomToolError(''); }}>إلغاء</button><button type="button" disabled={!customToolName.trim() || !customToolIcon} onClick={saveCustomTool}>حفظ الزر</button></div></div>}
       </div>
       {showTextComposer && <div className="landscape-text-note-creator"><label>اكتب النص الذي تريد وضعه على المخطط<textarea rows={2} value={draftText} onChange={(event) => setDraftText(event.target.value)} placeholder="مثال: المسافة 3 م" /></label><div><button type="button" disabled={!draftText.trim()} onClick={() => { setIsPlacingText(true); setActiveTool('select'); setActiveCustomToolId(null); }}>{isPlacingText ? 'انقر على المخطط لوضع النص' : 'اختيار مكان النص'}</button>{isPlacingText && <button type="button" onClick={() => setIsPlacingText(false)}>إلغاء</button>}</div>{isPlacingText && <small>انقر في المكان المطلوب على اللوحة؛ بعد ذلك يمكنك سحب النص وتغيير حجمه.</small>}</div>}
@@ -780,18 +706,9 @@ export default function LandscapePlan({
       </div>
     </div>}
 
-    {viewMode === 'plan' ? <div className="landscape-plan-composition" ref={planExportRef}><div className="landscape-plan-canvas-column"><div className={`landscape-plan-canvas-viewport${isCanvasPanMode ? ' is-pan-mode' : ''}`} ref={canvasViewportRef}>
-      <div className="landscape-canvas-viewport-controls" aria-label="التحكم في مساحة المخطط">
-        <button type="button" aria-label="تصغير مساحة العمل" title="تصغير" onClick={() => changeCanvasZoom(0.8)}><ZoomOut size={15} /></button>
-        <strong>{Math.round(canvasZoom * 100)}%</strong>
-        <button type="button" aria-label="تكبير مساحة العمل" title="تكبير" onClick={() => changeCanvasZoom(1.25)}><ZoomIn size={15} /></button>
-        <button type="button" className="landscape-canvas-fit-button" title="عرض كامل المساحة" onClick={fitCanvasToViewport}><Maximize2 size={14} />عرض كامل</button>
-        <button type="button" className={isCanvasPanMode ? 'active' : ''} aria-pressed={isCanvasPanMode} title="فعّل التحريك ثم اسحب مساحة فارغة" onClick={() => { const next = !isCanvasPanMode; if (next) { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); setActiveTool('select'); setActiveCustomToolId(null); setIsPlacingText(false); } setIsCanvasPanMode(next); }}><Move size={14} />تحريك</button>
-      </div>
-      <div
+    {viewMode === 'plan' ? <div className="landscape-plan-composition" ref={planExportRef}><div className="landscape-plan-canvas-column"><div
       ref={canvasRef}
-      className={`landscape-canvas landscape-canvas-white ${quote.landscapeShowGrid ? 'has-grid' : ''} ${activeTool !== 'select' || activeCustomToolId || isPlacingText ? 'is-drawing' : ''} ${isCanvasPanMode ? 'is-pan-mode' : ''}`}
-      style={{ width: CANVAS_WORLD_WIDTH, height: CANVAS_WORLD_HEIGHT, transform: `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasZoom})` }}
+      className={`landscape-canvas landscape-canvas-white ${quote.landscapeShowGrid ? 'has-grid' : ''} ${activeTool !== 'select' || activeCustomToolId || isPlacingText ? 'is-drawing' : ''}`}
       aria-label="لوحة Landscape بيضاء فارغة للرسم والتحرير"
       onPointerDown={beginDrawing}
       onPointerMove={moveDrawing}
@@ -805,18 +722,19 @@ export default function LandscapePlan({
       {customStamps.map((stamp) => {
         const tool = customTools.find((candidate) => candidate.id === stamp.toolId);
         if (!tool?.icon) return null;
-        const size = (stamp.size ?? 44) * CANVAS_ART_SCALE;
+        const size = stamp.size ?? 44;
         return <div key={stamp.id} className={`landscape-custom-stamp ${selectedCustomStampId === stamp.id ? 'selected' : ''}`} style={{ left: `${stamp.x}%`, top: `${stamp.y}%`, width: size, height: size }} title={tool.name} aria-label={tool.name} onPointerDown={(event) => startCustomStampDrag(event, stamp)} onPointerMove={(event) => moveCustomStampDrag(event, stamp.id)} onPointerUp={endCustomStampDrag} onPointerCancel={endCustomStampDrag}><img src={tool.icon} alt="" /></div>;
       })}
       {items.flatMap((item) => {
         const Icon = iconFor(item.category);
-        const size = Math.max(24, Math.min(180, item.landscapeSize ?? globalSize)) * CANVAS_ART_SCALE;
+        const size = Math.max(24, Math.min(180, item.landscapeSize ?? globalSize));
         const quantity = Math.max(0, Math.round(Number(item.quantity) || 0));
-        const iconSize = quantity > 1 ? Math.min(size, 42 * CANVAS_ART_SCALE) : size;
+        const iconSize = quantity > 1 ? Math.min(size, 42) : size;
         const columns = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, quantity))));
         const rows = Math.ceil(quantity / columns);
-        const xStep = ((iconSize + 12 * CANVAS_ART_SCALE) / CANVAS_WORLD_WIDTH) * 100;
-        const yStep = ((iconSize + 18 * CANVAS_ART_SCALE) / CANVAS_WORLD_HEIGHT) * 100;
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        const xStep = canvasRect?.width ? ((iconSize + 12) / canvasRect.width) * 100 : 6;
+        const yStep = canvasRect?.height ? ((iconSize + 18) / canvasRect.height) * 100 : 12;
         const centerX = item.landscapeX ?? 50;
         const centerY = item.landscapeY ?? 50;
         const defaultPositions = Array.from({ length: quantity }, (_, instanceIndex) => ({
@@ -826,7 +744,7 @@ export default function LandscapePlan({
         const positions = defaultPositions.map((position, index) => item.landscapeInstances?.[index] ?? position);
         const kind = categoryStyle(item.category);
         const wide = kind === 'road' || kind === 'turf' || kind === 'irrigation';
-        const width = wide ? Math.max((kind === 'road' ? 110 : 70) * CANVAS_ART_SCALE, Math.round(size * (kind === 'road' ? 2.8 : 1.8))) : size;
+        const width = wide ? Math.max(kind === 'road' ? 110 : 70, Math.round(size * (kind === 'road' ? 2.8 : 1.8))) : size;
         const shape = item.landscapeShape && item.landscapeShape !== 'auto' ? item.landscapeShape : globalShape;
         const artStyle: CSSProperties = {
           width: quantity > 1 ? iconSize : width, height: quantity > 1 ? iconSize : size, borderRadius: shapeRadius[shape],
@@ -847,13 +765,13 @@ export default function LandscapePlan({
             aria-label={`${item.name.split(' / ')[0]}، أيقونة ${instanceIndex + 1} من ${quantity}`}
           >
             <div className={`landscape-node-art landscape-art-${shape} landscape-kind-${kind}`} style={artStyle}>
-              {item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : kind === 'plant' ? <TreePlanSymbol size={Math.max(24 * CANVAS_ART_SCALE, iconSize - 4 * CANVAS_ART_SCALE)} /> : <Icon size={kind === 'road' ? 24 * CANVAS_ART_SCALE : Math.max(18 * CANVAS_ART_SCALE, Math.min(iconSize - 14 * CANVAS_ART_SCALE, 42 * CANVAS_ART_SCALE))} />}
+              {item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : kind === 'plant' ? <TreePlanSymbol size={Math.max(24, iconSize - 4)} /> : <Icon size={kind === 'road' ? 24 : Math.max(18, Math.min(iconSize - 14, 42))} />}
             </div>
           </div>;
         });
       })}
-      {textNotes.map((note) => <div key={note.id} className={`landscape-text-note ${selectedTextNoteId === note.id ? 'selected' : ''}`} style={{ left: `${note.x}%`, top: `${note.y}%`, fontSize: note.fontSize * CANVAS_ART_SCALE }} role="button" tabIndex={0} aria-label={`نص: ${note.text}`} onPointerDown={(event) => startTextNoteDrag(event, note)} onPointerMove={(event) => moveTextNoteDrag(event, note.id)} onPointerUp={endTextNoteDrag} onPointerCancel={endTextNoteDrag}>{note.text}</div>)}
-    </div></div></div><aside className="landscape-plan-schedule" aria-label="جدول عناصر المخطط"><header className="landscape-schedule-heading"><div><small>LANDSCAPE SCHEDULE</small><strong>قائمة العناصر</strong></div><span>{scheduleItems.length} أصناف</span></header><div className="landscape-schedule-total"><span>إجمالي الوحدات</span><strong>{scheduleItems.reduce((total, item) => total + item.quantity, 0)}</strong></div><div className="landscape-schedule-scroll">{scheduleItems.length ? <table className="landscape-schedule-table"><colgroup><col className="landscape-schedule-name-col" /><col className="landscape-schedule-quantity-col" /><col className="landscape-schedule-icon-col" /></colgroup><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{scheduleItems.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td title={item.name.split(' / ')[0]}>{item.name.split(' / ')[0]}</td><td className="landscape-schedule-quantity">{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; })}</tbody></table> : <div className="landscape-schedule-empty">أضف عنصرًا للمخطط ليظهر اسمه وكميته وأيقونته هنا.</div>}</div></aside></div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{scheduleItems.length ? scheduleItems.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
+      {textNotes.map((note) => <div key={note.id} className={`landscape-text-note ${selectedTextNoteId === note.id ? 'selected' : ''}`} style={{ left: `${note.x}%`, top: `${note.y}%`, fontSize: note.fontSize }} role="button" tabIndex={0} aria-label={`نص: ${note.text}`} onPointerDown={(event) => startTextNoteDrag(event, note)} onPointerMove={(event) => moveTextNoteDrag(event, note.id)} onPointerUp={endTextNoteDrag} onPointerCancel={endTextNoteDrag}>{note.text}</div>)}
+    </div></div><aside className="landscape-plan-schedule" aria-label="جدول عناصر المخطط"><header className="landscape-schedule-heading"><div><small>LANDSCAPE SCHEDULE</small><strong>قائمة العناصر</strong></div><span>{scheduleItems.length} أصناف</span></header><div className="landscape-schedule-total"><span>إجمالي الوحدات</span><strong>{scheduleItems.reduce((total, item) => total + item.quantity, 0)}</strong></div><div className="landscape-schedule-scroll">{scheduleItems.length ? <table className="landscape-schedule-table"><colgroup><col className="landscape-schedule-name-col" /><col className="landscape-schedule-quantity-col" /><col className="landscape-schedule-icon-col" /></colgroup><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{scheduleItems.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td title={item.name.split(' / ')[0]}>{item.name.split(' / ')[0]}</td><td className="landscape-schedule-quantity">{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; })}</tbody></table> : <div className="landscape-schedule-empty">أضف عنصرًا للمخطط ليظهر اسمه وكميته وأيقونته هنا.</div>}</div></aside></div> : <div className="landscape-table-scroll"><table ref={tableRef} className="landscape-items-table"><thead><tr><th>الاسم</th><th>الكمية</th><th>الأيقونة</th></tr></thead><tbody>{scheduleItems.length ? scheduleItems.map((item) => { const Icon = iconFor(item.category); return <tr key={item.id}><td>{item.name.split(' / ')[0]}</td><td>{item.quantity}</td><td><span className="landscape-table-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : <Icon size={19} />}</span></td></tr>; }) : <tr><td colSpan={3} className="landscape-table-empty">أضف عناصر إلى المخطط ليظهر الجدول هنا.</td></tr>}</tbody></table></div>}
     <div className={`landscape-ai-drawer ${isAiChatOpen ? 'is-open' : ''}`} aria-hidden={!isAiChatOpen}>
       {isAiChatOpen && <button type="button" className="landscape-ai-backdrop" aria-label="إغلاق مساعد AI" onClick={() => setAiChatVisibility(false)} />}
       <aside className="landscape-ai-drawer-panel" aria-label="مساعد مخطط Landscape" aria-modal={isAiChatOpen} role="dialog">
