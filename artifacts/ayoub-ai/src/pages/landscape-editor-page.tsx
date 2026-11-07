@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Search, Sparkles, Trash2, TreePine } from 'lucide-react';
+import { ArrowRight, Maximize2, Minimize2, Search, Sparkles, Trash2, TreePine } from 'lucide-react';
 import { Link } from 'wouter';
 import { getManagedPlants, type ManagedPlant } from '@/data/managed-plants';
 import LandscapePlan, {
@@ -115,6 +115,7 @@ export default function LandscapeEditorPage() {
   const [plan, setPlan] = useState<LandscapeQuote>(readSavedPlan);
   const [saveError, setSaveError] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [isWorkspaceExpanded, setIsWorkspaceExpanded] = useState(false);
   const [plants] = useState<ManagedPlant[]>(getManagedPlants);
   const [search, setSearch] = useState('');
   const filteredPlants = useMemo(() => {
@@ -229,7 +230,7 @@ export default function LandscapeEditorPage() {
     setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeCustomStamps: [], landscapeTextNotes: [], landscapeShowGrid: false }));
   };
 
-  return <main className="landscape-studio-page" dir="rtl">
+  return <main className={`landscape-studio-page${isWorkspaceExpanded ? ' is-expanded' : ''}`} dir="rtl">
     <header className="landscape-studio-header">
       <div>
         <Link href="/" className="landscape-studio-back"><ArrowRight size={15} />العودة للموقع</Link>
@@ -239,12 +240,13 @@ export default function LandscapeEditorPage() {
       </div>
       <div className="landscape-studio-header-actions">
         <span className={`landscape-studio-save-state${saveError ? ' has-error' : ''}`} role="status">{saveError ? 'تعذر الحفظ؛ مساحة التخزين ممتلئة' : 'يحفظ تلقائيًا على هذا الجهاز'}</span>
+        <button type="button" className="landscape-studio-expand-button" aria-pressed={isWorkspaceExpanded} onClick={() => setIsWorkspaceExpanded((expanded) => !expanded)}>{isWorkspaceExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}{isWorkspaceExpanded ? 'إرجاع القائمة' : 'توسيع مساحة الرسم'}</button>
         <button type="button" className="landscape-studio-ai-button" aria-expanded={aiChatOpen} onClick={() => setAiChatOpen((open) => !open)}><Sparkles size={14} />مساعد AI</button>
         <button type="button" onClick={clearPlan}><Trash2 size={14} />مسح المخطط</button>
       </div>
     </header>
 
-    <div className="landscape-studio-layout">
+    <div className={`landscape-studio-layout${isWorkspaceExpanded ? ' is-expanded' : ''}`}>
       <aside className="landscape-studio-library">
         <div className="landscape-studio-library-head">
           <span className="landscape-studio-library-icon"><TreePine size={19} /></span>

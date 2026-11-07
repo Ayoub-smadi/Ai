@@ -173,11 +173,11 @@
 }
 
 
-/* Compact right-side schedule paired with the landscape drawing. */
+/* Give the drawing the wider column while keeping its item schedule alongside it. */
 .landscape-plan-composition {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 248px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 215px);
+  gap: 10px;
   align-items: stretch;
   min-width: 0;
   direction: ltr;
@@ -218,7 +218,9 @@
 .landscape-schedule-table .landscape-schedule-quantity { color: #285d38; text-align: center; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .landscape-plan-schedule .landscape-table-icon { display: grid; width: 30px; height: 30px; margin: auto; }
 .landscape-schedule-empty { display: grid; min-height: 110px; place-items: center; padding: 14px; color: #778579; font-size: 9px; line-height: 1.8; text-align: center; }
+.landscape-studio-layout.is-expanded .landscape-plan-composition { grid-template-columns: minmax(0, 1fr) minmax(190px, 220px); }
 @media (max-width: 760px) {
   .landscape-plan-composition { grid-template-columns: minmax(0, 1fr); }
+  .landscape-studio-layout.is-expanded .landscape-plan-composition { grid-template-columns: minmax(0, 1fr); }
   .landscape-plan-schedule { max-height: 340px; }
 }
