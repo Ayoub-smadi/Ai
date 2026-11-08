@@ -35,6 +35,7 @@ import DailyPlantFeature from '@/pages/daily-plant-feature';
 import { getManagedPlants } from '@/data/managed-plants';
 import { getStoreProducts, type StoreProduct } from '@/data/site-content';
 import PlantTreatmentPage from '@/pages/plant-treatment-page';
+import { PlantDetailPage, PlantGuideHomeFeature, PlantGuidePage } from '@/pages/plant-guide-page';
 import PublicQuoteRequestPage from '@/pages/public-quote-request-page';
 import AdminQuoteRequestsPage from '@/pages/admin-quote-requests-page';
 import AdminStoreOrdersPage from '@/pages/admin-store-orders-page';
@@ -341,6 +342,7 @@ function HomePage() {
         <article className="step"><div className="step-num">{tr(lang, '02 / PLANT CARE', '02 / رعاية النبات')}</div><h3>{tr(lang, 'Keep useful details', 'احتفظ بالتفاصيل المهمة')}</h3><p>{tr(lang, 'A clear image helps you share the plant and its visible symptoms with an agronomist.', 'الصورة الواضحة تساعدك على مشاركة شكل النبتة وأعراضها الظاهرة مع المهندس الزراعي.')}</p></article>
         <article className="step"><div className="step-num">03 / SMART CARE</div><h3>{tr(lang, 'Get AI guidance soon', 'إرشادات ذكية قريبًا')}</h3><p>{tr(lang, 'Plant-image analysis and care suggestions will be activated when the AI API is connected.', 'سيتم تفعيل تحليل صور النباتات واقتراحات العناية عند ربط واجهة الذكاء الاصطناعي.')}</p></article></div>
     </div></section>
+    <PlantGuideHomeFeature lang={lang} />
     <section className="quote-band"><div className="quote-content"><div className="quote-glyph">“</div><blockquote>{tr(lang, 'A thoughtful plant-care decision begins with a clear look at the symptoms.', 'قرار العناية بالنبتة يبدأ بملاحظة واضحة للأعراض.')}</blockquote></div></section>
     <section className="trust-row"><div className="trust-stat"><strong>01</strong><span>{tr(lang, 'Photograph the visible symptoms', 'صوّر الأعراض الظاهرة')}</span></div><div className="trust-stat"><strong>02</strong><span>{tr(lang, 'Keep the image on your device', 'الصورة تبقى على جهازك')}</span></div><div className="trust-stat"><strong>100%</strong><span>{tr(lang, 'AI analysis after API connection', 'التحليل الذكي بعد ربط الخدمة')}</span></div><div className="eyebrow">{tr(lang, 'OBSERVE FIRST. GET GUIDANCE NEXT.', 'راقب الأعراض أولًا. والإرشاد الذكي لاحقًا.')}</div></section>
     <section className="cta-section"><div className="eyebrow" style={{ color: '#ffffff75' }}>{tr(lang, 'START WITH A PHOTO', 'ابدأ بصورة واضحة')}</div><h2>{tr(lang, 'Your plant-care workspace starts here.', 'مساحتك لرعاية النباتات تبدأ من هنا.')}</h2><p>{tr(lang, 'Open the camera or choose a plant photo. AI diagnosis will follow when its service is connected.', 'افتح الكاميرا أو اختر صورة للنبتة. يتاح التشخيص الذكي بعد ربط خدمته.')}</p><Link className="btn" href="/plant-treatment">{tr(lang, 'Photograph a plant', 'صوّر نبتتك')} <ArrowRight size={15} /></Link></section>
@@ -355,6 +357,8 @@ function PublicPlantTreatmentRoute() { const { lang } = useLang(); return <><Pub
 function PublicLandscapeEditorRoute() { return <><PublicPageNav /><LandscapeEditorPage /></>; }
 function PublicProjectsRoute() { return <><PublicPageNav /><ProjectsPage /></>; }
 function PublicStoreRoute() { return <><PublicPageNav /><StorePage /></>; }
+function PublicPlantGuideRoute() { return <><PublicPageNav /><PlantGuidePage /></>; }
+function PublicPlantDetailRoute() { return <><PublicPageNav /><PlantDetailPage /></>; }
 function Protected({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return <LoadingScreen label="Checking your session" />;
@@ -1416,6 +1420,8 @@ function PublicPreviewRouter() {
     <Route path="/store" component={PublicStoreRoute} />
     <Route path="/cart" component={StoreCartPage} />
     <Route path="/checkout" component={StoreCheckoutPage} />
+    <Route path="/plants" component={PublicPlantGuideRoute} />
+    <Route path="/plants/:plantId" component={PublicPlantDetailRoute} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
     <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
     <Route path="/sign-in/*?" component={AdminLoginPage} />
@@ -1450,6 +1456,8 @@ function Router() {
     <Route path="/store" component={PublicStoreRoute} />
     <Route path="/cart" component={StoreCartPage} />
     <Route path="/checkout" component={StoreCheckoutPage} />
+    <Route path="/plants" component={PublicPlantGuideRoute} />
+    <Route path="/plants/:plantId" component={PublicPlantDetailRoute} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
     <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
     <Route path="/sign-in/*?" component={AdminLoginPage} />

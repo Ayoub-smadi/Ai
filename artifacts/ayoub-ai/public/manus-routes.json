@@ -33,6 +33,14 @@
       "title": "Store checkout"
     },
     {
+      "path": "/plants",
+      "title": "Plant guide"
+    },
+    {
+      "path": "/plants/:plantId",
+      "title": "Plant care passport"
+    },
+    {
       "path": "/plant-treatment",
       "title": "Plant treatment and photo capture"
     },
