@@ -116,8 +116,8 @@ export default function PublicQuoteRequestPage() {
             <label className="customer-quote-field">الحجم <span>*</span><select value={selectedSize} onChange={(event) => setSelectedSize(event.target.value)}>{plantSizes.map((size) => <option key={size}>{size}</option>)}</select></label>
             <label className="customer-quote-field">الكمية <span>*</span><div className="customer-quote-quantity"><button type="button" onClick={() => setSelectedQuantity((value) => Math.max(1, value - 1))} aria-label="تقليل الكمية"><Minus size={15} /></button><input type="number" min="1" value={selectedQuantity} onChange={(event) => setSelectedQuantity(Math.max(1, Number(event.target.value)))} /><button type="button" onClick={() => setSelectedQuantity((value) => value + 1)} aria-label="زيادة الكمية"><Plus size={15} /></button></div></label>
           </div>
-          <div className="customer-quote-modal-actions"><button type="button" className="btn customer-quote-modal-primary" onClick={() => { addProduct(); setCheckoutOpen(true); }}><ArrowLeft size={16} />متابعة الطلب</button><button type="button" className="btn secondary" onClick={() => setSelectedProduct(null)}>متابعة التصفح</button></div>
-          <div className="customer-quote-modal-note"><Check size={14} /> السعر النهائي يؤكد بعد مراجعة الطلب</div>
+          <div className="customer-quote-modal-actions"><button type="button" className="btn customer-quote-modal-primary" onClick={addProduct}><Plus size={16} />إضافة للنباتات المختارة</button><button type="button" className="btn secondary" onClick={() => setSelectedProduct(null)}>متابعة التصفح</button></div>
+          <div className="customer-quote-modal-note"><Check size={14} />أضف النبات ثم اختر بقية النباتات قبل متابعة الطلب</div>
         </div>
       </section>
     </div>}
