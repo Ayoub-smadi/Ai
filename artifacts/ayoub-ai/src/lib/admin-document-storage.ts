@@ -7,7 +7,8 @@ export type AdminDocumentKind =
   | 'storeProduct'
   | 'plant'
   | 'socialLink'
-  | 'heroSlide';
+  | 'heroSlide'
+  | 'client';
 
 export type StoredAdminDocument = Record<string, unknown> & {
   number?: string;
@@ -38,6 +39,7 @@ export const adminDocumentKindLabels: Record<AdminDocumentKind, string> = {
   plant: 'نبتة من الكتالوج',
   socialLink: 'رابط تواصل',
   heroSlide: 'صورة الصفحة الرئيسية',
+  client: 'جهة اتصال',
 };
 
 const numberedDocumentKinds = new Set<AdminDocumentKind>(['quote', 'invoice', 'receipt', 'disbursement']);
