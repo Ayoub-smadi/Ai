@@ -33,8 +33,8 @@ const defaultProducts: StoreProduct[] = ((backup as BackupShape).siteData?.agriS
   category: String(product.category || ''),
   price: product.price ?? '',
 }));
-const PRODUCTS_KEY = 'qadri-store-products-v1';
-const PROJECTS_KEY = 'qadri-portfolio-projects-v1';
+export const STORE_PRODUCTS_STORAGE_KEY = 'qadri-store-products-v1';
+export const PORTFOLIO_PROJECTS_STORAGE_KEY = 'qadri-portfolio-projects-v1';
 
 function readList<T>(key: string, fallback: T[]): T[] {
   try {
@@ -43,7 +43,7 @@ function readList<T>(key: string, fallback: T[]): T[] {
   } catch { return fallback; }
 }
 function publishUpdate() { window.dispatchEvent(new CustomEvent('qadri-site-content-updated')); }
-export function getStoreProducts(): StoreProduct[] { return readList(PRODUCTS_KEY, defaultProducts); }
-export function saveStoreProducts(items: StoreProduct[]) { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items)); publishUpdate(); }
-export function getPortfolioProjects(): PortfolioProject[] { return readList(PROJECTS_KEY, []); }
-export function savePortfolioProjects(items: PortfolioProject[]) { localStorage.setItem(PROJECTS_KEY, JSON.stringify(items)); publishUpdate(); }
+export function getStoreProducts(): StoreProduct[] { return readList(STORE_PRODUCTS_STORAGE_KEY, defaultProducts); }
+export function saveStoreProducts(items: StoreProduct[]) { localStorage.setItem(STORE_PRODUCTS_STORAGE_KEY, JSON.stringify(items)); publishUpdate(); }
+export function getPortfolioProjects(): PortfolioProject[] { return readList(PORTFOLIO_PROJECTS_STORAGE_KEY, []); }
+export function savePortfolioProjects(items: PortfolioProject[]) { localStorage.setItem(PORTFOLIO_PROJECTS_STORAGE_KEY, JSON.stringify(items)); publishUpdate(); }

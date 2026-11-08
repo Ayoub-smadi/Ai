@@ -11,7 +11,7 @@ export type ManagedPlant = QuoteCatalogItem & {
   soilTypeEn?: string;
 };
 
-const STORAGE_KEY = 'qadri-managed-plants-v1';
+export const MANAGED_PLANTS_STORAGE_KEY = 'qadri-managed-plants-v1';
 const GOLD_STAR_ID = 'id-1779350171772-4t3d6';
 const goldStarCare = {
   descriptionAr: 'سرو جولدكريست دائم الخضرة بأوراق إبرية ذهبية عطرية وشكل قائم مخروطي. يضيف لونًا مميزًا للمداخل والحدائق، ويصلح كنبتة بارزة أو ضمن سياج نباتي.',
@@ -54,7 +54,7 @@ export function getManagedPlants(): ManagedPlant[] {
     landscapeIcon: '',
   } satisfies ManagedPlant));
   try {
-    const decoded = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') as ManagedPlant[] | { plants?: ManagedPlant[]; deletedIds?: string[] } | null;
+    const decoded = JSON.parse(localStorage.getItem(MANAGED_PLANTS_STORAGE_KEY) || 'null') as ManagedPlant[] | { plants?: ManagedPlant[]; deletedIds?: string[] } | null;
     if (!decoded) return base;
     const saved = Array.isArray(decoded) ? decoded : decoded.plants || [];
     const deletedIds = Array.isArray(decoded) ? [] : decoded.deletedIds || [];
@@ -71,5 +71,5 @@ export function saveManagedPlants(plants: ManagedPlant[]) {
   const baseIds = quoteCatalogItems.filter((item) => item.source === 'plant').map((item) => item.id);
   const presentIds = new Set(plants.map((plant) => plant.id));
   const deletedIds = baseIds.filter((id) => !presentIds.has(id));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ plants, deletedIds }));
+  localStorage.setItem(MANAGED_PLANTS_STORAGE_KEY, JSON.stringify({ plants, deletedIds }));
 }

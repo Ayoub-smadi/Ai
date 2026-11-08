@@ -44,7 +44,7 @@ import AdminStorePage from '@/pages/admin-store-page';
 import AdminVouchersPage from '@/pages/admin-vouchers-page';
 import AdminDeletedDocumentsPage from '@/pages/admin-deleted-documents-page';
 import OfficialLetterPage from '@/pages/official-letter-page';
-import { createAdminDocumentId, dateBasedDocumentNumber, localDateString, migrateLegacyDocumentNumber, moveAdminDocumentToTrash, type StoredAdminDocument } from '@/lib/admin-document-storage';
+import { createAdminDocumentId, dateBasedDocumentNumber, localDateString, migrateLegacyDocumentNumber, moveAdminDocumentToTrash, moveAdminEntityToTrash, type StoredAdminDocument } from '@/lib/admin-document-storage';
 import OrderAlertControl, { activateOrderAlertsFromUserGesture } from '@/components/order-alert-control';
 import { getQuoteRequests, saveQuoteRequests } from '@/data/quote-requests';
 import LandscapePlan, { type LandscapeAnnotation, type LandscapeCustomStamp, type LandscapeCustomTool, type LandscapeDrawing, type LandscapeGlobalShape, type LandscapeTextNote, type LandscapeQuoteItem } from '@/pages/landscape-plan';
@@ -115,6 +115,12 @@ const defaultAdminSettings: AdminSettings = { brandNameEn: 'Al-Qadri Smart Agric
 const AdminSettingsContext = createContext<{ settings: AdminSettings; update: (patch: Partial<AdminSettings>) => void }>({ settings: defaultAdminSettings, update: () => undefined });
 function AdminSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AdminSettings>(() => { try { const saved = JSON.parse(localStorage.getItem('qadri-admin-settings') || '{}'); const merged = { ...defaultAdminSettings, ...saved }; if (merged.brandNameAr === 'قادري AI') merged.brandNameAr = defaultAdminSettings.brandNameAr; if (merged.brandNameEn === 'QADRI AI') merged.brandNameEn = defaultAdminSettings.brandNameEn; return merged; } catch { return defaultAdminSettings; } });
+  useEffect(() => {
+    const refresh = () => { try { const saved = JSON.parse(localStorage.getItem('qadri-admin-settings') || '{}'); const merged = { ...defaultAdminSettings, ...saved }; if (merged.brandNameAr === 'قادري AI') merged.brandNameAr = defaultAdminSettings.brandNameAr; if (merged.brandNameEn === 'QADRI AI') merged.brandNameEn = defaultAdminSettings.brandNameEn; setSettings(merged); } catch { setSettings(defaultAdminSettings); } };
+    window.addEventListener('qadri-admin-settings-updated', refresh);
+    window.addEventListener('storage', refresh);
+    return () => { window.removeEventListener('qadri-admin-settings-updated', refresh); window.removeEventListener('storage', refresh); };
+  }, []);
   const update = (patch: Partial<AdminSettings>) => { const next = { ...settings, ...patch }; localStorage.setItem('qadri-admin-settings', JSON.stringify(next)); setSettings(next); };
   return <AdminSettingsContext.Provider value={{ settings, update }}>{children}</AdminSettingsContext.Provider>;
 }
@@ -1232,8 +1238,8 @@ function AdminDashboardPage() {
     update({ socialLinks: [...socialLinks, { id, label, url, icon: draftSocial.icon }] });
     setDraftSocial({ label: '', url: '', icon: 'instagram' });
   };
-  const removeSocial = (id: string) => update({ socialLinks: socialLinks.filter((social) => social.id !== id) });
-  const removeHeroSlide = (id: string) => update({ heroSlides: heroSlides.filter((slide) => slide.id !== id) });
+  const removeSocial = (id: string) => { const social = socialLinks.find((item) => item.id === id); if (!social) return; moveAdminEntityToTrash('socialLink', 'qadri-admin-settings', social as unknown as StoredAdminDocument, 'socialLinks'); update({ socialLinks: socialLinks.filter((item) => item.id !== id) }); };
+  const removeHeroSlide = (id: string) => { const slide = heroSlides.find((item) => item.id === id); if (!slide) return; moveAdminEntityToTrash('heroSlide', 'qadri-admin-settings', slide as unknown as StoredAdminDocument, 'heroSlides'); update({ heroSlides: heroSlides.filter((item) => item.id !== id) }); };
   const addHeroSlideUrl = () => { const src = heroSlideUrl.trim(); if (!src) return; update({ heroSlides: [...heroSlides, { id: `${Date.now()}`, src, alt: 'QADRI AI visual' }] }); setHeroSlideUrl(''); };
   const addHeroSlideFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);

@@ -1,7 +1,8 @@
 import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from 'react';
 import { ArrowRight, ImagePlus, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'wouter';
-import { getPortfolioProjects, savePortfolioProjects, type PortfolioProject } from '@/data/site-content';
+import { getPortfolioProjects, PORTFOLIO_PROJECTS_STORAGE_KEY, savePortfolioProjects, type PortfolioProject } from '@/data/site-content';
+import { moveAdminEntityToTrash } from '@/lib/admin-document-storage';
 import './admin-projects-image-upload.css';
 
 const blankProject = (): PortfolioProject => ({ id: '', name: '', category: '', description: '', image: '', images: [], location: '', date: '' });
@@ -125,7 +126,9 @@ export default function AdminProjectsPage() {
     }
   };
   const remove = (id: string) => {
-    if (!window.confirm('هل تريد حذف هذا المشروع؟')) return;
+    const project = projects.find((item) => item.id === id);
+    if (!project || !window.confirm(`نقل المشروع «${project.name}» إلى سجل المحذوفات؟ يمكنك استعادته لاحقًا.`)) return;
+    moveAdminEntityToTrash('project', PORTFOLIO_PROJECTS_STORAGE_KEY, project);
     const next = projects.filter((project) => project.id !== id);
     setProjects(next);
     savePortfolioProjects(next);

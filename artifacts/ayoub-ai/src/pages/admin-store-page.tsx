@@ -1,7 +1,8 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { ArrowRight, ImagePlus, Pencil, Plus, Save, Search, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'wouter';
-import { getStoreProducts, saveStoreProducts, type StoreProduct } from '@/data/site-content';
+import { getStoreProducts, saveStoreProducts, STORE_PRODUCTS_STORAGE_KEY, type StoreProduct } from '@/data/site-content';
+import { moveAdminEntityToTrash } from '@/lib/admin-document-storage';
 import './admin-store-image-upload.css';
 import './store-image-size.css';
 
@@ -99,7 +100,7 @@ export default function AdminStorePage() {
       setError('تعذر الحفظ: مساحة التخزين في المتصفح ممتلئة. أزل بعض الصور أو استخدم صورًا أصغر.');
     }
   };
-  const remove = (id: string) => { if (!window.confirm('هل تريد حذف هذا المنتج من المتجر؟')) return; const next = products.filter((product) => product.id !== id); setProducts(next); saveStoreProducts(next); };
+  const remove = (id: string) => { const product = products.find((item) => item.id === id); if (!product || !window.confirm(`نقل المنتج «${product.nameAr}» إلى سجل المحذوفات؟ يمكنك استعادته لاحقًا.`)) return; moveAdminEntityToTrash('storeProduct', STORE_PRODUCTS_STORAGE_KEY, product); const next = products.filter((item) => item.id !== id); saveStoreProducts(next); setProducts(next); };
 
   return <main className="admin-page content-admin-page" dir="rtl"><header className="admin-head"><div><div className="eyebrow">QADRI AI / STORE MANAGEMENT</div><h1>إدارة المتجر</h1><p className="page-desc">أضف المنتجات، حدّث بياناتها أو احذفها. التغييرات تظهر في صفحة المتجر.</p></div><div className="admin-head-actions"><Link className="btn secondary small" href="/admin"><ArrowRight size={14} />لوحة التحكم</Link><button className="btn" type="button" onClick={openNewProduct}><Plus size={15} />إضافة منتج</button></div></header>
     <div className="content-admin-toolbar"><label><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث باسم المنتج أو الفئة..." /></label><span>{products.length} منتج</span></div>

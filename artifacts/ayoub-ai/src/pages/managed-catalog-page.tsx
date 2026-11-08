@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { ArrowLeft, ImagePlus, Leaf, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'wouter';
-import { getManagedPlants, saveManagedPlants, type ManagedPlant } from '@/data/managed-plants';
+import { getManagedPlants, MANAGED_PLANTS_STORAGE_KEY, saveManagedPlants, type ManagedPlant } from '@/data/managed-plants';
 import { quoteCatalog } from '@/data/quote-catalog';
+import { moveAdminEntityToTrash } from '@/lib/admin-document-storage';
 import './managed-catalog-care.css';
 
 type PlantDraft = Pick<ManagedPlant, 'nameAr' | 'nameEn' | 'scientificName' | 'descriptionAr' | 'descriptionEn' | 'categoryId' | 'categoryAr' | 'image' | 'landscapeIcon' | 'plantingSeasonAr' | 'plantingSeasonEn' | 'preferredClimateAr' | 'preferredClimateEn' | 'soilTypeAr' | 'soilTypeEn'>;
@@ -70,8 +71,10 @@ export default function ManagedCatalogPage() {
     setDraft(null); setEditingId(null);
   };
   const removePlant = (plant: ManagedPlant) => {
-    if (!window.confirm(`حذف «${plant.nameAr}» من الكتالوج؟`)) return;
-    persist(plants.filter((item) => item.id !== plant.id));
+    if (!window.confirm(`نقل «${plant.nameAr}» إلى سجل المحذوفات؟ يمكنك استعادتها لاحقًا.`)) return;
+    moveAdminEntityToTrash('plant', MANAGED_PLANTS_STORAGE_KEY, plant, 'plants');
+    setPlants(plants.filter((item) => item.id !== plant.id));
+    setNotice('تم نقل النبتة إلى سجل المحذوفات.');
     if (editingId === plant.id) setDraft(null);
   };
   const updateDraft = (key: keyof PlantDraft, value: string | number) => setDraft((current) => current ? { ...current, [key]: value } : current);
