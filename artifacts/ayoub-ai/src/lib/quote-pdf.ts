@@ -2,6 +2,7 @@ const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
 const PAGE_PADDING_MM = 13;
 const CSS_PIXELS_PER_MM = 96 / 25.4;
+let quotePdfExportInProgress = false;
 
 type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
@@ -120,11 +121,14 @@ function hideLastPageOnlyContent(sheet: HTMLElement) {
 }
 
 export async function exportQuotePdf(source: HTMLElement, documentNumber: string) {
+  if (quotePdfExportInProgress) return;
+  quotePdfExportInProgress = true;
   const wrapper = document.createElement('div');
-  wrapper.style.cssText = `position:fixed;left:-20000px;top:0;width:${A4_WIDTH_MM}mm;z-index:-1;background:#fff;overflow:visible;`;
-  document.body.appendChild(wrapper);
+  wrapper.id = 'quote-pdf-render-root';
+  wrapper.style.cssText = `position:fixed;left:0;top:0;width:${A4_WIDTH_MM}mm;height:${A4_HEIGHT_MM}mm;z-index:-1;visibility:hidden;pointer-events:none;background:#fff;overflow:visible;`;
 
   try {
+    document.body.appendChild(wrapper);
     const measureSheet = preparePdfSheet(source);
     copyFormState(source, measureSheet);
     wrapper.appendChild(measureSheet);
@@ -229,6 +233,11 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
 
     for (let index = 0; index < pageSheets.length; index += 1) {
       const page = pageSheets[index];
+      wrapper.replaceChildren(page);
+      page.style.position = 'absolute';
+      page.style.left = '0';
+      page.style.top = '0';
+      await Promise.all(Array.from(page.querySelectorAll('img')).map((image) => (image as HTMLImageElement).decode().catch(() => undefined)));
       const canvas = await html2canvas(page, {
         scale: 2,
         backgroundColor: '#ffffff',
@@ -241,6 +250,13 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
         windowHeight: pageHeightPx,
         scrollX: 0,
         scrollY: 0,
+        onclone: (clonedDocument) => {
+          const clonedWrapper = clonedDocument.getElementById('quote-pdf-render-root');
+          if (clonedWrapper) {
+            clonedWrapper.style.visibility = 'visible';
+            clonedWrapper.style.zIndex = '99999';
+          }
+        },
       });
       if (index > 0) pdf.addPage('a4', 'portrait');
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
@@ -250,5 +266,6 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
     pdf.save(`${safeNumber}.pdf`);
   } finally {
     wrapper.remove();
+    quotePdfExportInProgress = false;
   }
 }
