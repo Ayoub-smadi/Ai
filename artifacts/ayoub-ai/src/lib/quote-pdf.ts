@@ -4,6 +4,22 @@ const PAGE_PADDING_MM = 13;
 const CSS_PIXELS_PER_MM = 96 / 25.4;
 let quotePdfExportInProgress = false;
 
+function loadQuotePdfLibraries() {
+  return Promise.all([import('html2canvas'), import('jspdf')] as const);
+}
+
+let quotePdfLibraries: ReturnType<typeof loadQuotePdfLibraries> | undefined;
+
+export function preloadQuotePdf() {
+  if (!quotePdfLibraries) {
+    quotePdfLibraries = loadQuotePdfLibraries().catch((error) => {
+      quotePdfLibraries = undefined;
+      throw error;
+    });
+  }
+  return quotePdfLibraries;
+}
+
 type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
 function copyFormState(source: ParentNode, target: ParentNode) {
@@ -223,10 +239,7 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
 
     measureSheet.remove();
 
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-      import('html2canvas'),
-      import('jspdf'),
-    ]);
+    const [{ default: html2canvas }, { jsPDF }] = await preloadQuotePdf();
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
     const pageWidth = Math.ceil(A4_WIDTH_MM * CSS_PIXELS_PER_MM);
     const pageHeightPx = Math.ceil(A4_HEIGHT_MM * CSS_PIXELS_PER_MM);
