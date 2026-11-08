@@ -36,6 +36,7 @@ import { getManagedPlants } from '@/data/managed-plants';
 import { getStoreProducts, type StoreProduct } from '@/data/site-content';
 import PlantTreatmentPage from '@/pages/plant-treatment-page';
 import { PlantDetailPage, PlantGuideHomeFeature, PlantGuidePage } from '@/pages/plant-guide-page';
+import PlantGuideAdminPage from '@/pages/plant-guide-admin-page';
 import PublicQuoteRequestPage from '@/pages/public-quote-request-page';
 import AdminQuoteRequestsPage from '@/pages/admin-quote-requests-page';
 import AdminStoreOrdersPage from '@/pages/admin-store-orders-page';
@@ -1441,6 +1442,7 @@ function PublicPreviewRouter() {
     <Route path="/admin/purchase-orders"><AdminGuard><AdminOperationsPage kind="purchase" /></AdminGuard></Route>
     <Route path="/admin/official-letters"><AdminGuard><OfficialLetterPage /></AdminGuard></Route>
     <Route path="/admin/catalog"><AdminGuard><ManagedCatalogPage /></AdminGuard></Route>
+    <Route path="/admin/plants"><AdminGuard><PlantGuideAdminPage /></AdminGuard></Route>
     <Route path="/admin/truck-load-planner"><AdminGuard><AdminTruckLoadPlannerPage /></AdminGuard></Route>
     <Route path="/sign-up/*?" component={AuthSetupPage} />
     <Route component={NotFound} />
@@ -1477,6 +1479,7 @@ function Router() {
     <Route path="/admin/deleted-documents"><AdminGuard><AdminDeletedDocumentsPage /></AdminGuard></Route>
     <Route path="/admin/official-letters"><AdminGuard><OfficialLetterPage /></AdminGuard></Route>
     <Route path="/admin/catalog"><AdminGuard><ManagedCatalogPage /></AdminGuard></Route>
+    <Route path="/admin/plants"><AdminGuard><PlantGuideAdminPage /></AdminGuard></Route>
     <Route path="/admin/truck-load-planner"><AdminGuard><AdminTruckLoadPlannerPage /></AdminGuard></Route>
     <Route path="/dashboard"><ProtectedRoute><DashboardPage /></ProtectedRoute></Route>
     <Route path="/agents"><ProtectedRoute><AgentsPage /></ProtectedRoute></Route>

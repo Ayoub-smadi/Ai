@@ -18,7 +18,7 @@ export type PlantCareSource = {
 export type PlantCareProfile = {
   id: string;
   titleAr: string;
-  matchNotesAr: string;
+  matchNotesAr?: string;
   summaryAr: string;
   plantingSeasonAr: string;
   lightSoilAr: string;
@@ -34,7 +34,6 @@ export type PlantCareProfile = {
 const fallbackProfile: PlantCareProfile = {
   id: 'general-care',
   titleAr: 'إرشادات عامة للنبتة',
-  matchNotesAr: 'استخدم هذا الملف مؤقتًا إذا لم يتوفر تطابق محدد للصنف.',
   summaryAr: 'بطاقة إرشادية للنبتة المسجلة في كتالوج المشتل. قد تختلف الاحتياجات الدقيقة بحسب الصنف والطقس والتربة.',
   plantingSeasonAr: 'غالبًا يكون الخريف المعتدل أو بداية الربيع مناسبًا للزراعة، مع تجنب موجات الحر والصقيع. اتبع احتياج النوع المحدد.',
   lightSoilAr: 'تحقق من احتياج النوع للضوء، واستخدم تربة جيدة التصريف مناسبة للنبتة. لا تترك الجذور في تربة مشبعة بالماء.',
