@@ -4,6 +4,7 @@ import channelsRouter from "./channels";
 import dashboardRouter from "./dashboard";
 import healthRouter from "./health";
 import landscapeAiRouter from "./landscape-ai";
+import plantAdvisorRouter from "./plant-advisor";
 import knowledgeRouter from "./knowledge";
 import productsRouter from "./products";
 import testingRouter from "./testing";
@@ -13,6 +14,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(landscapeAiRouter);
+router.use(plantAdvisorRouter);
 router.use(workspacesRouter);
 router.use(dashboardRouter);
 router.use(agentsRouter);

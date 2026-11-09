@@ -11,6 +11,12 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
+const configuredProxyHops = process.env.TRUST_PROXY_HOPS?.trim();
+const proxyHops = !configuredProxyHops
+  ? (process.env.NODE_ENV === "production" ? 1 : 0)
+  : Number(configuredProxyHops);
+if (Number.isSafeInteger(proxyHops) && proxyHops >= 0) app.set("trust proxy", proxyHops);
+else logger.warn("TRUST_PROXY_HOPS is invalid; using the default untrusted proxy setting.");
 
 app.use(
   pinoHttp({
@@ -32,6 +38,7 @@ app.use(
   }),
 );
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+app.use("/api/plant-advisor", express.json({ limit: "6mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
