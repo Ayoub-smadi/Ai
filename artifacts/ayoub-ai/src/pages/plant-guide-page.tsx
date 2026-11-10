@@ -4,7 +4,6 @@ import { Link, useRoute } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import { getPlantGuideRecords, getPlantGuideSourceCount, PLANT_GUIDE_STORAGE_KEY, PLANT_GUIDE_UPDATED_EVENT, type PlantGuidePhoto as PlantPhoto } from '@/data/plant-guide-content';
 import { getPlantCareProfile } from '@/data/plant-guide-data';
-import IrrigationPlanner from './irrigation-planner';
 import './plant-guide-page.css';
 
 const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
@@ -124,8 +123,6 @@ export function PlantGuidePage() {
         <div className="plant-guide-list-hero-art" aria-hidden="true"><div className="guide-art-disc"><Leaf size={80} strokeWidth={0.9} /></div><span className="guide-art-label guide-art-label-top">FIELD NOTES / 01</span><span className="guide-art-label guide-art-label-bottom">GROW WITH KNOWLEDGE</span><i className="guide-art-ring guide-art-ring-one" /><i className="guide-art-ring guide-art-ring-two" /></div>
       </div>
     </section>
-
-    <IrrigationPlanner />
 
     <section className="plant-guide-catalog-wrap">
       <div className="plant-guide-catalog-head">

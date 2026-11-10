@@ -10,6 +10,7 @@ import type {
   LandscapeDrawingTool,
   LandscapeAiPlant,
 } from './landscape-plan';
+import { readUserData, saveUserData } from '@/lib/user-account';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type AiOperation =
@@ -49,7 +50,7 @@ export default function LandscapeAiChat({ quote, onItemChange, onDrawingsChange,
   const [configured, setConfigured] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => readUserData<ChatMessage[]>('qadri-chat-history-v1', []));
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [requestError, setRequestError] = useState('');
@@ -79,6 +80,7 @@ export default function LandscapeAiChat({ quote, onItemChange, onDrawingsChange,
     const list = messageListRef.current;
     if (list) list.scrollTop = list.scrollHeight;
   }, [messages, busy]);
+  useEffect(() => { saveUserData('qadri-chat-history-v1', messages); }, [messages]);
 
   const applyOperations = (operations: AiOperation[]) => {
     let nextDrawings = [...(quote.landscapeDrawings ?? [])];

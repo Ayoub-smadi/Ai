@@ -3,6 +3,7 @@ import { Bell, BellRing, CalendarClock, Check, ChevronDown, Droplets, ImagePlus,
 import { getManagedPlants, type ManagedPlant } from '@/data/managed-plants';
 import { getPlantCareProfile } from '@/data/plant-guide-data';
 import { getPlantGuideCategory } from '@/data/plant-guide-taxonomy';
+import { userStorageKey } from '@/lib/user-account';
 import './irrigation-planner.css';
 
 const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
@@ -27,6 +28,7 @@ type SoilAdvice = {
 };
 
 const STORAGE_KEY = 'qadri-irrigation-plan-v1';
+const scopedStorageKey = () => userStorageKey(STORAGE_KEY);
 const excludedDecorSections = new Set(['id-1779608675326-62yls', 'id-1780917756228-hsi6f']);
 const livingTurfId = 'id-1790081508318-va81r';
 const countries = ['الأردن', 'فلسطين', 'مصر', 'السعودية', 'قطر'];
@@ -48,7 +50,7 @@ function isSafeSelectedPlant(value: unknown, knownIds: Set<string>): value is Se
 
 function readPlan(): IrrigationPlan | null {
   try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') as unknown;
+    const value = JSON.parse(localStorage.getItem(scopedStorageKey()) || 'null') as unknown;
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
     const candidate = value as Record<string, unknown>;
     const knownIds = new Set(getIrrigationPlants().map((plant) => plant.id));
@@ -66,8 +68,8 @@ function readPlan(): IrrigationPlan | null {
 }
 
 function savePlan(plan: IrrigationPlan | null) {
-  if (plan) localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-  else localStorage.removeItem(STORAGE_KEY);
+  if (plan) localStorage.setItem(scopedStorageKey(), JSON.stringify(plan));
+  else localStorage.removeItem(scopedStorageKey());
 }
 
 function normalize(value: string) { return value.normalize('NFKD').replace(/[\u064B-\u065F\u0670\u0640]/g, '').toLocaleLowerCase(); }

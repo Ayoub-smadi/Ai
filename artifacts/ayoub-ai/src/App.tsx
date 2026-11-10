@@ -58,6 +58,7 @@ import LandscapeEditorPage from '@/pages/landscape-editor-page';
 import AdminClientsPage from '@/pages/admin-clients-page';
 import AlternativeQuoteExportButton from '@/components/alternative-quote-export';
 import { exportQuotePdf, preloadQuotePdf } from '@/lib/quote-pdf';
+import { getCurrentAccount, loginAccount, logoutAccount, readUserData, registerAccount, type UserAccount } from '@/lib/user-account';
 
 const queryClient = new QueryClient();
 const configuredClerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -106,6 +107,34 @@ function LanguageProvider({ children }: { children: ReactNode }) {
 }
 function useLang() { return useContext(LanguageContext); }
 function tr(lang: Lang, en: string, ar: string) { return lang === 'ar' ? ar : en; }
+type AccountContextValue = { account: UserAccount | null; signIn: (email: string) => string | null; signUp: (name: string, email: string) => string | null; signOut: () => void };
+const AccountContext = createContext<AccountContextValue>({ account: null, signIn: () => 'الحساب غير متاح', signUp: () => 'الحساب غير متاح', signOut: () => undefined });
+function AccountProvider({ children }: { children: ReactNode }) {
+  const [account, setAccount] = useState<UserAccount | null>(() => getCurrentAccount());
+  const signIn = (email: string) => { const result = loginAccount(email); if (result.account) setAccount(result.account); return result.error || null; };
+  const signUp = (name: string, email: string) => { const result = registerAccount(name, email); if (result.account) setAccount(result.account); return result.error || null; };
+  const signOut = () => { logoutAccount(); setAccount(null); };
+  useEffect(() => { const refresh = () => setAccount(getCurrentAccount()); window.addEventListener('storage', refresh); return () => window.removeEventListener('storage', refresh); }, []);
+  return <AccountContext.Provider value={{ account, signIn, signUp, signOut }}>{children}</AccountContext.Provider>;
+}
+function useAccount() { return useContext(AccountContext); }
+function AccountPage() {
+  const { account, signIn, signUp } = useAccount();
+  const [location, setLocation] = useLocation();
+  const [mode, setMode] = useState<'sign-in' | 'sign-up'>(() => location.startsWith('/sign-up') ? 'sign-up' : 'sign-in');
+  const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [error, setError] = useState('');
+  const next = new URLSearchParams(window.location.search).get('next') || '/account';
+  useEffect(() => { if (account) setLocation(next); }, [account, next, setLocation]);
+  const submit = (event: FormEvent) => { event.preventDefault(); setError(mode === 'sign-up' ? signUp(name, email) || '' : signIn(email) || ''); };
+  return <main className="public-home" dir="rtl"><nav className="public-nav"><SiteBrand /><LanguageButton /></nav><section className="public-section"><div className="panel form-card account-card" style={{ maxWidth: 540, margin: '40px auto' }}><div className="eyebrow">AYOUB AI / ACCOUNT</div><h1>{mode === 'sign-up' ? 'أنشئ حسابك' : 'تسجيل الدخول'}</h1><p className="page-desc">احفظ محادثاتك ومخططاتك وخطة الري في ملفك لتعود إليها لاحقًا. الحساب التجريبي يحفظ البيانات في هذا المتصفح.</p><form onSubmit={submit} className="field account-form">{mode === 'sign-up' && <label>الاسم<input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" placeholder="اكتب اسمك" required /></label>}<label>البريد الإلكتروني<input dir="ltr" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="name@example.com" required /></label>{error && <p className="account-error" role="alert">{error}</p>}<button className="btn" type="submit">{mode === 'sign-up' ? 'إنشاء الحساب' : 'دخول'} <ArrowLeft size={15} /></button></form><button className="account-switch" type="button" onClick={() => { setMode(mode === 'sign-up' ? 'sign-in' : 'sign-up'); setError(''); }}>{mode === 'sign-up' ? 'لديك حساب؟ سجّل الدخول' : 'ليس لديك حساب؟ أنشئ حسابًا'}</button></div></section></main>;
+}
+function AccountGate({ children }: { children: ReactNode }) { const { account } = useAccount(); const [location] = useLocation(); return account ? <>{children}</> : <Redirect to={`/sign-in?next=${encodeURIComponent(location)}`} />; }
+function AccountProfilePage() {
+  const { account, signOut } = useAccount(); const [, setLocation] = useLocation();
+  if (!account) return <Redirect to="/sign-in" />;
+  const chat = readUserData<unknown[]>('qadri-chat-history-v1', []); const landscape = readUserData<unknown>('qadri-site-plan-v1', null); const irrigation = readUserData<unknown>('qadri-irrigation-plan-v1', null);
+  return <><PublicPageNav /><main className="public-section account-profile" dir="rtl"><div className="account-profile-head"><div><div className="eyebrow">AYOUB AI / PROFILE</div><h1>{account.name}</h1><p>{account.email}</p></div><button className="btn secondary small" onClick={() => { signOut(); setLocation('/'); }}><LogOut size={14} /> تسجيل الخروج</button></div><div className="account-service-grid"><Link href="/chat" className="panel account-service-card"><MessageSquareText size={20} /><strong>محادثات AI</strong><span>{chat.length ? `${chat.length} رسالة محفوظة` : 'ابدأ أول محادثة'}</span></Link><Link href="/landscape-editor" className="panel account-service-card"><MapPinned size={20} /><strong>مخطط Landscape</strong><span>{landscape ? 'آخر مخطط محفوظ' : 'لا يوجد مخطط بعد'}</span></Link><Link href="/plants" className="panel account-service-card"><Sprout size={20} /><strong>دليل النباتات وخطة الري</strong><span>{irrigation ? 'خطة ري محفوظة' : 'استكشف الدليل'}</span></Link></div></main></>;
+}
 type SocialIcon = 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'website';
 type SocialLink = { id: string; label: string; url: string; icon: SocialIcon };
 type HeroSlide = { id: string; src: string; alt: string };
@@ -185,7 +214,20 @@ function LanguageButton() {
 function SiteBrand({ inverse = false }: { inverse?: boolean }) {
   const { lang } = useLang();
   const { settings } = useAdminSettings();
-  return <Link href="/" className="brand" style={inverse ? { color: '#fff', padding: 0 } : undefined}><span className="brand-mark"><img src={settings.logoUrl || '/chatbot.png'} alt="" /></span><span className="brand-name">{tr(lang, settings.brandNameEn, settings.brandNameAr)}</span></Link>;
+  const [, setLocation] = useLocation();
+  const clickTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (clickTimer.current !== null) window.clearTimeout(clickTimer.current); }, []);
+  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (clickTimer.current !== null) {
+      window.clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      setLocation('/admin/login');
+      return;
+    }
+    clickTimer.current = window.setTimeout(() => { clickTimer.current = null; setLocation('/'); }, 280);
+  };
+  return <Link href="/" className="brand" style={inverse ? { color: '#fff', padding: 0 } : undefined} onClick={handleClick} title="نقرتان لفتح دخول الأدمن"><span className="brand-mark"><img src={settings.logoUrl || '/chatbot.png'} alt="" /></span><span className="brand-name">{tr(lang, settings.brandNameEn, settings.brandNameAr)}</span></Link>;
 }
 function HeroSlideshow() {
   const { lang } = useLang(); const { settings } = useAdminSettings(); const slides = settings.heroSlides?.length ? settings.heroSlides : [{ id: 'fallback', src: '/hero-slide-1.png', alt: 'QADRI AI visual' }]; const [active, setActive] = useState(0);
@@ -351,15 +393,15 @@ function HomePage() {
   </main>;
 }
 function PublicPageNav() {
-  const { lang } = useLang(); const { settings } = useAdminSettings();
-  return <header className="public-header"><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><Link className="public-nav-link" href="/">{tr(lang, 'Home', 'الرئيسية')}</Link>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link" href="/landscape-editor">{tr(lang, 'Landscape', 'لاندسكيب')}</Link><Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href="/sign-in" className="btn secondary small">{tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>;
+  const { lang } = useLang(); const { settings } = useAdminSettings(); const { account } = useAccount();
+  return <header className="public-header"><nav className="public-nav" style={{ background: settings.primaryColor }} aria-label={tr(lang, 'Main navigation', 'التنقل الرئيسي')}><SiteBrand inverse /><div className="public-nav-links"><Link className="public-nav-link" href="/">{tr(lang, 'Home', 'الرئيسية')}</Link>{(settings.sitePages?.projects ?? true) && <Link className="public-nav-link" href="/projects">{tr(lang, 'Projects & Work', 'مشاريعنا وأعمالنا')}</Link>}{(settings.sitePages?.quoteRequest ?? true) && <Link className="public-nav-link public-nav-quote-link" href="/quotes">{tr(lang, 'Request a Quote', 'طلب عرض سعر')}</Link>}{(settings.sitePages?.store ?? true) && <Link className="public-nav-link" href="/store">{tr(lang, 'Store', 'المتجر')}</Link>}<Link className="public-nav-link" href="/landscape-editor">{tr(lang, 'Landscape', 'لاندسكيب')}</Link><Link className="public-nav-link plant-treatment-nav-link" href="/plant-treatment"><Camera size={14} />{tr(lang, 'Plant treatment', 'معالجة النباتات')}</Link></div><div className="public-nav-actions"><LanguageButton /><Link href={account ? '/account' : '/sign-in'} className="btn secondary small">{account ? tr(lang, 'Profile', 'ملفي') : tr(lang, 'Sign in', 'تسجيل الدخول')}</Link></div></nav></header>;
 }
 function PublicPlantTreatmentRoute() { const { lang } = useLang(); return <><PublicPageNav /><PlantTreatmentPage lang={lang} /></>; }
-function PublicLandscapeEditorRoute() { return <><PublicPageNav /><LandscapeEditorPage /></>; }
+function PublicLandscapeEditorRoute() { return <AccountGate><PublicPageNav /><LandscapeEditorPage /></AccountGate>; }
 function PublicProjectsRoute() { return <><PublicPageNav /><ProjectsPage /></>; }
 function PublicStoreRoute() { return <><PublicPageNav /><StorePage /></>; }
-function PublicPlantGuideRoute() { return <><PublicPageNav /><PlantGuidePage /></>; }
-function PublicPlantDetailRoute() { return <><PublicPageNav /><PlantDetailPage /></>; }
+function PublicPlantGuideRoute() { return <AccountGate><PublicPageNav /><PlantGuidePage /></AccountGate>; }
+function PublicPlantDetailRoute() { return <AccountGate><PublicPageNav /><PlantDetailPage /></AccountGate>; }
 function Protected({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return <LoadingScreen label="Checking your session" />;
@@ -1414,7 +1456,7 @@ function PublicPreviewRouter() {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}><Switch>
     <Route path="/" component={HomePage} />
-    <Route path="/chat" component={AiChatPage} />
+    <Route path="/chat"><AccountGate><PublicPageNav /><AiChatPage /></AccountGate></Route>
     <Route path="/quotes" component={QuoteCatalogPage} />
     <Route path="/about" component={AboutUsPage} />
     <Route path="/projects" component={PublicProjectsRoute} />
@@ -1425,8 +1467,9 @@ function PublicPreviewRouter() {
     <Route path="/plants/:plantId" component={PublicPlantDetailRoute} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
     <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
-    <Route path="/sign-in/*?" component={AdminLoginPage} />
     <Route path="/admin/login" component={AdminLoginPage} />
+    <Route path="/account" component={AccountProfilePage} />
+    <Route path="/sign-in/*?" component={AccountPage} />
     <Route path="/admin"><AdminGuard><AdminDashboardPage /></AdminGuard></Route>
     <Route path="/admin/clients"><AdminGuard><AdminClientsRoute /></AdminGuard></Route>
     <Route path="/admin/training"><AdminGuard><AdminTrainingPage /></AdminGuard></Route>
@@ -1444,7 +1487,7 @@ function PublicPreviewRouter() {
     <Route path="/admin/catalog"><AdminGuard><ManagedCatalogPage /></AdminGuard></Route>
     <Route path="/admin/plants"><AdminGuard><PlantGuideAdminPage /></AdminGuard></Route>
     <Route path="/admin/truck-load-planner"><AdminGuard><AdminTruckLoadPlannerPage /></AdminGuard></Route>
-    <Route path="/sign-up/*?" component={AuthSetupPage} />
+    <Route path="/sign-up/*?" component={AccountPage} />
     <Route component={NotFound} />
   </Switch></ErrorBoundary>;
 }
@@ -1498,10 +1541,10 @@ function Router() {
 }
 function App() {
   if (!clerkPubKey) {
-    return <AdminSettingsProvider><QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><PublicPreviewRouter /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider></AdminSettingsProvider>;
+    return <AccountProvider><AdminSettingsProvider><QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><PublicPreviewRouter /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider></AdminSettingsProvider></AccountProvider>;
   }
   return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} routerPush={(to) => { window.history.pushState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }} routerReplace={(to) => { window.history.replaceState(null, '', stripBase(to)); window.dispatchEvent(new PopStateEvent('popstate')); }}>
-    <AdminSettingsProvider><QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider></AdminSettingsProvider>
+    <AccountProvider><AdminSettingsProvider><QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></LanguageProvider></TooltipProvider></QueryClientProvider></AdminSettingsProvider></AccountProvider>
   </ClerkProvider>;
 }
 

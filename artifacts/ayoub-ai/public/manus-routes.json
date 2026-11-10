@@ -49,6 +49,10 @@
       "title": "Landscape editor"
     },
     {
+      "path": "/account",
+      "title": "User profile"
+    },
+    {
       "path": "/sign-in/*?",
       "title": "Sign in"
     },

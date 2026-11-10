@@ -10,10 +10,12 @@ import LandscapePlan, {
   type LandscapeQuote,
   type LandscapeQuoteItem,
 } from '@/pages/landscape-plan';
+import { userStorageKey } from '@/lib/user-account';
 import './landscape-editor-unified.css';
 
 const STORAGE_KEY = 'qadri-site-plan-v1';
 const CUSTOM_TOOLS_STORAGE_KEY = 'qadri-landscape-custom-tools-v1';
+const scopedKey = (key: string) => userStorageKey(key);
 type LegacyPlanItem = {
   id?: string;
   kind?: 'plant' | 'shape';
@@ -86,8 +88,8 @@ function migrateLegacyPlan(value: unknown): LandscapeQuote {
 function readSavedPlan(): LandscapeQuote {
   if (typeof window === 'undefined') return emptyPlan();
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const separateTools = localStorage.getItem(CUSTOM_TOOLS_STORAGE_KEY);
+    const stored = localStorage.getItem(scopedKey(STORAGE_KEY));
+    const separateTools = localStorage.getItem(scopedKey(CUSTOM_TOOLS_STORAGE_KEY));
     const savedTools = separateTools ? JSON.parse(separateTools) : null;
     const tools = Array.isArray(savedTools) ? savedTools : undefined;
     if (!stored) return { ...emptyPlan(), landscapeCustomTools: tools ?? [] };
@@ -125,9 +127,9 @@ export default function LandscapeEditorPage() {
   useEffect(() => {
     try {
       const customTools = plan.landscapeCustomTools ?? [];
-      localStorage.setItem(CUSTOM_TOOLS_STORAGE_KEY, JSON.stringify(customTools));
+      localStorage.setItem(scopedKey(CUSTOM_TOOLS_STORAGE_KEY), JSON.stringify(customTools));
       const { landscapeCustomTools: _storedSeparately, ...planWithoutCustomTools } = plan;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(planWithoutCustomTools));
+      localStorage.setItem(scopedKey(STORAGE_KEY), JSON.stringify(planWithoutCustomTools));
       setSaveError(false);
     } catch (error) {
       console.error('Landscape auto-save failed:', error);
