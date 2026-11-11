@@ -35,6 +35,18 @@
 .official-letter-fields input:focus,
 .official-letter-fields textarea:focus { border-color: #6c9a6d; box-shadow: 0 0 0 3px #6c9a6d1c; }
 .official-letter-fields textarea { resize: vertical; line-height: 1.8; }
+.official-letter-image-editor { display: grid; gap: 11px; padding: 12px; border: 1px solid #dfe9de; border-radius: 9px; background: #f8fbf7; }
+.official-letter-image-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.official-letter-image-editor-head > div { display: grid; gap: 4px; }
+.official-letter-image-editor-head strong { color: #315c3c; font-size: 12px; }
+.official-letter-image-editor-head small { color: #7b887c; font-size: 10px; }
+.official-letter-file-input { display: none; }
+.official-letter-image-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
+.official-letter-image-item { position: relative; display: grid; gap: 5px; min-width: 0; padding: 6px; border: 1px solid #e1e9df; border-radius: 7px; background: #fff; }
+.official-letter-image-item img { width: 100%; height: 76px; border-radius: 4px; object-fit: cover; }
+.official-letter-image-item span { overflow: hidden; color: #647566; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.official-letter-image-item button { position: absolute; top: 9px; left: 9px; display: grid; width: 27px; height: 27px; place-items: center; border: 0; border-radius: 50%; background: #fff; color: #a54840; box-shadow: 0 1px 5px #172a1926; cursor: pointer; }
+.official-letter-extra-text { display: grid; gap: 6px; color: #637566; font-size: 11px; }
 .official-letter-field-wide { grid-column: 1 / -1; }
 .official-letter-save { width: 100%; justify-content: center; margin-top: 14px; }
 .official-letter-status { margin: 11px 0 0; color: #315c3c; font-size: 12px; }
@@ -96,10 +108,10 @@
   display: block;
   box-sizing: border-box;
   width: 8.5in;
-  height: 11in;
+  height: auto;
   min-height: 11in;
   margin: 0 auto;
-  padding: 0;
+  padding: 0 0 .55in;
   background: #fff;
   box-shadow: 0 3px 20px #12231a1b;
   color: #1f2937;
@@ -209,22 +221,16 @@
 }
 .official-letter-project-grid > div + div { border-right: 0; }
 .official-letter-project-grid b { color: #6fa83a; font-size: 11.3pt; font-weight: 400; }
-.official-letter-content { position: absolute; inset: 0; margin: 0; }
+.official-letter-content { position: relative; margin: 0; padding: 3.98in .65in 0; }
 .official-letter-greeting {
-  position: absolute;
-  top: 3.98in;
-  right: .7in;
-  margin: 0;
+  margin: 0 0 .24in;
   color: #1f2937;
   font-size: 16pt;
   font-weight: 400;
   line-height: 1.2;
 }
 .official-letter-body {
-  position: absolute;
-  top: 4.35in;
-  right: .65in;
-  left: .65in;
+  min-height: 2.8in;
   color: #1f2937;
   font-size: 16pt;
   line-height: 1.34;
@@ -232,24 +238,21 @@
   overflow-wrap: anywhere;
 }
 .official-letter-body p { margin: 0 0 .13in; text-indent: .12in; }
+.official-letter-attachments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: .14in; margin: .22in 0; }
+.official-letter-attachments img { display: block; width: 100%; max-width: 100%; height: 2.5in; object-fit: contain; break-inside: avoid; }
+.official-letter-extra-preview { margin: .18in 0; color: #1f2937; font-size: 14pt; line-height: 1.6; text-align: justify; overflow-wrap: anywhere; }
+.official-letter-extra-preview p { margin: 0 0 .12in; white-space: pre-wrap; }
 .official-letter-closing {
-  position: absolute;
-  top: 7.43in;
-  right: .65in;
-  left: .65in;
-  margin: 0;
+  margin: .25in 0 0;
   color: #1f2937;
   text-align: center;
   font-size: 14pt;
   font-weight: 700;
   line-height: 1.2;
 }
-.official-letter-signature { position: absolute; inset: 0; color: #175b78; text-align: center; }
+.official-letter-signature { position: relative; display: grid; justify-items: center; gap: .08in; margin: .34in .65in 0; color: #175b78; text-align: center; }
 .official-letter-signature > strong {
-  position: absolute;
-  top: 8.37in;
-  left: 1.7in;
-  width: 1.52in;
+  width: auto;
   margin: 0;
   color: #175b78;
   font-size: 12pt;
@@ -257,9 +260,6 @@
   line-height: 1.2;
 }
 .official-letter-signature img {
-  position: absolute;
-  top: 8.72in;
-  left: 1.37in;
   display: block;
   width: 2.18in;
   max-width: none;
@@ -267,10 +267,6 @@
   object-fit: fill;
 }
 .official-letter-signature b {
-  position: absolute;
-  top: 10.28in;
-  right: .65in;
-  left: .65in;
   color: #175b78;
   font-size: 14pt;
   font-weight: 400;

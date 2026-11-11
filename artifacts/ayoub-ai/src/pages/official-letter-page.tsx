@@ -1,5 +1,5 @@
-import { useRef, useState, type FormEvent } from 'react';
-import { FileDown, FileText, LayoutDashboard, RotateCcw, Save } from 'lucide-react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { FileDown, FileText, ImagePlus, LayoutDashboard, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { createAdminDocumentId, dateBasedDocumentNumber, migrateLegacyDocumentNumber } from '@/lib/admin-document-storage';
 import './official-letter-page.css';
@@ -16,6 +16,10 @@ type OfficialLetterDraft = {
   projectName: string;
   greeting: string;
   body: string;
+  images: string[];
+  extraText: string;
+  imagesAfterText: string[];
+  textAfterImages: string;
   closing: string;
   signatureLabel: string;
   footerName: string;
@@ -39,6 +43,10 @@ const DEFAULT_LETTER: OfficialLetterDraft = {
   projectName: 'أعمال الزراعة والتشجير وعزل الأحواض وصيانة شبكة الري',
   greeting: 'تحية طيبة وبعد،',
   body: 'يسرنا بالإشارة إلى العطاء المذكور أعلاه، وبناءً على كتاب الإحالة وأمر المباشرة الصادر عنكم، إعلامكم بأن مؤسسة القادري الزراعية ستباشر بتنفيذ الأعمال الموكلة إليها اعتباراً من يوم الخميس الموافق 2026/11/05، وذلك وفقاً للشروط والمواصفات الفنية وجدول الكميات والبرنامج الزمني المعتمد في وثائق العطاء.\n\nونؤكد التزامنا بتنفيذ الأعمال وفق الأصول الفنية والمهنية المتبعة، وبما يضمن جودة التنفيذ والالتزام بالمدة الزمنية المحددة، مع التنسيق المستمر مع إدارة المشروع والجهات المعنية.\n\nراجين التكرم بالعلم واتخاذ ما يلزم حسب الأصول.',
+  images: [],
+  extraText: '',
+  imagesAfterText: [],
+  textAfterImages: '',
   closing: 'وتفضلوا بقبول فائق الاحترام والتقدير....',
   signatureLabel: 'التوقيع والختم',
   footerName: 'مؤسسة القادري الزراعية',
@@ -59,6 +67,10 @@ function readSavedLetters(): SavedOfficialLetter[] {
         title: old.title || old.subject || DEFAULT_LETTER.title,
         recipient: old.recipient || DEFAULT_LETTER.recipient,
         body: old.body || DEFAULT_LETTER.body,
+        images: Array.isArray(old.images) ? old.images.filter((image): image is string => typeof image === 'string') : [],
+        extraText: typeof old.extraText === 'string' ? old.extraText : '',
+        imagesAfterText: Array.isArray(old.imagesAfterText) ? old.imagesAfterText.filter((image): image is string => typeof image === 'string') : [],
+        textAfterImages: typeof old.textAfterImages === 'string' ? old.textAfterImages : '',
         id: old.id || `legacy-${index}-${old.savedAt || ''}`,
         savedAt: old.savedAt || '',
       };
@@ -82,6 +94,8 @@ export default function OfficialLetterPage() {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [status, setStatus] = useState('');
   const paperRef = useRef<HTMLElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const imagesAfterTextInputRef = useRef<HTMLInputElement>(null);
 
   const update = (key: keyof OfficialLetterDraft, value: string) => {
     setForm((current) => ({
@@ -103,6 +117,43 @@ export default function OfficialLetterPage() {
     } catch {
       setStatus('تعذر حفظ الكتاب في المتصفح.');
     }
+  };
+
+  const addImages = async (event: ChangeEvent<HTMLInputElement>, group: 'images' | 'imagesAfterText') => {
+    const input = event.currentTarget;
+    const files = Array.from(input.files || []).filter((file) => file.type.startsWith('image/'));
+    input.value = '';
+    if (!files.length) return;
+
+    let added = 0;
+    let failed = 0;
+    for (const file of files) {
+      try {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+        const image = canvas.toDataURL('image/jpeg', 0.86);
+        setForm((current) => ({ ...current, [group]: [...current[group], image] }));
+        added += 1;
+        setStatus(`تمت إضافة ${added} من ${files.length} صورة...`);
+      } catch {
+        failed += 1;
+      }
+    }
+    setStatus(failed ? `تمت إضافة ${added} صورة، وتعذّر تجهيز ${failed} صورة.` : `تمت إضافة ${added} صورة للكتاب.`);
+  };
+
+  const removeImage = (group: 'images' | 'imagesAfterText', indexToRemove: number) => {
+    setForm((current) => ({ ...current, [group]: current[group].filter((_, index) => index !== indexToRemove) }));
+    setStatus('تم حذف الصورة من الكتاب.');
   };
 
   const openSaved = (record: SavedOfficialLetter) => {
@@ -131,11 +182,20 @@ export default function OfficialLetterPage() {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imageHeight = canvas.height * pageWidth / canvas.width;
-      const fit = Math.min(1, pageHeight / imageHeight);
-      const finalWidth = pageWidth * fit;
-      const finalHeight = imageHeight * fit;
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', (pageWidth - finalWidth) / 2, 0, finalWidth, finalHeight);
+      const sourcePageHeight = Math.floor(canvas.width * pageHeight / pageWidth);
+      for (let page = 0, sourceY = 0; sourceY < canvas.height; page += 1, sourceY += sourcePageHeight) {
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sourcePageHeight;
+        const context = pageCanvas.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
+        context.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+        if (page > 0) pdf.addPage();
+        pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageWidth, pageHeight);
+      }
       const safeName = (form.title.trim() || 'كتاب-رسمي').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
       pdf.save(`${safeName}.pdf`);
     } catch (error) {
@@ -147,6 +207,8 @@ export default function OfficialLetterPage() {
   };
 
   const bodyParagraphs = form.body.split(/\n\s*\n/).filter((paragraph) => paragraph.trim());
+  const extraTextParagraphs = form.extraText.split(/\n\s*\n/).filter((paragraph) => paragraph.trim());
+  const textAfterImagesParagraphs = form.textAfterImages.split(/\n\s*\n/).filter((paragraph) => paragraph.trim());
 
   return (
     <main className="admin-page operations-page official-letter-page" dir="rtl">
@@ -184,6 +246,38 @@ export default function OfficialLetterPage() {
             <label>اسم المشروع<input value={form.projectName} onChange={(event) => update('projectName', event.target.value)} /></label>
             <label className="official-letter-field-wide">التحية<input value={form.greeting} onChange={(event) => update('greeting', event.target.value)} /></label>
             <label className="official-letter-field-wide">نص الكتاب<textarea rows={12} value={form.body} onChange={(event) => update('body', event.target.value)} /></label>
+            <section className="official-letter-image-editor official-letter-field-wide">
+              <div className="official-letter-image-editor-head">
+                <div><strong>صور أسفل نص الكتاب</strong><small>أضف صورًا متعددة، ويمكنك اختيار المزيد في أي وقت.</small></div>
+                <input ref={imageInputRef} className="official-letter-file-input" type="file" accept="image/*" multiple onChange={(event) => addImages(event, 'images')} />
+                <button className="btn secondary" type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={14} />إضافة صور</button>
+              </div>
+              {form.images.length > 0 && <div className="official-letter-image-list">
+                {form.images.map((image, index) => (
+                  <div className="official-letter-image-item" key={`${index}-${image.slice(-24)}`}>
+                    <img src={image} alt={`صورة مرفقة ${index + 1}`} />
+                    <span>الصورة {index + 1}</span>
+                    <button type="button" aria-label={`حذف الصورة ${index + 1}`} onClick={() => removeImage('images', index)}><Trash2 size={14} /></button>
+                  </div>
+                ))}
+              </div>}
+              <label className="official-letter-extra-text">نص أسفل الصور<textarea rows={5} value={form.extraText} onChange={(event) => update('extraText', event.target.value)} placeholder="اكتب أي توضيح أو ملاحظات تظهر بعد الصور..." /></label>
+              <div className="official-letter-image-editor-head">
+                <div><strong>صور أسفل النص</strong><small>أضف مجموعة صور تظهر بعد النص مباشرة.</small></div>
+                <input ref={imagesAfterTextInputRef} className="official-letter-file-input" type="file" accept="image/*" multiple onChange={(event) => addImages(event, 'imagesAfterText')} />
+                <button className="btn secondary" type="button" onClick={() => imagesAfterTextInputRef.current?.click()}><ImagePlus size={14} />إضافة صور بعد النص</button>
+              </div>
+              {form.imagesAfterText.length > 0 && <div className="official-letter-image-list">
+                {form.imagesAfterText.map((image, index) => (
+                  <div className="official-letter-image-item" key={`${index}-${image.slice(-24)}`}>
+                    <img src={image} alt={`صورة بعد النص ${index + 1}`} />
+                    <span>صورة بعد النص {index + 1}</span>
+                    <button type="button" aria-label={`حذف صورة بعد النص ${index + 1}`} onClick={() => removeImage('imagesAfterText', index)}><Trash2 size={14} /></button>
+                  </div>
+                ))}
+              </div>}
+              <label className="official-letter-extra-text">نص أسفل الصور الإضافية<textarea rows={5} value={form.textAfterImages} onChange={(event) => update('textAfterImages', event.target.value)} placeholder="اكتب نصًا يظهر تحت الصور الإضافية..." /></label>
+            </section>
             <label className="official-letter-field-wide">عبارة الختام<input value={form.closing} onChange={(event) => update('closing', event.target.value)} /></label>
             <label>تسمية التوقيع والختم<input value={form.signatureLabel} onChange={(event) => update('signatureLabel', event.target.value)} /></label>
             <label>الاسم أسفل التوقيع<input value={form.footerName} onChange={(event) => update('footerName', event.target.value)} /></label>
@@ -224,6 +318,18 @@ export default function OfficialLetterPage() {
                 <div className="official-letter-body">
                   {bodyParagraphs.length ? bodyParagraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>) : <p>اكتب نص الكتاب ليظهر هنا.</p>}
                 </div>
+                {form.images.length > 0 && <div className="official-letter-attachments">
+                  {form.images.map((image, index) => <img key={`${index}-${image.slice(-24)}`} src={image} alt={`صورة مرفقة ${index + 1}`} />)}
+                </div>}
+                {extraTextParagraphs.length > 0 && <div className="official-letter-extra-preview">
+                  {extraTextParagraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>)}
+                </div>}
+                {form.imagesAfterText.length > 0 && <div className="official-letter-attachments">
+                  {form.imagesAfterText.map((image, index) => <img key={`${index}-${image.slice(-24)}`} src={image} alt={`صورة بعد النص ${index + 1}`} />)}
+                </div>}
+                {textAfterImagesParagraphs.length > 0 && <div className="official-letter-extra-preview">
+                  {textAfterImagesParagraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>)}
+                </div>}
                 <p className="official-letter-closing">{form.closing || '—'}</p>
               </section>
               <footer className="official-letter-signature">
