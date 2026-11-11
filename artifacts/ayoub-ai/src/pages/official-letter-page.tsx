@@ -94,7 +94,7 @@ function formattedDate(date: string) {
 export default function OfficialLetterPage() {
   const [form, setForm] = useState<OfficialLetterDraft>({ ...DEFAULT_LETTER });
   const [saved, setSaved] = useState<SavedOfficialLetter[]>(readSavedLetters);
-  const [pdfMode, setPdfMode] = useState<'multi' | 'single' | null>(null);
+  const [pdfMode, setPdfMode] = useState<'multi' | 'single' | 'smart' | null>(null);
   const pdfBusy = pdfMode !== null;
   const [status, setStatus] = useState('');
   const paperRef = useRef<HTMLElement>(null);
@@ -166,36 +166,67 @@ export default function OfficialLetterPage() {
     setStatus('تم فتح الكتاب المحفوظ.');
   };
 
-  const downloadPdf = async () => {
+  const downloadPdf = async (smartLayout = false) => {
     const paper = paperRef.current;
     if (!paper) return;
-    setPdfMode('multi');
+    setPdfMode(smartLayout ? 'smart' : 'multi');
     setStatus('');
+    let temporaryPaper: HTMLElement | null = null;
     try {
       await document.fonts?.ready;
-      await Promise.all(Array.from(paper.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
+      let exportPaper = paper;
+      if (smartLayout) {
+        const textLength = paper.querySelector('.official-letter-content')?.textContent?.trim().length || 0;
+        const imageCount = paper.querySelectorAll('.official-letter-attachments img').length;
+        const densityScore = textLength / 900 + imageCount * 0.45;
+        const density = densityScore < 1.8 ? 'spacious' : densityScore < 4.5 ? 'balanced' : 'compact';
+        temporaryPaper = paper.cloneNode(true) as HTMLElement;
+        temporaryPaper.classList.add('official-letter-paper--smart');
+        temporaryPaper.dataset.smartDensity = density;
+        Object.assign(temporaryPaper.style, {
+          position: 'fixed',
+          top: '0',
+          left: '-10000px',
+          width: getComputedStyle(paper).width,
+          margin: '0',
+          pointerEvents: 'none',
+          zIndex: '-1',
+        });
+        document.body.appendChild(temporaryPaper);
+        exportPaper = temporaryPaper;
+      }
+      await Promise.all(Array.from(exportPaper.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
-      const canvas = await html2canvas(paper, {
+      const canvas = await html2canvas(exportPaper, {
         scale: 2.5,
         backgroundColor: '#ffffff',
         useCORS: true,
         logging: false,
-        width: paper.scrollWidth,
-        height: paper.scrollHeight,
+        width: exportPaper.scrollWidth,
+        height: exportPaper.scrollHeight,
       });
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const sourcePageHeight = Math.floor(canvas.width * pageHeight / pageWidth);
-      const paperBounds = paper.getBoundingClientRect();
-      const canvasScaleY = canvas.height / paper.scrollHeight;
-      const imageRanges = Array.from(paper.querySelectorAll('img')).map((image) => {
+      const paperBounds = exportPaper.getBoundingClientRect();
+      const canvasScaleY = canvas.height / exportPaper.scrollHeight;
+      const imageRanges = Array.from(exportPaper.querySelectorAll('img')).map((image) => {
         const bounds = image.getBoundingClientRect();
         return {
           top: (bounds.top - paperBounds.top) * canvasScaleY,
           bottom: (bounds.bottom - paperBounds.top) * canvasScaleY,
         };
       });
+      const paragraphRanges = smartLayout
+        ? Array.from(exportPaper.querySelectorAll('.official-letter-content p')).map((paragraph) => {
+            const bounds = paragraph.getBoundingClientRect();
+            return {
+              top: (bounds.top - paperBounds.top) * canvasScaleY,
+              bottom: (bounds.bottom - paperBounds.top) * canvasScaleY,
+            };
+          })
+        : [];
       let page = 0;
       let sourceY = 0;
       while (sourceY < canvas.height) {
@@ -204,9 +235,13 @@ export default function OfficialLetterPage() {
         if (crossingImages.length && sourceEnd < canvas.height) {
           const safetyGap = 12 * canvasScaleY;
           const beforeImages = Math.floor(Math.min(...crossingImages.map((image) => image.top)) - safetyGap);
-          const afterImages = Math.ceil(Math.max(...crossingImages.map((image) => image.bottom)) + safetyGap);
           if (beforeImages > sourceY) sourceEnd = beforeImages;
-          else if (afterImages > sourceY && afterImages - sourceY < sourcePageHeight) sourceEnd = afterImages;
+        } else if (smartLayout && sourceEnd < canvas.height) {
+          const crossingParagraphs = paragraphRanges.filter((paragraph) => paragraph.top < sourceEnd && paragraph.bottom > sourceEnd);
+          if (crossingParagraphs.length) {
+            const beforeParagraphs = Math.floor(Math.min(...crossingParagraphs.map((paragraph) => paragraph.top)) - 12 * canvasScaleY);
+            if (beforeParagraphs - sourceY >= sourcePageHeight * 0.45) sourceEnd = beforeParagraphs;
+          }
         }
         const pageCanvas = document.createElement('canvas');
         pageCanvas.width = canvas.width;
@@ -223,11 +258,13 @@ export default function OfficialLetterPage() {
         page += 1;
       }
       const safeName = (form.title.trim() || 'كتاب-رسمي').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
-      pdf.save(`${safeName}.pdf`);
+      pdf.save(smartLayout ? `${safeName}-تنسيق-مميز.pdf` : `${safeName}.pdf`);
+      if (smartLayout) setStatus('تم تنزيل الكتاب بالتنسيق المميز.');
     } catch (error) {
       console.error('Official letter PDF generation failed', error);
       setStatus('تعذر إنشاء ملف PDF. أعد المحاولة بعد اكتمال تحميل الصفحة.');
     } finally {
+      temporaryPaper?.remove();
       setPdfMode(null);
     }
   };
@@ -289,8 +326,11 @@ export default function OfficialLetterPage() {
           <p className="page-desc">عدّل بيانات الخطاب وشاهدها مباشرة في النموذج الرسمي، ثم نزّله PDF مطابقًا لمقاس الملف المرفق.</p>
         </div>
         <div className="admin-head-actions">
-          <button className="btn" type="button" onClick={downloadPdf} disabled={pdfBusy}>
+          <button className="btn" type="button" onClick={() => downloadPdf()} disabled={pdfBusy}>
             <FileDown size={14} />{pdfMode === 'multi' ? 'جاري تجهيز PDF...' : 'تنزيل PDF متعدد الصفحات'}
+          </button>
+          <button className="btn secondary" type="button" onClick={() => downloadPdf(true)} disabled={pdfBusy}>
+            <FileDown size={14} />{pdfMode === 'smart' ? 'جاري تنسيق المحتوى...' : 'تنسيق مميز'}
           </button>
           <button className="btn secondary" type="button" onClick={downloadSinglePagePdf} disabled={pdfBusy}>
             <FileDown size={14} />{pdfMode === 'single' ? 'جاري تجهيز صفحة واحدة...' : 'تنزيل PDF صفحة واحدة'}
