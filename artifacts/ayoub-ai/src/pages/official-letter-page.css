@@ -250,9 +250,9 @@
   font-weight: 700;
   line-height: 1.2;
 }
-.official-letter-signature { position: relative; display: grid; justify-items: center; gap: .08in; margin: .34in .65in 0; color: #175b78; text-align: center; }
+.official-letter-signature { position: relative; display: grid; width: 2.18in; justify-items: center; gap: .08in; margin: .34in auto 0 1.37in; color: #175b78; text-align: center; direction: ltr; }
 .official-letter-signature > strong {
-  width: auto;
+  width: 100%;
   margin: 0;
   color: #175b78;
   font-size: 12pt;
@@ -267,6 +267,7 @@
   object-fit: fill;
 }
 .official-letter-signature b {
+  width: 100%;
   color: #175b78;
   font-size: 14pt;
   font-weight: 400;
