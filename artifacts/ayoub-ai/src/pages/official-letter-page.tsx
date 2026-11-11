@@ -18,6 +18,7 @@ type OfficialLetterDraft = {
   body: string;
   images: string[];
   extraText: string;
+  textBeforeImagesAfterText: string;
   imagesAfterText: string[];
   textAfterImages: string;
   closing: string;
@@ -45,6 +46,7 @@ const DEFAULT_LETTER: OfficialLetterDraft = {
   body: 'يسرنا بالإشارة إلى العطاء المذكور أعلاه، وبناءً على كتاب الإحالة وأمر المباشرة الصادر عنكم، إعلامكم بأن مؤسسة القادري الزراعية ستباشر بتنفيذ الأعمال الموكلة إليها اعتباراً من يوم الخميس الموافق 2026/11/05، وذلك وفقاً للشروط والمواصفات الفنية وجدول الكميات والبرنامج الزمني المعتمد في وثائق العطاء.\n\nونؤكد التزامنا بتنفيذ الأعمال وفق الأصول الفنية والمهنية المتبعة، وبما يضمن جودة التنفيذ والالتزام بالمدة الزمنية المحددة، مع التنسيق المستمر مع إدارة المشروع والجهات المعنية.\n\nراجين التكرم بالعلم واتخاذ ما يلزم حسب الأصول.',
   images: [],
   extraText: '',
+  textBeforeImagesAfterText: '',
   imagesAfterText: [],
   textAfterImages: '',
   closing: 'وتفضلوا بقبول فائق الاحترام والتقدير....',
@@ -69,6 +71,7 @@ function readSavedLetters(): SavedOfficialLetter[] {
         body: old.body || DEFAULT_LETTER.body,
         images: Array.isArray(old.images) ? old.images.filter((image): image is string => typeof image === 'string') : [],
         extraText: typeof old.extraText === 'string' ? old.extraText : '',
+        textBeforeImagesAfterText: typeof old.textBeforeImagesAfterText === 'string' ? old.textBeforeImagesAfterText : '',
         imagesAfterText: Array.isArray(old.imagesAfterText) ? old.imagesAfterText.filter((image): image is string => typeof image === 'string') : [],
         textAfterImages: typeof old.textAfterImages === 'string' ? old.textAfterImages : '',
         id: old.id || `legacy-${index}-${old.savedAt || ''}`,
@@ -208,6 +211,7 @@ export default function OfficialLetterPage() {
 
   const bodyParagraphs = form.body.split(/\n\s*\n/).filter((paragraph) => paragraph.trim());
   const extraTextParagraphs = form.extraText.split(/\n\s*\n/).filter((paragraph) => paragraph.trim());
+  const textBeforeImagesParagraphs = form.textBeforeImagesAfterText.split(/\n\s*\n/).filter((paragraph) => paragraph.trim());
   const textAfterImagesParagraphs = form.textAfterImages.split(/\n\s*\n/).filter((paragraph) => paragraph.trim());
 
   return (
@@ -262,6 +266,7 @@ export default function OfficialLetterPage() {
                 ))}
               </div>}
               <label className="official-letter-extra-text">نص أسفل الصور<textarea rows={5} value={form.extraText} onChange={(event) => update('extraText', event.target.value)} placeholder="اكتب أي توضيح أو ملاحظات تظهر بعد الصور..." /></label>
+              <label className="official-letter-extra-text">نص فوق الصور الإضافية<textarea rows={5} value={form.textBeforeImagesAfterText} onChange={(event) => update('textBeforeImagesAfterText', event.target.value)} placeholder="اكتب نصًا يظهر قبل الصور الإضافية..." /></label>
               <div className="official-letter-image-editor-head">
                 <div><strong>صور أسفل النص</strong><small>أضف مجموعة صور تظهر بعد النص مباشرة.</small></div>
                 <input ref={imagesAfterTextInputRef} className="official-letter-file-input" type="file" accept="image/*" multiple onChange={(event) => addImages(event, 'imagesAfterText')} />
@@ -323,6 +328,9 @@ export default function OfficialLetterPage() {
                 </div>}
                 {extraTextParagraphs.length > 0 && <div className="official-letter-extra-preview">
                   {extraTextParagraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>)}
+                </div>}
+                {textBeforeImagesParagraphs.length > 0 && <div className="official-letter-extra-preview">
+                  {textBeforeImagesParagraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>)}
                 </div>}
                 {form.imagesAfterText.length > 0 && <div className="official-letter-attachments">
                   {form.imagesAfterText.map((image, index) => <img key={`${index}-${image.slice(-24)}`} src={image} alt={`صورة بعد النص ${index + 1}`} />)}
