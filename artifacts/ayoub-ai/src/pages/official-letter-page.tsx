@@ -186,7 +186,27 @@ export default function OfficialLetterPage() {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const sourcePageHeight = Math.floor(canvas.width * pageHeight / pageWidth);
-      for (let page = 0, sourceY = 0; sourceY < canvas.height; page += 1, sourceY += sourcePageHeight) {
+      const paperBounds = paper.getBoundingClientRect();
+      const canvasScaleY = canvas.height / paper.scrollHeight;
+      const imageRanges = Array.from(paper.querySelectorAll('img')).map((image) => {
+        const bounds = image.getBoundingClientRect();
+        return {
+          top: (bounds.top - paperBounds.top) * canvasScaleY,
+          bottom: (bounds.bottom - paperBounds.top) * canvasScaleY,
+        };
+      });
+      let page = 0;
+      let sourceY = 0;
+      while (sourceY < canvas.height) {
+        let sourceEnd = Math.min(sourceY + sourcePageHeight, canvas.height);
+        const crossingImages = imageRanges.filter((image) => image.top < sourceEnd && image.bottom > sourceEnd);
+        if (crossingImages.length && sourceEnd < canvas.height) {
+          const safetyGap = 12 * canvasScaleY;
+          const beforeImages = Math.floor(Math.min(...crossingImages.map((image) => image.top)) - safetyGap);
+          const afterImages = Math.ceil(Math.max(...crossingImages.map((image) => image.bottom)) + safetyGap);
+          if (beforeImages > sourceY) sourceEnd = beforeImages;
+          else if (afterImages > sourceY && afterImages - sourceY < sourcePageHeight) sourceEnd = afterImages;
+        }
         const pageCanvas = document.createElement('canvas');
         pageCanvas.width = canvas.width;
         pageCanvas.height = sourcePageHeight;
@@ -194,10 +214,12 @@ export default function OfficialLetterPage() {
         if (!context) throw new Error('Canvas is unavailable');
         context.fillStyle = '#ffffff';
         context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
+        const sliceHeight = Math.min(sourceEnd - sourceY, canvas.height - sourceY);
         context.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
         if (page > 0) pdf.addPage();
         pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageWidth, pageHeight);
+        sourceY = sourceEnd;
+        page += 1;
       }
       const safeName = (form.title.trim() || 'كتاب-رسمي').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
       pdf.save(`${safeName}.pdf`);
