@@ -94,7 +94,8 @@ function formattedDate(date: string) {
 export default function OfficialLetterPage() {
   const [form, setForm] = useState<OfficialLetterDraft>({ ...DEFAULT_LETTER });
   const [saved, setSaved] = useState<SavedOfficialLetter[]>(readSavedLetters);
-  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfMode, setPdfMode] = useState<'multi' | 'single' | null>(null);
+  const pdfBusy = pdfMode !== null;
   const [status, setStatus] = useState('');
   const paperRef = useRef<HTMLElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -168,7 +169,7 @@ export default function OfficialLetterPage() {
   const downloadPdf = async () => {
     const paper = paperRef.current;
     if (!paper) return;
-    setPdfBusy(true);
+    setPdfMode('multi');
     setStatus('');
     try {
       await document.fonts?.ready;
@@ -227,7 +228,50 @@ export default function OfficialLetterPage() {
       console.error('Official letter PDF generation failed', error);
       setStatus('تعذر إنشاء ملف PDF. أعد المحاولة بعد اكتمال تحميل الصفحة.');
     } finally {
-      setPdfBusy(false);
+      setPdfMode(null);
+    }
+  };
+
+  const downloadSinglePagePdf = async () => {
+    const paper = paperRef.current;
+    if (!paper) return;
+    setPdfMode('single');
+    setStatus('');
+    try {
+      await document.fonts?.ready;
+      await Promise.all(Array.from(paper.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+      const canvas = await html2canvas(paper, {
+        scale: 2.5,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        width: paper.scrollWidth,
+        height: paper.scrollHeight,
+      });
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const fullHeight = canvas.height * pageWidth / canvas.width;
+      const scaleToFit = Math.min(1, pageHeight / fullHeight);
+      const imageWidth = pageWidth * scaleToFit;
+      const imageHeight = fullHeight * scaleToFit;
+      pdf.addImage(
+        canvas.toDataURL('image/jpeg', 0.98),
+        'JPEG',
+        (pageWidth - imageWidth) / 2,
+        (pageHeight - imageHeight) / 2,
+        imageWidth,
+        imageHeight,
+      );
+      const safeName = (form.title.trim() || 'كتاب-رسمي').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
+      pdf.save(`${safeName}-صفحة-واحدة.pdf`);
+      setStatus('تم تنزيل الكتاب كاملًا في صفحة PDF واحدة.');
+    } catch (error) {
+      console.error('Single-page official letter PDF generation failed', error);
+      setStatus('تعذر إنشاء ملف PDF من صفحة واحدة. أعد المحاولة بعد اكتمال تحميل الصفحة.');
+    } finally {
+      setPdfMode(null);
     }
   };
 
@@ -246,7 +290,10 @@ export default function OfficialLetterPage() {
         </div>
         <div className="admin-head-actions">
           <button className="btn" type="button" onClick={downloadPdf} disabled={pdfBusy}>
-            <FileDown size={14} />{pdfBusy ? 'جاري تجهيز PDF...' : 'تنزيل PDF'}
+            <FileDown size={14} />{pdfMode === 'multi' ? 'جاري تجهيز PDF...' : 'تنزيل PDF متعدد الصفحات'}
+          </button>
+          <button className="btn secondary" type="button" onClick={downloadSinglePagePdf} disabled={pdfBusy}>
+            <FileDown size={14} />{pdfMode === 'single' ? 'جاري تجهيز صفحة واحدة...' : 'تنزيل PDF صفحة واحدة'}
           </button>
           <button className="btn secondary" type="button" onClick={() => { setForm({ ...DEFAULT_LETTER }); setStatus('تمت استعادة بيانات النموذج المرفق.'); }}>
             <RotateCcw size={14} />استعادة النموذج
