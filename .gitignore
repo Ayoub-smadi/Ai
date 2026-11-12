@@ -52,3 +52,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Manus session metadata
+/.agents/
+/.conversation/

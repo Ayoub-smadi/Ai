@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import agentsRouter from "./agents";
 import channelsRouter from "./channels";
+import clientStorageRouter from "./client-storage";
 import dashboardRouter from "./dashboard";
 import healthRouter from "./health";
 import landscapeAiRouter from "./landscape-ai";
@@ -22,5 +23,6 @@ router.use(productsRouter);
 router.use(knowledgeRouter);
 router.use(testingRouter);
 router.use(channelsRouter);
+router.use(clientStorageRouter);
 
 export default router;

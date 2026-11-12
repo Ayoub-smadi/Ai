@@ -121,6 +121,10 @@
       "title": "Plant catalog management"
     },
     {
+      "path": "/admin/plants",
+      "title": "Plant guide management"
+    },
+    {
       "path": "/admin/truck-load-planner",
       "title": "توزيع حمولة الأشجار"
     },

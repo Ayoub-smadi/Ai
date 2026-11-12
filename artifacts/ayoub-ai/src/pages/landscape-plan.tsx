@@ -299,7 +299,7 @@ export default function LandscapePlan({
       const points = [...current.points];
       const last = points[points.length - 1];
       if (Math.hypot(end.x - last.x, end.y - last.y) > 0.25) points.push(end);
-      if (points.length >= (current.tool === 'boundary' ? 3 : 2)) {
+      if (points.length >= 2) {
         drawing = makeStroke(current.tool as 'boundary' | 'path', points, `drawing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
       }
     }

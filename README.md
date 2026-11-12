@@ -53,8 +53,9 @@ There is currently no automated test script or test suite in the workspace.
 
 | Variable | Required for | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | API runtime | PostgreSQL URL. For Neon, use the pooled connection string for the running API. |
-| `MIGRATION_DATABASE_URL` | Optional schema migrations | Use a direct Neon connection string when available; otherwise migrations use `DATABASE_URL`. |
+| `NEON_DATABASE_URL` | API runtime and Webdev | Protected Neon PostgreSQL connection string. Webdev uses this before the managed `DATABASE_URL` fallback. |
+| `DATABASE_URL` | Local API fallback | PostgreSQL URL used only when `NEON_DATABASE_URL` is not configured. |
+| `MIGRATION_DATABASE_URL` | Optional schema migrations | Use a direct Neon connection string when available; otherwise migrations use `NEON_DATABASE_URL`. |
 | `CLERK_PUBLISHABLE_KEY` | API authentication | Publishable key for the same external Clerk instance as `CLERK_SECRET_KEY`. |
 | `CLERK_SECRET_KEY` | API authentication | Server-only. Never prefix with `VITE_`. |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Browser sign-in | Same Clerk instance as the API keys. |
@@ -67,7 +68,7 @@ In Replit, store private values in Secrets and set browser-safe publishable keys
 ## Neon database setup
 
 1. Create a PostgreSQL project in Neon.
-2. Add the Neon pooled connection string as `DATABASE_URL` in the API environment.
+2. Add the Neon pooled connection string as the protected Webdev secret `NEON_DATABASE_URL`.
 3. If Neon provides a non-pooled/direct connection string, set it as `MIGRATION_DATABASE_URL` for migration commands.
 4. Apply the checked-in schema migration:
 
@@ -80,6 +81,11 @@ In Replit, store private values in Secrets and set browser-safe publishable keys
    ```bash
    pnpm --filter @workspace/db run generate
    ```
+
+The existing public and admin UI also synchronizes its legacy `localStorage` data to the
+`ayoub_client_storage` PostgreSQL table. This includes saved settings, catalog data, orders,
+documents, quote data, and image/file data stored by the existing editors as data URLs. Clerk
+tokens, passwords, and transient browser preferences are intentionally excluded.
 
    Review and commit the generated SQL before applying it. Do not use `push-force` against a production database. The application will not create tables automatically; it requires the migrations to have been applied first.
 
