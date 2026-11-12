@@ -1295,14 +1295,18 @@ function AdminQuotePage() {
   const findCatalogMatch = (name: string): { image: string; category: string } => {
     const normalizedName = normalizeQuoteProductName(name);
     if (normalizedName.length < 3) return { image: '', category: '' };
+    // Keep this lookup aligned with the public /quotes catalog: managed plants plus catalog supplies.
     const candidates = [
-      ...storeProducts.map((product) => ({ names: [product.nameAr, product.nameEn], image: product.image, category: quoteStoreCategoryLabels[product.category.trim().toLocaleLowerCase()] || (/^[\u0600-\u06FF\s]+$/.test(product.category.trim()) ? product.category.trim() : 'منتجات المتجر') })),
       ...managedPlants.map((plant) => ({ names: [plant.nameAr, plant.nameEn, plant.scientificName], image: plant.image, category: plant.categoryAr })),
-      ...quoteCatalogItems.map((item) => ({ names: [item.nameAr, item.nameEn], image: item.image, category: item.categoryAr })),
+      ...quoteCatalogItems.filter((item) => item.source !== 'plant').map((item) => ({ names: [item.nameAr, item.nameEn], image: item.image, category: item.categoryAr })),
     ];
     const matches = candidates.filter((candidate) => candidate.names.some((candidateName) => normalizeQuoteProductName(candidateName) === normalizedName));
-    if (matches.length !== 1) return { image: '', category: '' };
-    const match = matches[0];
+    const uniqueMatches = Array.from(new Map(matches.map((candidate) => [
+      `${candidate.names.map(normalizeQuoteProductName).join('|')}|${candidate.image || ''}|${candidate.category || ''}`,
+      candidate,
+    ])).values());
+    if (uniqueMatches.length !== 1) return { image: '', category: '' };
+    const match = uniqueMatches[0];
     return { image: resolveQuoteCatalogImage(match.image || ''), category: match.category || '' };
   };
   const handleQuoteItemNameChange = (id: string, name: string) => {
