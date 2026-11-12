@@ -194,7 +194,12 @@ export default function OfficialLetterPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedKeys]);
   const formatSelected = (next: Partial<LetterBlock>) => updateSelectedBlocks((block) => ({ ...block, ...next }));
-  const alignSelected = (alignment: 'left' | 'center' | 'right') => updateSelectedBlocks((block) => ({ ...block, textAlign: alignment }));
+  const alignSelected = (alignment: 'left' | 'center' | 'right') => updateSelectedBlocks((block) => {
+    if (block.type === 'images' && block.position) {
+      return { ...block, position: { ...block.position, x: alignment === 'left' ? 4 : alignment === 'center' ? (100 - block.position.width) / 2 : 96 - block.position.width } };
+    }
+    return { ...block, textAlign: alignment };
+  });
   const equalizeSelectedImages = () => {
     const images = selectedEntries.filter(({ block }) => block.type === 'images');
     if (images.length < 2) return;
