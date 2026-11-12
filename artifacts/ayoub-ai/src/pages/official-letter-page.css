@@ -316,3 +316,29 @@
   .official-letter-paper-scroll { overflow: visible !important; padding: 0 !important; background: #fff !important; }
   .official-letter-paper { margin: 0 !important; box-shadow: none !important; }
 }
+
+/* Multi-page block editor */
+.official-letter-pages-editor { display: grid; gap: 12px; margin-top: 14px; padding: 12px; border: 1px solid #dfe9de; border-radius: 9px; background: #f8fbf7; }
+.official-letter-pages-editor-head, .official-letter-page-editor-head, .official-letter-block-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.official-letter-pages-editor-head > div, .official-letter-page-editor-head > div { display: grid; gap: 4px; }
+.official-letter-pages-editor-head strong, .official-letter-page-editor-head strong { color: #315c3c; font-size: 12px; }
+.official-letter-pages-editor-head small, .official-letter-page-editor-head small { color: #7b887c; font-size: 10px; }
+.official-letter-page-editor { display: grid; gap: 10px; padding: 11px; border: 1px solid #dbe8da; border-radius: 8px; background: #fff; }
+.official-letter-block-editor { display: grid; gap: 9px; }
+.official-letter-block-card { display: grid; gap: 8px; padding: 10px; border: 1px solid #e1e9df; border-radius: 8px; background: #fbfdfb; }
+.official-letter-block-card-head strong { color: #176079; font-size: 11px; }
+.official-letter-block-card textarea { box-sizing: border-box; width: 100%; border: 1px solid #d9e5d8; border-radius: 7px; background: #fff; padding: 10px; color: #294530; outline: none; font: inherit; font-size: 12px; line-height: 1.8; resize: vertical; }
+.official-letter-block-card textarea:focus { border-color: #6c9a6d; box-shadow: 0 0 0 3px #6c9a6d1c; }
+.official-letter-insert-actions, .official-letter-page-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.official-letter-page-actions { padding-top: 2px; border-top: 1px dashed #dbe8da; }
+.official-letter-add-image { width: fit-content; justify-content: center; cursor: pointer; }
+.official-letter-additional-page { box-sizing: border-box; width: 8.5in; min-height: 11in; margin-top: .18in; padding: .65in; break-before: page; page-break-before: always; background: #fff; box-shadow: 0 3px 20px #12231a1b; }
+.official-letter-additional-header { display: flex; justify-content: space-between; gap: 10px; padding-bottom: .12in; border-bottom: 1px solid #6fa83a; color: #175b78; font-size: 12pt; }
+.official-letter-additional-header span { color: #6fa83a; }
+.official-letter-additional-content { padding-top: .28in; }
+.official-letter-additional-content .official-letter-extra-preview { font-size: 16pt; }
+.official-letter-additional-content .official-letter-attachments { margin: .18in 0; }
+@media (max-width: 600px) {
+  .official-letter-pages-editor-head { align-items: flex-start; flex-direction: column; }
+  .official-letter-page-actions .btn { flex: 1; justify-content: center; }
+}
