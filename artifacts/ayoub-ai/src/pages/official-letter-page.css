@@ -398,3 +398,12 @@
 .official-letter-additional-page-footer .official-letter-closing { margin: 0 0 .16in; }
 .official-letter-additional-page-footer .official-letter-signature { margin: 0; }
 .official-letter-additional-page-footer .official-letter-signature img { height: 1.05in; }
+
+/* Each export unit is captured independently, so page N never spills into page N+1. */
+.official-letter-paper { height: auto; min-height: 0; padding: 0; }
+.official-letter-export-page { position: relative; box-sizing: border-box; width: 8.5in; height: 11in; min-height: 11in; overflow: hidden; background: #fff; }
+.official-letter-first-page { box-shadow: 0 3px 20px #12231a1b; }
+@media print {
+  .official-letter-export-page { break-after: page; page-break-after: always; }
+  .official-letter-export-page:last-child { break-after: auto; page-break-after: auto; }
+}

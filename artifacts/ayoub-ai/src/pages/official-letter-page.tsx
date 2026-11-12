@@ -338,34 +338,22 @@ export default function OfficialLetterPage() {
     setStatus('');
     try {
       await document.fonts?.ready;
-      await Promise.all(Array.from(paper.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
-      paper.classList.add('official-letter-exporting');
-      const canvas = await html2canvas(paper, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true, logging: false, width: paper.scrollWidth, height: paper.scrollHeight });
+      const pageElements = Array.from(paper.querySelectorAll<HTMLElement>('.official-letter-export-page'));
+      if (!pageElements.length) throw new Error('No export pages found');
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const sourcePageHeight = Math.floor(canvas.width * pageHeight / pageWidth);
-      let sourceY = 0;
-      let page = 0;
-      while (sourceY < canvas.height) {
-        const sourceEnd = Math.min(sourceY + sourcePageHeight, canvas.height);
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourcePageHeight;
-        const context = pageCanvas.getContext('2d');
-        if (!context) throw new Error('Canvas is unavailable');
-        context.fillStyle = '#ffffff';
-        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        context.drawImage(canvas, 0, sourceY, canvas.width, sourceEnd - sourceY, 0, 0, canvas.width, sourceEnd - sourceY);
-        if (page > 0) pdf.addPage();
-        pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageWidth, pageHeight);
-        sourceY = sourceEnd;
-        page += 1;
+      paper.classList.add('official-letter-exporting');
+      for (const [index, pageElement] of pageElements.entries()) {
+        await Promise.all(Array.from(pageElement.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
+        const canvas = await html2canvas(pageElement, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true, logging: false, width: pageElement.scrollWidth, height: pageElement.scrollHeight });
+        if (index > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageWidth, pageHeight);
       }
       const safeName = (form.title.trim() || 'كتاب-رسمي').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
       pdf.save(`${safeName}.pdf`);
-      setStatus('تم تنزيل الكتاب بصيغة PDF متعددة الصفحات.');
+      setStatus(`تم تنزيل ${pageElements.length} صفحات PDF، وكل صفحة مطابقة لمحتوى الصفحة المقابل لها.`);
     } catch (error) {
       console.error('Official letter PDF generation failed', error);
       setStatus('تعذر إنشاء ملف PDF. أعد المحاولة بعد اكتمال تحميل الصفحة.');
@@ -456,7 +444,7 @@ export default function OfficialLetterPage() {
           <button type="button" className="btn secondary small" onClick={() => formatSelected({ fontWeight: 'bold' })} disabled={!selectedEntries.some(({ block }) => block.type === 'text')}><Bold size={13} /></button>
           <button type="button" className="btn secondary small" onClick={() => formatSelected({ textDecoration: 'underline' })} disabled={!selectedEntries.some(({ block }) => block.type === 'text')}><Underline size={13} /></button>
           <button type="button" className="btn secondary small" onClick={() => alignSelected('right')}><AlignRight size={13} /></button><button type="button" className="btn secondary small" onClick={() => alignSelected('center')}><AlignCenter size={13} /></button><button type="button" className="btn secondary small" onClick={() => alignSelected('left')}><AlignLeft size={13} /></button>
-        </div><div className="official-letter-paper-scroll"><article className="official-letter-paper" ref={paperRef}><div className="official-letter-top-rule" /><header className="official-letter-header-row"><strong>{form.institution || '—'}</strong><span><b>التاريخ:</b> {formattedDate(form.date)}</span></header><h2 className="official-letter-title"><span className="official-letter-title-text">{form.title || '—'}</span></h2><div className="official-letter-recipient"><b>إلى :</b><span>{form.recipient || '—'}</span></div><div className="official-letter-attention"><b>{form.attentionLabel || '—'} :</b><span>{form.attention || '—'}</span></div><div className="official-letter-project-grid"><div><b>موقع المشروع</b><span>{form.projectSite || '—'}</span></div><div><b>المشروع</b><span>{form.projectName || '—'}</span></div></div><section className="official-letter-content"><p className="official-letter-greeting">{form.greeting || '—'}</p><div className="official-letter-body">{paragraphs(form.body).length ? paragraphs(form.body).map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>) : <p>اكتب نص الكتاب ليظهر هنا.</p>}</div></section>{renderCanvasBlocks(firstPageBlocks, 0)}{form.pages.length === 1 && <div className="official-letter-last-page-footer">{renderClosingSignature()}</div>}{form.pages.slice(1).map((page, pageIndex) => <section className="official-letter-additional-page" key={page.id}><div className="official-letter-additional-header"><strong>{form.institution || '—'}</strong><span>صفحة {pageIndex + 2}</span></div><div className="official-letter-additional-content">{renderCanvasBlocks(page.blocks, pageIndex + 1)}</div>{pageIndex === form.pages.length - 2 && <div className="official-letter-additional-page-footer">{renderClosingSignature()}</div>}</section>)}</article></div></section>
+        </div><div className="official-letter-paper-scroll"><article className="official-letter-paper" ref={paperRef}><section className="official-letter-export-page official-letter-first-page"><div className="official-letter-top-rule" /><header className="official-letter-header-row"><strong>{form.institution || '—'}</strong><span><b>التاريخ:</b> {formattedDate(form.date)}</span></header><h2 className="official-letter-title"><span className="official-letter-title-text">{form.title || '—'}</span></h2><div className="official-letter-recipient"><b>إلى :</b><span>{form.recipient || '—'}</span></div><div className="official-letter-attention"><b>{form.attentionLabel || '—'} :</b><span>{form.attention || '—'}</span></div><div className="official-letter-project-grid"><div><b>موقع المشروع</b><span>{form.projectSite || '—'}</span></div><div><b>المشروع</b><span>{form.projectName || '—'}</span></div></div><section className="official-letter-content"><p className="official-letter-greeting">{form.greeting || '—'}</p><div className="official-letter-body">{paragraphs(form.body).length ? paragraphs(form.body).map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>) : <p>اكتب نص الكتاب ليظهر هنا.</p>}</div></section>{renderCanvasBlocks(firstPageBlocks, 0)}{form.pages.length === 1 && <div className="official-letter-last-page-footer">{renderClosingSignature()}</div>}</section>{form.pages.slice(1).map((page, pageIndex) => <section className="official-letter-export-page official-letter-additional-page" key={page.id}><div className="official-letter-additional-header"><strong>{form.institution || '—'}</strong><span>صفحة {pageIndex + 2}</span></div><div className="official-letter-additional-content">{renderCanvasBlocks(page.blocks, pageIndex + 1)}</div>{pageIndex === form.pages.length - 2 && <div className="official-letter-additional-page-footer">{renderClosingSignature()}</div>}</section>)}</article></div></section>
     </div>
   </main>;
 }
