@@ -387,3 +387,14 @@
   .official-letter-selection-count { width: 100%; margin: 0; }
   .official-letter-toolbar-divider { display: none; }
 }
+
+/* Keep every visual page exactly Letter-sized for clean PDF page breaks. */
+.official-letter-paper { min-height: 11in; }
+.official-letter-additional-page { margin-top: 0; height: 11in; min-height: 11in; overflow: hidden; break-before: page; page-break-before: always; }
+.official-letter-last-page-footer { position: absolute; right: .65in; bottom: .45in; left: .65in; }
+.official-letter-last-page-footer .official-letter-closing { margin: 0 0 .16in; }
+.official-letter-last-page-footer .official-letter-signature { margin: 0; }
+.official-letter-additional-page-footer { position: absolute; right: .65in; bottom: .45in; left: .65in; }
+.official-letter-additional-page-footer .official-letter-closing { margin: 0 0 .16in; }
+.official-letter-additional-page-footer .official-letter-signature { margin: 0; }
+.official-letter-additional-page-footer .official-letter-signature img { height: 1.05in; }
