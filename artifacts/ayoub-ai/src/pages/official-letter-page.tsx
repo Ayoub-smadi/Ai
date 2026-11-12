@@ -1,14 +1,16 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { FileDown, FileText, ImagePlus, LayoutDashboard, Plus, RotateCcw, Save, Trash2, Type, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { createAdminDocumentId, dateBasedDocumentNumber, migrateLegacyDocumentNumber } from '@/lib/admin-document-storage';
 import './official-letter-page.css';
 
+type BlockPosition = { x: number; y: number; width: number; height: number };
 type LetterBlock = {
   id: string;
   type: 'text' | 'images';
   text?: string;
   images?: string[];
+  position?: BlockPosition;
 };
 
 type LetterPage = {
@@ -70,10 +72,25 @@ function asImages(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((image): image is string => typeof image === 'string') : [];
 }
 
+function defaultBlockPosition(pageIndex: number, blockIndex: number, type: LetterBlock['type']): BlockPosition {
+  return { x: 10, y: pageIndex === 0 ? Math.min(72 + blockIndex * 12, 86) : Math.min(12 + blockIndex * 18, 78), width: 80, height: type === 'images' ? 22 : 12 };
+}
+
+function normalizeBlock(block: Partial<LetterBlock>, pageIndex: number, blockIndex: number): LetterBlock {
+  const type = block.type === 'images' ? 'images' : 'text';
+  return {
+    id: block.id || makeId('block'),
+    type,
+    text: type === 'text' ? String(block.text || '') : undefined,
+    images: type === 'images' ? asImages(block.images) : undefined,
+    position: block.position || defaultBlockPosition(pageIndex, blockIndex, type),
+  };
+}
+
 function migrateLegacyPages(old: LegacyLetter): LetterPage[] {
   if (Array.isArray(old.pages) && old.pages.length) {
     const pages = old.pages.filter((page): page is LetterPage => Boolean(page && typeof page === 'object' && Array.isArray(page.blocks)));
-    if (pages.length) return pages.map((page, index) => ({ id: page.id || `page-${index + 1}`, blocks: page.blocks.filter((block) => block?.type === 'text' || block?.type === 'images').map((block) => ({ ...block, id: block.id || makeId('block'), images: block.type === 'images' ? asImages(block.images) : undefined, text: block.type === 'text' ? String(block.text || '') : undefined })) }));
+    if (pages.length) return pages.map((page, index) => ({ id: page.id || `page-${index + 1}`, blocks: page.blocks.filter((block) => block?.type === 'text' || block?.type === 'images').map((block, blockIndex) => normalizeBlock(block, index, blockIndex)) }));
   }
   const blocks: LetterBlock[] = [];
   const images = asImages(old.images);
@@ -81,11 +98,11 @@ function migrateLegacyPages(old: LegacyLetter): LetterPage[] {
   const beforeImages = typeof old.textBeforeImagesAfterText === 'string' ? old.textBeforeImagesAfterText : '';
   const imagesAfterText = asImages(old.imagesAfterText);
   const afterImages = typeof old.textAfterImages === 'string' ? old.textAfterImages : '';
-  if (images.length) blocks.push({ id: makeId('block'), type: 'images', images });
-  if (extraText) blocks.push({ id: makeId('block'), type: 'text', text: extraText });
-  if (beforeImages) blocks.push({ id: makeId('block'), type: 'text', text: beforeImages });
-  if (imagesAfterText.length) blocks.push({ id: makeId('block'), type: 'images', images: imagesAfterText });
-  if (afterImages) blocks.push({ id: makeId('block'), type: 'text', text: afterImages });
+  if (images.length) blocks.push({ id: makeId('block'), type: 'images', images, position: defaultBlockPosition(0, blocks.length, 'images') });
+  if (extraText) blocks.push({ id: makeId('block'), type: 'text', text: extraText, position: defaultBlockPosition(0, blocks.length, 'text') });
+  if (beforeImages) blocks.push({ id: makeId('block'), type: 'text', text: beforeImages, position: defaultBlockPosition(0, blocks.length, 'text') });
+  if (imagesAfterText.length) blocks.push({ id: makeId('block'), type: 'images', images: imagesAfterText, position: defaultBlockPosition(0, blocks.length, 'images') });
+  if (afterImages) blocks.push({ id: makeId('block'), type: 'text', text: afterImages, position: defaultBlockPosition(0, blocks.length, 'text') });
   return [{ id: 'page-1', blocks }];
 }
 
@@ -142,6 +159,31 @@ export default function OfficialLetterPage() {
     setStatus('');
   };
 
+  const updateBlockPosition = (pageId: string, blockId: string, position: BlockPosition) => updatePages((pages) => pages.map((page) => page.id === pageId ? { ...page, blocks: page.blocks.map((block) => block.id === blockId ? { ...block, position } : block) } : page));
+
+  const beginBlockInteraction = (event: ReactPointerEvent<HTMLElement>, pageId: string, block: LetterBlock, mode: 'move' | 'resize') => {
+    event.preventDefault();
+    event.stopPropagation();
+    const layer = event.currentTarget.closest('.official-letter-free-layer');
+    if (!layer) return;
+    const bounds = layer.getBoundingClientRect();
+    const start = block.position || defaultBlockPosition(0, 0, block.type);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const onMove = (moveEvent: PointerEvent) => {
+      const dx = ((moveEvent.clientX - startX) / bounds.width) * 100;
+      const dy = ((moveEvent.clientY - startY) / bounds.height) * 100;
+      if (mode === 'move') {
+        updateBlockPosition(pageId, block.id, { ...start, x: Math.max(0, Math.min(100 - start.width, start.x + dx)), y: Math.max(0, Math.min(100 - start.height, start.y + dy)) });
+      } else {
+        updateBlockPosition(pageId, block.id, { ...start, width: Math.max(12, Math.min(100 - start.x, start.width + dx)), height: Math.max(8, Math.min(100 - start.y, start.height + dy)) });
+      }
+    };
+    const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  };
+
   const saveLetter = (event: FormEvent) => {
     event.preventDefault();
     const record: SavedOfficialLetter = { ...form, id: createAdminDocumentId(), savedAt: new Date().toISOString() };
@@ -183,7 +225,7 @@ export default function OfficialLetterPage() {
     updatePages((pages) => pages.map((page) => {
       if (page.id !== pageId) return page;
       if (blockId) return { ...page, blocks: page.blocks.map((block) => block.id === blockId ? { ...block, images: [...(block.images || []), ...images] } : block) };
-      return { ...page, blocks: [...page.blocks, { id: makeId('block'), type: 'images', images }] };
+      return { ...page, blocks: [...page.blocks, { id: makeId('block'), type: 'images', images, position: defaultBlockPosition(pages.indexOf(page), page.blocks.length, 'images') }] };
     }));
     setStatus(`تمت إضافة ${images.length} صورة.`);
   };
@@ -202,7 +244,7 @@ export default function OfficialLetterPage() {
   const insertBlockAfter = (pageId: string, index: number, type: LetterBlock['type']) => {
     updatePages((pages) => pages.map((page) => {
       if (page.id !== pageId) return page;
-      const block: LetterBlock = type === 'text' ? { id: makeId('block'), type, text: '' } : { id: makeId('block'), type, images: [] };
+      const block: LetterBlock = type === 'text' ? { id: makeId('block'), type, text: '', position: defaultBlockPosition(pages.indexOf(page), page.blocks.length, type) } : { id: makeId('block'), type, images: [], position: defaultBlockPosition(pages.indexOf(page), page.blocks.length, type) };
       const blocks = [...page.blocks];
       blocks.splice(index + 1, 0, block);
       return { ...page, blocks };
@@ -228,6 +270,7 @@ export default function OfficialLetterPage() {
       await document.fonts?.ready;
       await Promise.all(Array.from(paper.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+      paper.classList.add('official-letter-exporting');
       const canvas = await html2canvas(paper, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true, logging: false, width: paper.scrollWidth, height: paper.scrollHeight });
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -257,6 +300,7 @@ export default function OfficialLetterPage() {
       console.error('Official letter PDF generation failed', error);
       setStatus('تعذر إنشاء ملف PDF. أعد المحاولة بعد اكتمال تحميل الصفحة.');
     } finally {
+      paper.classList.remove('official-letter-exporting');
       setPdfMode(null);
     }
   };
@@ -270,6 +314,7 @@ export default function OfficialLetterPage() {
       await document.fonts?.ready;
       await Promise.all(Array.from(paper.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+      paper.classList.add('official-letter-exporting');
       const canvas = await html2canvas(paper, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true, logging: false, width: paper.scrollWidth, height: paper.scrollHeight });
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -286,13 +331,19 @@ export default function OfficialLetterPage() {
       console.error('Single-page official letter PDF generation failed', error);
       setStatus('تعذر إنشاء ملف PDF من صفحة واحدة. أعد المحاولة بعد اكتمال تحميل الصفحة.');
     } finally {
+      paper.classList.remove('official-letter-exporting');
       setPdfMode(null);
     }
   };
 
-  const renderBlocks = (blocks: LetterBlock[], prefix: string) => blocks.map((block, index) => block.type === 'text'
-    ? <div className="official-letter-extra-preview" key={`${prefix}-${block.id}-${index}`}>{paragraphs(block.text || '').map((paragraph, paragraphIndex) => <p key={`${paragraphIndex}-${paragraph.slice(0, 12)}`}>{paragraph}</p>)}</div>
-    : <div className="official-letter-attachments" key={`${prefix}-${block.id}-${index}`}>{(block.images || []).map((image, imageIndex) => <img key={`${imageIndex}-${image.slice(-24)}`} src={image} alt={`صورة الصفحة ${index + 1}`} />)}</div>);
+  const renderCanvasBlocks = (blocks: LetterBlock[], pageIndex: number) => <div className="official-letter-free-layer">{blocks.map((block, index) => {
+    const position = block.position || defaultBlockPosition(pageIndex, index, block.type);
+    return <div className={`official-letter-canvas-block official-letter-canvas-block--${block.type}`} key={block.id} style={{ left: `${position.x}%`, top: `${position.y}%`, width: `${position.width}%`, height: `${position.height}%` }} onPointerDown={(event) => beginBlockInteraction(event, form.pages[pageIndex]?.id || '', block, 'move')}>
+      <div className="official-letter-canvas-block-label">{block.type === 'text' ? 'اسحب النص' : 'اسحب الصورة'}</div>
+      {block.type === 'text' ? <textarea value={block.text || ''} onChange={(event) => updateTextBlock(form.pages[pageIndex]?.id || '', block.id, event.target.value)} onPointerDown={(event) => event.stopPropagation()} placeholder="اكتب النص هنا..." /> : <div className="official-letter-canvas-images">{(block.images || []).map((image, imageIndex) => <img key={`${imageIndex}-${image.slice(-24)}`} src={image} alt="صورة مضافة" />)}{!(block.images || []).length && <span>أضف صورًا من لوحة التحكم</span>}</div>}
+      <span className="official-letter-resize-handle" onPointerDown={(event) => beginBlockInteraction(event, form.pages[pageIndex]?.id || '', block, 'resize')} />
+    </div>;
+  })}</div>;
 
   const renderPageBlocksEditor = (page: LetterPage, pageIndex: number) => (
     <section className="official-letter-page-editor" key={page.id}>
@@ -320,7 +371,7 @@ export default function OfficialLetterPage() {
         {status && <p className="official-letter-status" role="status">{status}</p>}<button className="btn official-letter-save" type="submit"><Save size={14} />حفظ الكتاب</button>
         <section className="official-letter-history"><div className="official-letter-history-head"><h2>الكتب المحفوظة</h2><span>{saved.length}</span></div>{saved.length ? saved.map((record) => <button type="button" className="official-letter-record" key={record.id} onClick={() => openSaved(record)}><span className="official-letter-record-icon"><FileText size={15} /></span><span className="official-letter-record-copy"><strong>{record.title || 'كتاب رسمي'}</strong><small>{record.number} · {record.recipient || 'بدون جهة'} · {formattedDate(record.date)}</small></span><span className="official-letter-open">فتح</span></button>) : <p className="operations-empty">لا توجد كتب محفوظة بعد.</p>}</section>
       </form>
-      <section className="panel official-letter-preview-panel"><div className="official-letter-preview-toolbar"><span>معاينة الورقة الرسمية</span><small>{form.pages.length} صفحة · Letter · 8.5 × 11 بوصة</small></div><div className="official-letter-paper-scroll"><article className="official-letter-paper" ref={paperRef}><div className="official-letter-top-rule" /><header className="official-letter-header-row"><strong>{form.institution || '—'}</strong><span><b>التاريخ:</b> {formattedDate(form.date)}</span></header><h2 className="official-letter-title"><span className="official-letter-title-text">{form.title || '—'}</span></h2><div className="official-letter-recipient"><b>إلى :</b><span>{form.recipient || '—'}</span></div><div className="official-letter-attention"><b>{form.attentionLabel || '—'} :</b><span>{form.attention || '—'}</span></div><div className="official-letter-project-grid"><div><b>موقع المشروع</b><span>{form.projectSite || '—'}</span></div><div><b>المشروع</b><span>{form.projectName || '—'}</span></div></div><section className="official-letter-content"><p className="official-letter-greeting">{form.greeting || '—'}</p><div className="official-letter-body">{paragraphs(form.body).length ? paragraphs(form.body).map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>) : <p>اكتب نص الكتاب ليظهر هنا.</p>}</div>{renderBlocks(firstPageBlocks, 'first')}<p className="official-letter-closing">{form.closing || '—'}</p></section><footer className="official-letter-signature"><strong>{form.signatureLabel || '—'}</strong><img src="/official-letter-signature.jpg" alt="التوقيع والختم" /><b>{form.footerName || '—'}</b></footer>{form.pages.slice(1).map((page, pageIndex) => <section className="official-letter-additional-page" key={page.id}><div className="official-letter-additional-header"><strong>{form.institution || '—'}</strong><span>صفحة {pageIndex + 2}</span></div><div className="official-letter-additional-content">{renderBlocks(page.blocks, `page-${pageIndex + 2}`)}</div></section>)}</article></div></section>
+      <section className="panel official-letter-preview-panel"><div className="official-letter-preview-toolbar"><span>معاينة الورقة الرسمية</span><small>{form.pages.length} صفحة · Letter · 8.5 × 11 بوصة</small></div><div className="official-letter-paper-scroll"><article className="official-letter-paper" ref={paperRef}><div className="official-letter-top-rule" /><header className="official-letter-header-row"><strong>{form.institution || '—'}</strong><span><b>التاريخ:</b> {formattedDate(form.date)}</span></header><h2 className="official-letter-title"><span className="official-letter-title-text">{form.title || '—'}</span></h2><div className="official-letter-recipient"><b>إلى :</b><span>{form.recipient || '—'}</span></div><div className="official-letter-attention"><b>{form.attentionLabel || '—'} :</b><span>{form.attention || '—'}</span></div><div className="official-letter-project-grid"><div><b>موقع المشروع</b><span>{form.projectSite || '—'}</span></div><div><b>المشروع</b><span>{form.projectName || '—'}</span></div></div><section className="official-letter-content"><p className="official-letter-greeting">{form.greeting || '—'}</p><div className="official-letter-body">{paragraphs(form.body).length ? paragraphs(form.body).map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>) : <p>اكتب نص الكتاب ليظهر هنا.</p>}</div><p className="official-letter-closing">{form.closing || '—'}</p></section><footer className="official-letter-signature"><strong>{form.signatureLabel || '—'}</strong><img src="/official-letter-signature.jpg" alt="التوقيع والختم" /><b>{form.footerName || '—'}</b></footer>{renderCanvasBlocks(firstPageBlocks, 0)}{form.pages.slice(1).map((page, pageIndex) => <section className="official-letter-additional-page" key={page.id}><div className="official-letter-additional-header"><strong>{form.institution || '—'}</strong><span>صفحة {pageIndex + 2}</span></div><div className="official-letter-additional-content">{renderCanvasBlocks(page.blocks, pageIndex + 1)}</div></section>)}</article></div></section>
     </div>
   </main>;
 }

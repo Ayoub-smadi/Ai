@@ -342,3 +342,24 @@
   .official-letter-pages-editor-head { align-items: flex-start; flex-direction: column; }
   .official-letter-page-actions .btn { flex: 1; justify-content: center; }
 }
+
+/* Direct manipulation canvas for text and image elements */
+.official-letter-free-layer { position: absolute; inset: 0; z-index: 8; pointer-events: none; }
+.official-letter-canvas-block { position: absolute; box-sizing: border-box; min-width: 44px; min-height: 34px; border: 1px dashed #4d8c68; border-radius: 5px; background: #ffffffd9; pointer-events: auto; cursor: move; overflow: visible; }
+.official-letter-canvas-block:hover { border-color: #176079; box-shadow: 0 0 0 2px #17607924; }
+.official-letter-canvas-block-label { position: absolute; top: -18px; right: 0; display: none; padding: 2px 5px; border-radius: 3px; background: #176079; color: #fff; font: 9px/1.2 Tahoma, sans-serif; white-space: nowrap; pointer-events: none; }
+.official-letter-canvas-block:hover .official-letter-canvas-block-label { display: block; }
+.official-letter-canvas-block textarea { box-sizing: border-box; width: 100%; height: 100%; min-height: 32px; padding: 8px; border: 0; outline: 0; resize: none; background: transparent; color: #1f2937; direction: rtl; text-align: right; font: 14pt/1.5 'Times New Roman', 'Noto Sans Arabic', Tahoma, serif; }
+.official-letter-canvas-images { display: grid; width: 100%; height: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; box-sizing: border-box; }
+.official-letter-canvas-images img { display: block; width: 100%; height: 100%; min-height: 20px; object-fit: contain; pointer-events: none; }
+.official-letter-canvas-images span { display: grid; height: 100%; place-items: center; color: #758578; font: 10px Tahoma, sans-serif; }
+.official-letter-resize-handle { position: absolute; right: -6px; bottom: -6px; width: 12px; height: 12px; border: 2px solid #fff; border-radius: 50%; background: #176079; cursor: nwse-resize; box-shadow: 0 1px 4px #10281c55; }
+.official-letter-additional-page { position: relative; }
+.official-letter-additional-content { position: absolute; inset: 0; padding: 0; }
+.official-letter-exporting .official-letter-canvas-block { border-color: transparent; background: transparent; box-shadow: none; }
+.official-letter-exporting .official-letter-canvas-block-label,
+.official-letter-exporting .official-letter-resize-handle { display: none !important; }
+.official-letter-exporting .official-letter-canvas-block textarea { border: 0; }
+@media print {
+  .official-letter-canvas-block-label, .official-letter-resize-handle { display: none !important; }
+}
