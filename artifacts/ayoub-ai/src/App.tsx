@@ -1291,21 +1291,23 @@ function AdminQuotePage() {
     ...managedPlants.map((plant) => plant.image).filter(Boolean),
     ...quoteCatalogItems.map((item) => item.image).filter(Boolean),
   ]);
-  const findCatalogImage = (name: string): string => {
+  const quoteStoreCategoryLabels: Record<string, string> = { irrigation: 'شبكات الري', 'garden-decor': 'ديكور الحديقة', pots: 'أحواض وأصص', tools: 'أدوات زراعية', fertilizers: 'أسمدة ومحسنات تربة', pesticides: 'مبيدات ومعالجات', seeds: 'بذور', 'seedling-supplies': 'مستلزمات المشاتل' };
+  const findCatalogMatch = (name: string): { image: string; category: string } => {
     const normalizedName = normalizeQuoteProductName(name);
-    if (!normalizedName) return '';
+    if (!normalizedName) return { image: '', category: '' };
     const candidates = [
-      ...storeProducts.map((product) => ({ names: [product.nameAr, product.nameEn], image: product.image })),
-      ...managedPlants.map((plant) => ({ names: [plant.nameAr, plant.nameEn, plant.scientificName], image: plant.image })),
-      ...quoteCatalogItems.map((item) => ({ names: [item.nameAr, item.nameEn], image: item.image })),
+      ...storeProducts.map((product) => ({ names: [product.nameAr, product.nameEn], image: product.image, category: quoteStoreCategoryLabels[product.category.trim().toLocaleLowerCase()] || (/^[\u0600-\u06FF\s]+$/.test(product.category.trim()) ? product.category.trim() : 'منتجات المتجر') })),
+      ...managedPlants.map((plant) => ({ names: [plant.nameAr, plant.nameEn, plant.scientificName], image: plant.image, category: plant.categoryAr })),
+      ...quoteCatalogItems.map((item) => ({ names: [item.nameAr, item.nameEn], image: item.image, category: item.categoryAr })),
     ];
-    return resolveQuoteCatalogImage(candidates.find((candidate) => candidate.image && candidate.names.some((candidateName) => normalizeQuoteProductName(candidateName) === normalizedName))?.image || '');
+    const match = candidates.find((candidate) => candidate.names.some((candidateName) => normalizeQuoteProductName(candidateName) === normalizedName));
+    return match ? { image: resolveQuoteCatalogImage(match.image || ''), category: match.category || '' } : { image: '', category: '' };
   };
   const handleQuoteItemNameChange = (id: string, name: string) => {
     const currentItem = quote.items.find((item) => item.id === id);
-    const image = findCatalogImage(name);
+    const match = findCatalogMatch(name);
     const hasCustomImage = Boolean(currentItem?.image && !catalogImages.has(currentItem.image));
-    patchItem(id, { name, ...(image && !hasCustomImage ? { image } : {}) });
+    patchItem(id, { name, ...(match.image && !hasCustomImage ? { image: match.image } : {}), ...(match.category ? { category: match.category } : {}) });
   };
   const quoteProductSuggestions = useMemo(() => {
     const names = [
