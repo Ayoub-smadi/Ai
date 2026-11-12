@@ -1287,40 +1287,37 @@ function AdminQuotePage() {
   const moveQuoteItem = (index: number, direction: -1 | 1) => setQuote((current) => { const target = index + direction; if (target < 0 || target >= current.items.length) return current; const items = [...current.items]; [items[index], items[target]] = [items[target], items[index]]; return { ...current, items }; });
   const convertQuoteToInvoice = () => { const generated = nextAppDocumentNumber('INV', 'invoice'); const now = new Date(); const invoice: SavedQuote = { ...quote, recordId: generated.recordId, number: generated.number, date: generated.date, title: 'فاتورة', documentType: 'invoice', invoiceKinds: [], invoiceCompanyName: 'مؤسسة القادري الزراعية', invoiceCompanyLocation: 'جرش - الأردن', invoiceCompanyPhone: '0777772211 - 0778111155', items: quote.items.map((item) => ({ ...item, image: '' })), savedAt: now.toISOString() }; sessionStorage.setItem('qadri-invoice-conversion-draft', JSON.stringify(invoice)); setLocation('/admin/invoices?convert=1'); }; const patchItem = (id: string, next: Partial<QuoteItem>) => patch({ items: quote.items.map((item) => item.id === id ? { ...item, ...next } : item) });
   const catalogImages = new Set([
-    ...storeProducts.map((product) => product.image).filter(Boolean),
-    ...managedPlants.map((plant) => plant.image).filter(Boolean),
-    ...quoteCatalogItems.map((item) => item.image).filter(Boolean),
+    ...storeProducts.flatMap((product) => [product.image, resolveQuoteCatalogImage(product.image || '')]).filter(Boolean),
+    ...managedPlants.flatMap((plant) => [plant.image, resolveQuoteCatalogImage(plant.image || '')]).filter(Boolean),
+    ...quoteCatalogItems.flatMap((item) => [item.image, resolveQuoteCatalogImage(item.image || '')]).filter(Boolean),
   ]);
   const quoteStoreCategoryLabels: Record<string, string> = { irrigation: 'شبكات الري', 'garden-decor': 'ديكور الحديقة', pots: 'أحواض وأصص', tools: 'أدوات زراعية', fertilizers: 'أسمدة ومحسنات تربة', pesticides: 'مبيدات ومعالجات', seeds: 'بذور', 'seedling-supplies': 'مستلزمات المشاتل' };
   const findCatalogMatch = (name: string): { image: string; category: string } => {
     const normalizedName = normalizeQuoteProductName(name);
     if (normalizedName.length < 3) return { image: '', category: '' };
-    const queryTokens = normalizedName.split(' ').filter((token) => token.length > 1);
     const candidates = [
       ...storeProducts.map((product) => ({ names: [product.nameAr, product.nameEn], image: product.image, category: quoteStoreCategoryLabels[product.category.trim().toLocaleLowerCase()] || (/^[\u0600-\u06FF\s]+$/.test(product.category.trim()) ? product.category.trim() : 'منتجات المتجر') })),
       ...managedPlants.map((plant) => ({ names: [plant.nameAr, plant.nameEn, plant.scientificName], image: plant.image, category: plant.categoryAr })),
       ...quoteCatalogItems.map((item) => ({ names: [item.nameAr, item.nameEn], image: item.image, category: item.categoryAr })),
     ];
-    const score = (candidateName: string) => {
-      const normalizedCandidate = normalizeQuoteProductName(candidateName);
-      if (!normalizedCandidate) return 0;
-      if (normalizedCandidate === normalizedName) return 100;
-      if (normalizedCandidate.includes(normalizedName)) return 85;
-      if (normalizedName.includes(normalizedCandidate) && normalizedCandidate.length >= 4) return 80;
-      const matchedTokens = queryTokens.filter((token) => normalizedCandidate.includes(token)).length;
-      return matchedTokens ? 55 + (matchedTokens / Math.max(queryTokens.length, 1)) * 20 : 0;
-    };
-    const match = candidates
-      .map((candidate) => ({ candidate, score: Math.max(...candidate.names.map(score)) }))
-      .filter((entry) => entry.score > 0)
-      .sort((left, right) => right.score - left.score)[0]?.candidate;
-    return match ? { image: resolveQuoteCatalogImage(match.image || ''), category: match.category || '' } : { image: '', category: '' };
+    const matches = candidates.filter((candidate) => candidate.names.some((candidateName) => normalizeQuoteProductName(candidateName) === normalizedName));
+    if (matches.length !== 1) return { image: '', category: '' };
+    const match = matches[0];
+    return { image: resolveQuoteCatalogImage(match.image || ''), category: match.category || '' };
   };
   const handleQuoteItemNameChange = (id: string, name: string) => {
     const currentItem = quote.items.find((item) => item.id === id);
     const match = findCatalogMatch(name);
-    const hasCustomImage = Boolean(currentItem?.image && !catalogImages.has(currentItem.image));
-    patchItem(id, { name, ...(match.image && !hasCustomImage ? { image: match.image } : {}), ...(match.category ? { category: match.category } : {}) });
+    const hasCatalogImage = Boolean(currentItem?.image && catalogImages.has(currentItem.image));
+    const hasCustomImage = Boolean(currentItem?.image && !hasCatalogImage);
+    const knownCategories = new Set([
+      ...Object.values(quoteStoreCategoryLabels),
+      ...managedPlants.map((plant) => plant.categoryAr),
+      ...quoteCatalogItems.map((item) => item.categoryAr),
+    ]);
+    const nextImage = match.image ? (!hasCustomImage ? match.image : currentItem?.image || '') : (hasCatalogImage ? '' : currentItem?.image || '');
+    const nextCategory = match.category || (currentItem?.category && !knownCategories.has(currentItem.category) ? currentItem.category : '');
+    patchItem(id, { name, image: nextImage, category: nextCategory });
   };
   const addManagedPlant = (plant: ReturnType<typeof getManagedPlants>[number]) => {
     const name = plant.scientificName ? `${plant.nameAr} / ${plant.scientificName}` : plant.nameAr;
