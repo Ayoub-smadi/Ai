@@ -1,5 +1,5 @@
-import { useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { FileDown, FileText, ImagePlus, LayoutDashboard, Plus, RotateCcw, Save, Trash2, Type, X } from 'lucide-react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { AlignCenter, AlignLeft, AlignRight, Bold, FileDown, FileText, ImagePlus, LayoutDashboard, MoveHorizontal, MoveVertical, Plus, RotateCcw, Save, Trash2, Type, Underline, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { createAdminDocumentId, dateBasedDocumentNumber, migrateLegacyDocumentNumber } from '@/lib/admin-document-storage';
 import './official-letter-page.css';
@@ -11,6 +11,11 @@ type LetterBlock = {
   text?: string;
   images?: string[];
   position?: BlockPosition;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: 'normal' | 'bold';
+  textDecoration?: 'none' | 'underline';
+  textAlign?: 'right' | 'center' | 'left';
 };
 
 type LetterPage = {
@@ -84,6 +89,11 @@ function normalizeBlock(block: Partial<LetterBlock>, pageIndex: number, blockInd
     text: type === 'text' ? String(block.text || '') : undefined,
     images: type === 'images' ? asImages(block.images) : undefined,
     position: block.position || defaultBlockPosition(pageIndex, blockIndex, type),
+    fontFamily: block.fontFamily || 'Noto Sans Arabic, Tahoma, sans-serif',
+    fontSize: block.fontSize || 16,
+    fontWeight: block.fontWeight === 'bold' ? 'bold' : 'normal',
+    textDecoration: block.textDecoration === 'underline' ? 'underline' : 'none',
+    textAlign: block.textAlign || 'right',
   };
 }
 
@@ -159,11 +169,57 @@ export default function OfficialLetterPage() {
     setStatus('');
   };
 
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const blockKey = (pageId: string, blockId: string) => `${pageId}:${blockId}`;
+  const selectBlock = (pageId: string, blockId: string, additive = false) => {
+    const key = blockKey(pageId, blockId);
+    setSelectedKeys((current) => additive ? (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]) : [key]);
+  };
+  const selectedEntries = form.pages.flatMap((page) => page.blocks.filter((block) => selectedKeys.includes(blockKey(page.id, block.id))).map((block) => ({ page, block })));
+  const updateSelectedBlocks = (updater: (block: LetterBlock) => LetterBlock) => updatePages((pages) => pages.map((page) => ({ ...page, blocks: page.blocks.map((block) => selectedKeys.includes(blockKey(page.id, block.id)) ? updater(block) : block) })));
+  const deleteSelected = () => {
+    if (!selectedKeys.length) return;
+    updatePages((pages) => pages.map((page) => ({ ...page, blocks: page.blocks.filter((block) => !selectedKeys.includes(blockKey(page.id, block.id))) })));
+    setSelectedKeys([]);
+  };
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.key === 'Delete' && selectedKeys.length && target && !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
+        event.preventDefault();
+        deleteSelected();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedKeys]);
+  const formatSelected = (next: Partial<LetterBlock>) => updateSelectedBlocks((block) => ({ ...block, ...next }));
+  const alignSelected = (alignment: 'left' | 'center' | 'right') => updateSelectedBlocks((block) => ({ ...block, textAlign: alignment }));
+  const equalizeSelectedImages = () => {
+    const images = selectedEntries.filter(({ block }) => block.type === 'images');
+    if (images.length < 2) return;
+    const size = images[0].block.position || defaultBlockPosition(0, 0, 'images');
+    updateSelectedBlocks((block) => block.type === 'images' ? { ...block, position: { ...(block.position || size), width: size.width, height: size.height } } : block);
+  };
+  const arrangeSelectedImages = (direction: 'horizontal' | 'vertical') => {
+    const images = selectedEntries.filter(({ block }) => block.type === 'images');
+    if (images.length < 2) return;
+    const ordered = [...images].sort((a, b) => (a.block.position?.[direction === 'horizontal' ? 'x' : 'y'] || 0) - (b.block.position?.[direction === 'horizontal' ? 'x' : 'y'] || 0));
+    updatePages((pages) => pages.map((page) => ({ ...page, blocks: page.blocks.map((block) => {
+      const index = ordered.findIndex(({ page: selectedPage, block: selectedBlock }) => selectedPage.id === page.id && selectedBlock.id === block.id);
+      if (index < 0) return block;
+      const position = block.position || defaultBlockPosition(0, index, 'images');
+      const previous = index ? (ordered[index - 1].block.position || position) : position;
+      return { ...block, position: direction === 'horizontal' ? { ...position, y: previous.y, x: index ? Math.min(92, previous.x + previous.width + 2) : 5 } : { ...position, x: previous.x, y: index ? Math.min(92, previous.y + previous.height + 2) : 5 } };
+    }) })));
+  };
+
   const updateBlockPosition = (pageId: string, blockId: string, position: BlockPosition) => updatePages((pages) => pages.map((page) => page.id === pageId ? { ...page, blocks: page.blocks.map((block) => block.id === blockId ? { ...block, position } : block) } : page));
 
-  const beginBlockInteraction = (event: ReactPointerEvent<HTMLElement>, pageId: string, block: LetterBlock, mode: 'move' | 'resize') => {
+  const beginBlockInteraction = (event: ReactPointerEvent<HTMLElement>, pageId: string, block: LetterBlock, mode: 'move' | 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w') => {
     event.preventDefault();
     event.stopPropagation();
+    selectBlock(pageId, block.id, event.shiftKey || event.ctrlKey || event.metaKey);
     const layer = event.currentTarget.closest('.official-letter-free-layer');
     if (!layer) return;
     const bounds = layer.getBoundingClientRect();
@@ -175,14 +231,23 @@ export default function OfficialLetterPage() {
       const dy = ((moveEvent.clientY - startY) / bounds.height) * 100;
       if (mode === 'move') {
         updateBlockPosition(pageId, block.id, { ...start, x: Math.max(0, Math.min(100 - start.width, start.x + dx)), y: Math.max(0, Math.min(100 - start.height, start.y + dy)) });
-      } else {
-        updateBlockPosition(pageId, block.id, { ...start, width: Math.max(12, Math.min(100 - start.x, start.width + dx)), height: Math.max(8, Math.min(100 - start.y, start.height + dy)) });
+        return;
       }
+      let x = start.x;
+      let y = start.y;
+      let width = start.width;
+      let height = start.height;
+      if (mode.includes('e')) width = Math.max(8, Math.min(100 - x, start.width + dx));
+      if (mode.includes('s')) height = Math.max(6, Math.min(100 - y, start.height + dy));
+      if (mode.includes('w')) { x = Math.max(0, Math.min(start.x + start.width - 8, start.x + dx)); width = start.width - (x - start.x); }
+      if (mode.includes('n')) { y = Math.max(0, Math.min(start.y + start.height - 6, start.y + dy)); height = start.height - (y - start.y); }
+      updateBlockPosition(pageId, block.id, { x, y, width, height });
     };
     const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp, { once: true });
   };
+
 
   const saveLetter = (event: FormEvent) => {
     event.preventDefault();
@@ -338,10 +403,10 @@ export default function OfficialLetterPage() {
 
   const renderCanvasBlocks = (blocks: LetterBlock[], pageIndex: number) => <div className="official-letter-free-layer">{blocks.map((block, index) => {
     const position = block.position || defaultBlockPosition(pageIndex, index, block.type);
-    return <div className={`official-letter-canvas-block official-letter-canvas-block--${block.type}`} key={block.id} style={{ left: `${position.x}%`, top: `${position.y}%`, width: `${position.width}%`, height: `${position.height}%` }} onPointerDown={(event) => beginBlockInteraction(event, form.pages[pageIndex]?.id || '', block, 'move')}>
+    return <div className={`official-letter-canvas-block official-letter-canvas-block--${block.type}${selectedKeys.includes(blockKey(form.pages[pageIndex]?.id || '', block.id)) ? ' is-selected' : ''}`} key={block.id} style={{ left: `${position.x}%`, top: `${position.y}%`, width: `${position.width}%`, height: `${position.height}%` }} onPointerDown={(event) => beginBlockInteraction(event, form.pages[pageIndex]?.id || '', block, 'move')}>
       <div className="official-letter-canvas-block-label">{block.type === 'text' ? 'اسحب النص' : 'اسحب الصورة'}</div>
-      {block.type === 'text' ? <textarea value={block.text || ''} onChange={(event) => updateTextBlock(form.pages[pageIndex]?.id || '', block.id, event.target.value)} onPointerDown={(event) => event.stopPropagation()} placeholder="اكتب النص هنا..." /> : <div className="official-letter-canvas-images">{(block.images || []).map((image, imageIndex) => <img key={`${imageIndex}-${image.slice(-24)}`} src={image} alt="صورة مضافة" />)}{!(block.images || []).length && <span>أضف صورًا من لوحة التحكم</span>}</div>}
-      <span className="official-letter-resize-handle" onPointerDown={(event) => beginBlockInteraction(event, form.pages[pageIndex]?.id || '', block, 'resize')} />
+      {block.type === 'text' ? <textarea value={block.text || ''} onChange={(event) => updateTextBlock(form.pages[pageIndex]?.id || '', block.id, event.target.value)} onPointerDown={(event) => { event.stopPropagation(); selectBlock(form.pages[pageIndex]?.id || '', block.id, event.shiftKey || event.ctrlKey || event.metaKey); }} style={{ fontFamily: block.fontFamily, fontSize: `${block.fontSize || 16}pt`, fontWeight: block.fontWeight, textDecoration: block.textDecoration, textAlign: block.textAlign }} placeholder="اكتب النص هنا..." /> : <div className="official-letter-canvas-images">{(block.images || []).map((image, imageIndex) => <img key={`${imageIndex}-${image.slice(-24)}`} src={image} alt="صورة مضافة" />)}{!(block.images || []).length && <span>أضف صورًا من لوحة التحكم</span>}</div>}
+      {block.type === 'images' && (['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const).map((handle) => <span key={handle} className={`official-letter-resize-handle official-letter-resize-handle--${handle}`} onPointerDown={(event) => beginBlockInteraction(event, form.pages[pageIndex]?.id || '', block, handle)} />)}
     </div>;
   })}</div>;
 
@@ -371,7 +436,20 @@ export default function OfficialLetterPage() {
         {status && <p className="official-letter-status" role="status">{status}</p>}<button className="btn official-letter-save" type="submit"><Save size={14} />حفظ الكتاب</button>
         <section className="official-letter-history"><div className="official-letter-history-head"><h2>الكتب المحفوظة</h2><span>{saved.length}</span></div>{saved.length ? saved.map((record) => <button type="button" className="official-letter-record" key={record.id} onClick={() => openSaved(record)}><span className="official-letter-record-icon"><FileText size={15} /></span><span className="official-letter-record-copy"><strong>{record.title || 'كتاب رسمي'}</strong><small>{record.number} · {record.recipient || 'بدون جهة'} · {formattedDate(record.date)}</small></span><span className="official-letter-open">فتح</span></button>) : <p className="operations-empty">لا توجد كتب محفوظة بعد.</p>}</section>
       </form>
-      <section className="panel official-letter-preview-panel"><div className="official-letter-preview-toolbar"><span>معاينة الورقة الرسمية</span><small>{form.pages.length} صفحة · Letter · 8.5 × 11 بوصة</small></div><div className="official-letter-paper-scroll"><article className="official-letter-paper" ref={paperRef}><div className="official-letter-top-rule" /><header className="official-letter-header-row"><strong>{form.institution || '—'}</strong><span><b>التاريخ:</b> {formattedDate(form.date)}</span></header><h2 className="official-letter-title"><span className="official-letter-title-text">{form.title || '—'}</span></h2><div className="official-letter-recipient"><b>إلى :</b><span>{form.recipient || '—'}</span></div><div className="official-letter-attention"><b>{form.attentionLabel || '—'} :</b><span>{form.attention || '—'}</span></div><div className="official-letter-project-grid"><div><b>موقع المشروع</b><span>{form.projectSite || '—'}</span></div><div><b>المشروع</b><span>{form.projectName || '—'}</span></div></div><section className="official-letter-content"><p className="official-letter-greeting">{form.greeting || '—'}</p><div className="official-letter-body">{paragraphs(form.body).length ? paragraphs(form.body).map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>) : <p>اكتب نص الكتاب ليظهر هنا.</p>}</div><p className="official-letter-closing">{form.closing || '—'}</p></section><footer className="official-letter-signature"><strong>{form.signatureLabel || '—'}</strong><img src="/official-letter-signature.jpg" alt="التوقيع والختم" /><b>{form.footerName || '—'}</b></footer>{renderCanvasBlocks(firstPageBlocks, 0)}{form.pages.slice(1).map((page, pageIndex) => <section className="official-letter-additional-page" key={page.id}><div className="official-letter-additional-header"><strong>{form.institution || '—'}</strong><span>صفحة {pageIndex + 2}</span></div><div className="official-letter-additional-content">{renderCanvasBlocks(page.blocks, pageIndex + 1)}</div></section>)}</article></div></section>
+      <section className="panel official-letter-preview-panel"><div className="official-letter-preview-toolbar"><span>معاينة الورقة الرسمية</span><small>{form.pages.length} صفحة · Letter · 8.5 × 11 بوصة</small></div><div className="official-letter-canvas-toolbar">
+          <span className="official-letter-selection-count">{selectedEntries.length ? `${selectedEntries.length} محدد` : 'حدد عنصرًا أو عدة صور بـ Shift'}</span>
+          <button type="button" className="btn secondary small" onClick={deleteSelected} disabled={!selectedEntries.length}><Trash2 size={13} />حذف</button>
+          <span className="official-letter-toolbar-divider" />
+          <button type="button" className="btn secondary small" onClick={equalizeSelectedImages} disabled={selectedEntries.filter(({ block }) => block.type === 'images').length < 2}>توحيد الحجم</button>
+          <button type="button" className="btn secondary small" onClick={() => arrangeSelectedImages('horizontal')} disabled={selectedEntries.filter(({ block }) => block.type === 'images').length < 2}><MoveHorizontal size={13} />جنب بعض</button>
+          <button type="button" className="btn secondary small" onClick={() => arrangeSelectedImages('vertical')} disabled={selectedEntries.filter(({ block }) => block.type === 'images').length < 2}><MoveVertical size={13} />بالطول</button>
+          <span className="official-letter-toolbar-divider" />
+          <select aria-label="نوع الخط" defaultValue="Noto Sans Arabic, Tahoma, sans-serif" onChange={(event) => formatSelected({ fontFamily: event.target.value })}><option value="Noto Sans Arabic, Tahoma, sans-serif">Noto Arabic</option><option value="Tahoma, sans-serif">Tahoma</option><option value="Arial, sans-serif">Arial</option><option value="'Times New Roman', serif">Times</option></select>
+          <select aria-label="حجم الخط" defaultValue="16" onChange={(event) => formatSelected({ fontSize: Number(event.target.value) })}>{[10, 12, 14, 16, 18, 20, 24, 28, 32, 40].map((size) => <option key={size} value={size}>{size}</option>)}</select>
+          <button type="button" className="btn secondary small" onClick={() => formatSelected({ fontWeight: 'bold' })} disabled={!selectedEntries.some(({ block }) => block.type === 'text')}><Bold size={13} /></button>
+          <button type="button" className="btn secondary small" onClick={() => formatSelected({ textDecoration: 'underline' })} disabled={!selectedEntries.some(({ block }) => block.type === 'text')}><Underline size={13} /></button>
+          <button type="button" className="btn secondary small" onClick={() => alignSelected('right')}><AlignRight size={13} /></button><button type="button" className="btn secondary small" onClick={() => alignSelected('center')}><AlignCenter size={13} /></button><button type="button" className="btn secondary small" onClick={() => alignSelected('left')}><AlignLeft size={13} /></button>
+        </div><div className="official-letter-paper-scroll"><article className="official-letter-paper" ref={paperRef}><div className="official-letter-top-rule" /><header className="official-letter-header-row"><strong>{form.institution || '—'}</strong><span><b>التاريخ:</b> {formattedDate(form.date)}</span></header><h2 className="official-letter-title"><span className="official-letter-title-text">{form.title || '—'}</span></h2><div className="official-letter-recipient"><b>إلى :</b><span>{form.recipient || '—'}</span></div><div className="official-letter-attention"><b>{form.attentionLabel || '—'} :</b><span>{form.attention || '—'}</span></div><div className="official-letter-project-grid"><div><b>موقع المشروع</b><span>{form.projectSite || '—'}</span></div><div><b>المشروع</b><span>{form.projectName || '—'}</span></div></div><section className="official-letter-content"><p className="official-letter-greeting">{form.greeting || '—'}</p><div className="official-letter-body">{paragraphs(form.body).length ? paragraphs(form.body).map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>) : <p>اكتب نص الكتاب ليظهر هنا.</p>}</div><p className="official-letter-closing">{form.closing || '—'}</p></section><footer className="official-letter-signature"><strong>{form.signatureLabel || '—'}</strong><img src="/official-letter-signature.jpg" alt="التوقيع والختم" /><b>{form.footerName || '—'}</b></footer>{renderCanvasBlocks(firstPageBlocks, 0)}{form.pages.slice(1).map((page, pageIndex) => <section className="official-letter-additional-page" key={page.id}><div className="official-letter-additional-header"><strong>{form.institution || '—'}</strong><span>صفحة {pageIndex + 2}</span></div><div className="official-letter-additional-content">{renderCanvasBlocks(page.blocks, pageIndex + 1)}</div></section>)}</article></div></section>
     </div>
   </main>;
 }

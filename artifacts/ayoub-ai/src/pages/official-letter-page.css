@@ -363,3 +363,27 @@
 @media print {
   .official-letter-canvas-block-label, .official-letter-resize-handle { display: none !important; }
 }
+
+/* Word-like selection toolbar and eight resize handles */
+.official-letter-canvas-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px; margin-bottom: 8px; border: 1px solid #dfe9de; border-radius: 8px; background: #f8fbf7; }
+.official-letter-canvas-toolbar .btn { min-height: 28px; }
+.official-letter-canvas-toolbar select { min-height: 28px; border: 1px solid #d9e5d8; border-radius: 5px; background: #fff; color: #315c3c; font: 10px Tahoma, sans-serif; padding: 0 5px; }
+.official-letter-selection-count { margin-left: auto; color: #315c3c; font-size: 10px; }
+.official-letter-toolbar-divider { width: 1px; height: 22px; background: #d9e5d8; }
+.official-letter-canvas-block.is-selected { border: 2px solid #176079; box-shadow: 0 0 0 2px #17607924; }
+.official-letter-canvas-block--images.is-selected { background: #ffffffee; }
+.official-letter-resize-handle { display: none; z-index: 3; }
+.official-letter-canvas-block.is-selected .official-letter-resize-handle { display: block; }
+.official-letter-resize-handle--nw { top: -6px; left: -6px; right: auto; bottom: auto; cursor: nwse-resize; }
+.official-letter-resize-handle--n { top: -6px; left: calc(50% - 6px); right: auto; bottom: auto; cursor: ns-resize; }
+.official-letter-resize-handle--ne { top: -6px; right: -6px; bottom: auto; cursor: nesw-resize; }
+.official-letter-resize-handle--e { top: calc(50% - 6px); right: -6px; bottom: auto; cursor: ew-resize; }
+.official-letter-resize-handle--se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.official-letter-resize-handle--s { bottom: -6px; left: calc(50% - 6px); right: auto; cursor: ns-resize; }
+.official-letter-resize-handle--sw { bottom: -6px; left: -6px; right: auto; cursor: nesw-resize; }
+.official-letter-resize-handle--w { top: calc(50% - 6px); left: -6px; right: auto; bottom: auto; cursor: ew-resize; }
+.official-letter-exporting .official-letter-canvas-block.is-selected { border-color: transparent; box-shadow: none; }
+@media (max-width: 700px) {
+  .official-letter-selection-count { width: 100%; margin: 0; }
+  .official-letter-toolbar-divider { display: none; }
+}
