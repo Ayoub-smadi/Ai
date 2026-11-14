@@ -1,12 +1,14 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ArrowRight, Building2, Check, Copy, FileDown, Globe2, Mail, MapPin, MessageCircle, Pencil, Phone, Plus, Search, Trash2, UserRound, Users, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { moveAdminEntityToTrash } from '@/lib/admin-document-storage';
+import { getRegisteredAccounts, updateAccountProfile } from '@/lib/user-account';
 import './admin-clients-page.css';
 
 type ClientKind = 'individual' | 'company';
 export type ClientRecord = {
   id: string;
+  accountId?: string;
   kind: ClientKind;
   name: string;
   contactPerson?: string;
@@ -48,12 +50,19 @@ const blankDraft = () => ({ kind: 'individual' as ClientKind, name: '', contactP
 const readClients = (): ClientRecord[] => {
   try {
     const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    return Array.isArray(value) ? value.map((client) => ({
+    const clients: ClientRecord[] = Array.isArray(value) ? value.map((client) => ({
       ...client,
       contactPerson: client.contactPerson || '',
       website: client.website || '',
       transactions: Array.isArray(client.transactions) ? client.transactions : [],
     })) : [];
+    getRegisteredAccounts().forEach((account) => {
+      const accountClient: ClientRecord = { id: `account-${account.id}`, accountId: account.id, kind: 'individual', name: account.name, contactPerson: '', phone: account.phone, email: '', address: account.address || '', website: '', taxNumber: '', notes: 'حساب عميل مسجل من الموقع.', createdAt: account.createdAt, transactions: [] };
+      const index = clients.findIndex((client) => client.accountId === account.id || client.id === accountClient.id);
+      if (index >= 0) clients[index] = { ...clients[index], ...accountClient };
+      else clients.unshift(accountClient);
+    });
+    return clients;
   } catch { return []; }
 };
 
@@ -76,6 +85,7 @@ export default function AdminClientsPage() {
   const [exportFields, setExportFields] = useState(defaultExportFields);
   const [pdfTitle, setPdfTitle] = useState('دليل العملاء');
   const [pdfBusy, setPdfBusy] = useState(false);
+  useEffect(() => { const refresh = () => setClients(readClients()); window.addEventListener('qadri-clients-updated', refresh); window.addEventListener('storage', refresh); return () => { window.removeEventListener('qadri-clients-updated', refresh); window.removeEventListener('storage', refresh); }; }, []);
   const pdfCoverRef = useRef<HTMLDivElement>(null);
   const pdfCardsRef = useRef<HTMLDivElement>(null);
 
@@ -115,6 +125,8 @@ export default function AdminClientsPage() {
     const name = draft.name.trim();
     if (!name) return;
     if (editingId) {
+      const current = clients.find((client) => client.id === editingId);
+      if (current?.accountId) updateAccountProfile(current.accountId, { name, phone: draft.phone, address: draft.address });
       const next = clients.map((client) => client.id === editingId ? { ...client, ...draft, name, createdAt: client.createdAt } : client);
       persist(next);
       setSelectedId(editingId);

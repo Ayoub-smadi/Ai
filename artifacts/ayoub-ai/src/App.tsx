@@ -58,7 +58,7 @@ import LandscapeEditorPage from '@/pages/landscape-editor-page';
 import AdminClientsPage from '@/pages/admin-clients-page';
 import AlternativeQuoteExportButton from '@/components/alternative-quote-export';
 import { exportQuotePdf, preloadQuotePdf } from '@/lib/quote-pdf';
-import { getCurrentAccount, loginAccount, logoutAccount, readUserData, registerAccount, type UserAccount } from '@/lib/user-account';
+import { getCurrentAccount, loginAccount, logoutAccount, readUserData, registerAccount, updateAccountProfile, type UserAccount } from '@/lib/user-account';
 
 const queryClient = new QueryClient();
 const configuredClerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -107,15 +107,16 @@ function LanguageProvider({ children }: { children: ReactNode }) {
 }
 function useLang() { return useContext(LanguageContext); }
 function tr(lang: Lang, en: string, ar: string) { return lang === 'ar' ? ar : en; }
-type AccountContextValue = { account: UserAccount | null; signIn: (phone: string) => string | null; signUp: (name: string, phone: string) => string | null; signOut: () => void };
-const AccountContext = createContext<AccountContextValue>({ account: null, signIn: () => 'الحساب غير متاح', signUp: () => 'الحساب غير متاح', signOut: () => undefined });
+type AccountContextValue = { account: UserAccount | null; signIn: (phone: string) => string | null; signUp: (name: string, phone: string) => string | null; updateProfile: (patch: Partial<Pick<UserAccount, 'name' | 'phone' | 'address'>>) => string | null; signOut: () => void };
+const AccountContext = createContext<AccountContextValue>({ account: null, signIn: () => 'الحساب غير متاح', signUp: () => 'الحساب غير متاح', updateProfile: () => 'الحساب غير متاح', signOut: () => undefined });
 function AccountProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<UserAccount | null>(() => getCurrentAccount());
   const signIn = (phone: string) => { const result = loginAccount(phone); if (result.account) setAccount(result.account); return result.error || null; };
   const signUp = (name: string, phone: string) => { const result = registerAccount(name, phone); if (result.account) setAccount(result.account); return result.error || null; };
+  const updateProfile = (patch: Partial<Pick<UserAccount, 'name' | 'phone' | 'address'>>) => { if (!account) return 'الحساب غير متاح'; const result = updateAccountProfile(account.id, patch); if (result.account) setAccount(result.account); return result.error || null; };
   const signOut = () => { logoutAccount(); setAccount(null); };
-  useEffect(() => { const refresh = () => setAccount(getCurrentAccount()); window.addEventListener('storage', refresh); return () => window.removeEventListener('storage', refresh); }, []);
-  return <AccountContext.Provider value={{ account, signIn, signUp, signOut }}>{children}</AccountContext.Provider>;
+  useEffect(() => { const refresh = () => setAccount(getCurrentAccount()); window.addEventListener('storage', refresh); window.addEventListener('qadri-account-updated', refresh); return () => { window.removeEventListener('storage', refresh); window.removeEventListener('qadri-account-updated', refresh); }; }, []);
+  return <AccountContext.Provider value={{ account, signIn, signUp, updateProfile, signOut }}>{children}</AccountContext.Provider>;
 }
 function useAccount() { return useContext(AccountContext); }
 function AccountPage() {
@@ -130,10 +131,13 @@ function AccountPage() {
 }
 function AccountGate({ children }: { children: ReactNode }) { const { account } = useAccount(); const [location] = useLocation(); return account ? <>{children}</> : <Redirect to={`/sign-in?next=${encodeURIComponent(location)}`} />; }
 function AccountProfilePage() {
-  const { account, signOut } = useAccount(); const [, setLocation] = useLocation();
+  const { account, updateProfile, signOut } = useAccount(); const [, setLocation] = useLocation();
+  const [name, setName] = useState(account?.name || ''); const [phone, setPhone] = useState(account?.phone || ''); const [address, setAddress] = useState(account?.address || ''); const [notice, setNotice] = useState('');
+  useEffect(() => { if (account) { setName(account.name); setPhone(account.phone); setAddress(account.address || ''); } }, [account]);
   if (!account) return <Redirect to="/sign-in" />;
   const chat = readUserData<unknown[]>('qadri-chat-history-v1', []); const landscape = readUserData<unknown>('qadri-site-plan-v1', null); const irrigation = readUserData<unknown>('qadri-irrigation-plan-v1', null);
-  return <><PublicPageNav /><main className="public-section account-profile" dir="rtl"><div className="account-profile-head"><div><div className="eyebrow">AYOUB AI / PROFILE</div><h1>{account.name}</h1><p dir="ltr">{account.phone}</p></div><button className="btn secondary small" onClick={() => { signOut(); setLocation('/'); }}><LogOut size={14} /> تسجيل الخروج</button></div><div className="account-service-grid"><Link href="/chat" className="panel account-service-card"><MessageSquareText size={20} /><strong>محادثات AI</strong><span>{chat.length ? `${chat.length} رسالة محفوظة` : 'ابدأ أول محادثة'}</span></Link><Link href="/landscape-editor" className="panel account-service-card"><MapPinned size={20} /><strong>مخطط Landscape</strong><span>{landscape ? 'آخر مخطط محفوظ' : 'لا يوجد مخطط بعد'}</span></Link><Link href="/plants" className="panel account-service-card"><Sprout size={20} /><strong>دليل النباتات وخطة الري</strong><span>{irrigation ? 'خطة ري محفوظة' : 'استكشف الدليل'}</span></Link></div></main></>;
+  const saveProfile = (event: FormEvent) => { event.preventDefault(); const error = updateProfile({ name, phone, address }); setNotice(error || 'تم تحديث بياناتك، وتم إرسالها إلى دليل العملاء.'); window.setTimeout(() => setNotice(''), 3000); };
+  return <><PublicPageNav /><main className="public-section account-profile" dir="rtl"><div className="account-profile-head"><div><div className="eyebrow">AYOUB AI / PROFILE</div><h1>{account.name}</h1><p dir="ltr">{account.phone}</p></div><button className="btn secondary small" onClick={() => { signOut(); setLocation('/'); }}><LogOut size={14} /> تسجيل الخروج</button></div><form className="panel account-profile-form" onSubmit={saveProfile}><div className="eyebrow">بيانات العميل</div><h2>تعديل بياناتي</h2><div className="account-profile-fields"><label>الاسم<input value={name} onChange={(event) => setName(event.target.value)} required /></label><label>رقم الهاتف<input dir="ltr" type="tel" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required /></label><label className="full">العنوان<input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="اختياري" /></label></div><button className="btn" type="submit">حفظ بياناتي</button>{notice && <p className="account-profile-notice" role="status">{notice}</p>}</form><div className="account-service-grid"><Link href="/chat" className="panel account-service-card"><MessageSquareText size={20} /><strong>محادثات AI</strong><span>{chat.length ? `${chat.length} رسالة محفوظة` : 'ابدأ أول محادثة'}</span></Link><Link href="/landscape-editor" className="panel account-service-card"><MapPinned size={20} /><strong>مخطط Landscape</strong><span>{landscape ? 'آخر مخطط محفوظ' : 'لا يوجد مخطط بعد'}</span></Link><Link href="/plants" className="panel account-service-card"><Sprout size={20} /><strong>دليل النباتات وخطة الري</strong><span>{irrigation ? 'خطة ري محفوظة' : 'استكشف الدليل'}</span></Link></div></main></>;
 }
 type SocialIcon = 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'website';
 type SocialLink = { id: string; label: string; url: string; icon: SocialIcon };
