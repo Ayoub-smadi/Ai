@@ -1252,3 +1252,6 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 /* Lift the closing phrase and signature slightly above the bottom contact footer. */
 .quote-pdf-page .quote-signoff{margin-bottom:30px!important}
 .quote-pdf-page .quote-signoff-message{align-self:stretch!important;text-align:center!important}
+
+/* Raise the closing phrase and signature by approximately two text lines. */
+.quote-pdf-page .quote-signoff{transform:translateY(-24px)!important}
