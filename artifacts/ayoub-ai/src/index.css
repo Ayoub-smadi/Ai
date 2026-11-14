@@ -1239,3 +1239,12 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 /* Align category content with the other quote columns in the PDF row. */
 .quote-pdf-page .quote-items-table td[data-quote-part="col-category"]{vertical-align:middle!important;text-align:center!important;padding:8px 6px!important}
 .quote-pdf-page .quote-items-table td[data-quote-part="col-category"] .quote-pdf-value{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;min-height:100%!important;margin:0 auto!important;line-height:1.55!important;direction:rtl!important}
+
+/* Balanced closing block at the bottom of the final quote PDF page. */
+.quote-pdf-page{display:flex!important;flex-direction:column!important;justify-content:flex-start!important}
+.quote-pdf-page .quote-signoff{margin-top:auto!important;margin-bottom:7px!important;gap:10px!important;flex:0 0 auto!important}
+.quote-pdf-page .quote-signoff-message{font-size:13px!important;line-height:1.6!important;font-weight:650!important;color:#27352c!important}
+.quote-pdf-page .quote-signature{gap:4px!important}
+.quote-pdf-page .quote-signature strong{font-size:12px!important;line-height:1.5!important;font-weight:750!important;color:#263a2c!important}
+.quote-pdf-page .quote-signature img{width:175px!important;max-height:90px!important}
+.quote-pdf-page .quote-sheet-footer{margin-top:0!important;padding-top:8px!important;font-size:9.5px!important;line-height:1.45!important;flex:0 0 auto!important}
