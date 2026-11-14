@@ -8,7 +8,6 @@ import './plant-guide-page.css';
 
 const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 const pageUrl = (path: string) => new URL(`${basePath}${path.startsWith('/') ? path : `/${path}`}`, window.location.origin).toString();
-const directoryUrl = () => pageUrl('/plants');
 const plantUrl = (id: string) => pageUrl(`/plants/${encodeURIComponent(id)}`);
 const normalize = (value: string) => value.normalize('NFKD').replace(/[\u064B-\u065F\u0670\u0640]/g, '').toLocaleLowerCase();
 const safeFilename = (value: string) => value.normalize('NFKC').replace(/[^\p{L}\p{N}-]+/gu, '-').replace(/^-|-$/g, '') || 'plant';
@@ -55,7 +54,6 @@ function accentFor() { return navbarColor; }
 
 export function PlantGuideHomeFeature({ lang }: { lang: 'ar' | 'en' }) {
   const isArabic = lang === 'ar';
-  const url = directoryUrl();
   return <section className="plant-guide-home-section" aria-labelledby="plant-guide-home-title" dir={isArabic ? 'rtl' : 'ltr'}>
     <div className="plant-guide-home-shell">
       <div className="plant-guide-home-copy">
@@ -68,19 +66,7 @@ export function PlantGuideHomeFeature({ lang }: { lang: 'ar' | 'en' }) {
         <Link className="plant-guide-home-button" href="/plants">{isArabic ? 'تصفّح دليل النباتات' : 'Browse the plant guide'} {isArabic ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}</Link>
         <small>{isArabic ? 'القائمة مرجعية ولا تؤكد توفر كل صنف تجاريًا.' : 'Reference list only; it does not confirm stock availability.'}</small>
       </div>
-      <div className="plant-guide-home-qr-stage">
-        <div className="plant-guide-home-orbit plant-guide-home-orbit-one" />
-        <div className="plant-guide-home-orbit plant-guide-home-orbit-two" />
-        <div className="plant-guide-home-qr-card">
-          <div className="plant-guide-home-qr-label"><span><QrCode size={15} /> QADRI / PLANT LIBRARY</span><span className="plant-guide-live-dot" /></div>
-          <div className="plant-guide-home-qr-box"><QRCodeSVG value={url} size={176} level="H" includeMargin title={isArabic ? 'رمز QR لدليل النباتات' : 'QR code to the plant guide'} /></div>
-          <strong>{isArabic ? 'وجّه الكاميرا وابدأ' : 'Point your camera to begin'}</strong>
-          <span>{isArabic ? 'يفتح مكتبة النباتات كاملة' : 'Opens the full plant library'}</span>
-          <div className="plant-guide-home-qr-url" dir="ltr">{new URL(url).host}/plants</div>
-        </div>
-        <div className="plant-guide-qr-leaf leaf-one"><Leaf size={28} /></div>
-        <div className="plant-guide-qr-leaf leaf-two"><Sprout size={25} /></div>
-      </div>
+
     </div>
   </section>;
 }
