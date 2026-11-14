@@ -105,7 +105,7 @@ function materializePrintableControls(sheet: HTMLElement) {
 function preparePdfSheet(source: HTMLElement) {
   const sheet = source.cloneNode(true) as HTMLElement;
   sheet.classList.add('quote-pdf-page');
-  sheet.style.cssText += `;width:${A4_WIDTH_MM}mm!important;height:${A4_HEIGHT_MM}mm!important;min-width:${A4_WIDTH_MM}mm!important;max-width:${A4_WIDTH_MM}mm!important;min-height:${A4_HEIGHT_MM}mm!important;max-height:${A4_HEIGHT_MM}mm!important;margin:0!important;padding:${PAGE_PADDING_MM}mm!important;box-sizing:border-box!important;overflow:hidden!important;box-shadow:none!important;`;
+  sheet.style.cssText += `;width:${A4_WIDTH_MM}mm!important;height:${A4_HEIGHT_MM}mm!important;min-width:${A4_WIDTH_MM}mm!important;max-width:${A4_WIDTH_MM}mm!important;min-height:${A4_HEIGHT_MM}mm!important;max-height:${A4_HEIGHT_MM}mm!important;margin:0!important;padding:${PAGE_PADDING_MM}mm!important;box-sizing:border-box!important;overflow:hidden!important;`;
 
   const itemsWrap = sheet.querySelector<HTMLElement>('.quote-items-wrap');
   if (itemsWrap) {
@@ -121,6 +121,12 @@ function preparePdfSheet(source: HTMLElement) {
     element.style.display = 'none';
   });
   return sheet;
+}
+
+function hideEmptyNotes(sheet: HTMLElement) {
+  const notes = sheet.querySelector<HTMLElement>('.quote-notes-under-table');
+  const notesInput = notes?.querySelector<HTMLTextAreaElement>('textarea');
+  if (notes && !notesInput?.value.trim()) notes.style.display = 'none';
 }
 
 function hideLastPageOnlyContent(sheet: HTMLElement) {
@@ -147,6 +153,7 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
     document.body.appendChild(wrapper);
     const measureSheet = preparePdfSheet(source);
     copyFormState(source, measureSheet);
+    hideEmptyNotes(measureSheet);
     wrapper.appendChild(measureSheet);
     materializePrintableControls(measureSheet);
 
@@ -221,6 +228,7 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
     for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
       const page = preparePdfSheet(source);
       copyFormState(source, page);
+      hideEmptyNotes(page);
       const pageBody = page.querySelector<HTMLTableElement>('.quote-items-table')?.tBodies[0];
       if (!pageBody) continue;
 
