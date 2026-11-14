@@ -1064,7 +1064,7 @@ function nextAppDocumentNumber(prefix: 'Q' | 'INV', kind: 'quote' | 'invoice') {
   return { date, number: dateBasedDocumentNumber(prefix, date), recordId: createAdminDocumentId() };
 }
 const emptyQuoteItem = (): QuoteItem => ({ id: `${Date.now()}-${Math.random()}`, code: '', name: '', description: '', category: '', quantity: 1, price: 0, image: '', landscapeSize: 58, landscapeShape: 'circle', landscapeArea: 0, landscapeAdded: false });
-const quoteMoney = (value: number, currency = 'JOD') => `${value.toFixed(2)} ${currency}`;
+const quoteMoney = (value: number, currency = 'JOD') => `${value.toFixed(2)} ${currency === 'JOD' ? 'د.ا' : currency}`;
 const quoteEscape = (value: string) => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char] || char));
 function quoteExportMarkup(quote: QuoteDraft, settings: AdminSettings) {
   const subtotal = quote.items.reduce((sum, item) => sum + item.quantity * item.price, 0); const discount = Math.min(subtotal, Math.max(0, Number(quote.discount) || 0)); const taxable = subtotal - discount; const tax = quote.taxEnabled ? taxable * (quote.taxRate / 100) : 0; const shippingCost = Math.max(0, Number(quote.shippingCost) || 0); const total = taxable + tax + shippingCost;

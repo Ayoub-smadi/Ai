@@ -1255,3 +1255,12 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 
 /* Raise the closing phrase and signature by approximately two text lines. */
 .quote-pdf-page .quote-signoff{transform:translateY(-24px)!important}
+
+/* Make quote totals prominent and readable in the exported PDF. */
+.quote-pdf-page .quote-totals{gap:10px!important;font-size:13px!important}
+.quote-pdf-page .quote-totals>div{font-size:13px!important;line-height:1.55!important;color:#26372b!important}
+.quote-pdf-page .quote-totals>div>span,.quote-pdf-page .quote-totals>div>label{font-size:13px!important;font-weight:700!important;color:#26372b!important}
+.quote-pdf-page .quote-totals>div>strong{font-size:13.5px!important;font-weight:800!important;color:#1c2f22!important;white-space:nowrap!important}
+.quote-pdf-page .quote-totals .quote-grand-total{padding-top:12px!important;margin-top:3px!important}
+.quote-pdf-page .quote-totals .quote-grand-total>span{font-size:15px!important;font-weight:800!important;color:#183b25!important}
+.quote-pdf-page .quote-totals .quote-grand-total>strong{font-size:16px!important;font-weight:850!important;color:#183b25!important}
