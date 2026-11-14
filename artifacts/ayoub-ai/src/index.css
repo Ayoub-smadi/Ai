@@ -1248,3 +1248,7 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-pdf-page .quote-signature strong{font-size:12px!important;line-height:1.5!important;font-weight:750!important;color:#263a2c!important}
 .quote-pdf-page .quote-signature img{width:175px!important;max-height:90px!important}
 .quote-pdf-page .quote-sheet-footer{margin-top:0!important;padding-top:8px!important;font-size:9.5px!important;line-height:1.45!important;flex:0 0 auto!important}
+
+/* Lift the closing phrase and signature slightly above the bottom contact footer. */
+.quote-pdf-page .quote-signoff{margin-bottom:30px!important}
+.quote-pdf-page .quote-signoff-message{align-self:stretch!important;text-align:center!important}
