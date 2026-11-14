@@ -1264,3 +1264,26 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-pdf-page .quote-totals .quote-grand-total{padding-top:12px!important;margin-top:3px!important}
 .quote-pdf-page .quote-totals .quote-grand-total>span{font-size:15px!important;font-weight:800!important;color:#183b25!important}
 .quote-pdf-page .quote-totals .quote-grand-total>strong{font-size:16px!important;font-weight:850!important;color:#183b25!important}
+
+
+/* Independent quote-request motion section on the public home page. */
+.quote-motion-section{position:relative;margin:64px auto 0;padding:72px 0 78px;overflow:hidden;background:#122f24;color:#f8fbf2}
+.quote-motion-section:before{position:absolute;inset:0;background:radial-gradient(circle at 16% 20%,#47744b33,transparent 33%),radial-gradient(circle at 85% 80%,#d6a64a18,transparent 29%);content:'';pointer-events:none}
+.quote-motion-inner{position:relative;width:min(1160px,calc(100% - 48px));margin:0 auto}
+.quote-motion-intro{display:grid;justify-items:center;max-width:680px;margin:0 auto 30px;text-align:center}
+.quote-motion-kicker{display:inline-flex;align-items:center;gap:7px;color:#c6deaf;font-size:10px;font-weight:800;letter-spacing:.08em}
+.quote-motion-kicker svg{color:#e3bd72}
+.quote-motion-intro h2{margin:13px 0 10px;color:#fff;font-size:clamp(28px,4vw,47px);line-height:1.17;letter-spacing:-.035em}
+.quote-motion-intro p{max-width:540px;margin:0;color:#c4d3c4;font-size:12px;line-height:1.9}
+.quote-motion-stage{position:relative;width:min(960px,100%);margin:0 auto;border:1px solid #b7d2ad3b;border-radius:24px;background:#0e271e;padding:10px;box-shadow:0 24px 70px #07160e80}
+.quote-motion-video{display:block;width:100%;aspect-ratio:16/9;border-radius:17px;background:#102f24;object-fit:cover}
+.quote-motion-video-glow{position:absolute;inset:10px;border-radius:17px;box-shadow:inset 0 0 0 1px #fff2,inset 0 -80px 100px #07160e22;pointer-events:none}
+.quote-motion-sound,.quote-motion-autoplay{position:absolute;bottom:24px;display:inline-flex;align-items:center;gap:7px;border:1px solid #fff4;border-radius:999px;background:#102f24dd;color:#fff;padding:9px 12px;font:700 10px inherit;backdrop-filter:blur(10px);cursor:pointer}
+.quote-motion-sound{right:24px}.quote-motion-autoplay{left:24px;color:#d5e8c8;cursor:default}
+.quote-motion-sound:hover{background:#28563c}
+.quote-motion-steps{display:flex;align-items:center;justify-content:center;gap:0;margin:26px auto 0;max-width:920px}
+.quote-motion-step{display:flex;align-items:center;gap:9px;color:#d8e6d4;font-size:11px;font-weight:700;white-space:nowrap}
+.quote-motion-step>span{display:grid;place-items:center;width:28px;height:28px;border:1px solid #a7ca9b66;border-radius:50%;color:#e3bd72;font-size:10px}
+.quote-motion-step i{display:block;width:44px;height:1px;margin:0 16px;background:linear-gradient(90deg,#8ab38188,#d9b36644)}
+@media(max-width:700px){.quote-motion-section{margin-top:42px;padding:52px 0 58px}.quote-motion-inner{width:calc(100% - 28px)}.quote-motion-stage{padding:6px;border-radius:17px}.quote-motion-video{border-radius:12px}.quote-motion-video-glow{inset:6px;border-radius:12px}.quote-motion-sound,.quote-motion-autoplay{bottom:14px;padding:7px 9px;font-size:9px}.quote-motion-sound{right:14px}.quote-motion-autoplay{left:14px}.quote-motion-steps{align-items:flex-start;flex-direction:column;gap:12px;padding:0 8px}.quote-motion-step i{width:1px;height:16px;margin:0 13px;position:absolute;transform:translateY(22px)}.quote-motion-step:last-child i{display:none}}
+@media(prefers-reduced-motion:reduce){.quote-motion-video{animation:none}.quote-motion-section *{scroll-behavior:auto}}

@@ -24,6 +24,7 @@ import type { Agent, BusinessProfileInput, Faq, Product } from '@workspace/api-c
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import QuoteRequestMotionSection from '@/components/quote-request-motion-section';
 import NotFound from '@/pages/not-found';
 import { exportProductsCsv, parseProductCsv, PRODUCT_CSV_TEMPLATE } from '@/lib/product-csv';
 import readXlsxFile from 'read-excel-file/browser';
@@ -383,6 +384,7 @@ function HomePage() {
     </section>
     <DailyPlantFeature lang={lang} />
     <FounderBiographyTicker />
+    <QuoteRequestMotionSection lang={lang} />
     <section className="public-section" id="about-us"><div className="public-section-inner" id="how-it-works">
       <div className="section-heading"><div><div className="eyebrow">{tr(lang, 'CARE STARTS WITH OBSERVATION', 'العناية تبدأ بالملاحظة')}</div><h2>{tr(lang, 'Start with what you can see.', 'ابدأ بما تراه في نبتتك.')}</h2></div><p>{tr(lang, 'A plant photo prepares the ground for practical crop-care guidance. Automated diagnosis will be available after the AI service is connected.', 'صورة النبتة تمهّد لإرشادات عملية للعناية بالمحاصيل. سيتاح التشخيص الآلي بعد ربط خدمة الذكاء الاصطناعي.')}</p></div>
       <div className="steps-row"><article className="step"><div className="step-num">{tr(lang, '01 / PHOTO', '01 / الصورة')}</div><h3>{tr(lang, 'Photograph the plant', 'صوّر النبتة')}</h3><p>{tr(lang, 'Capture the whole plant or a close-up of the affected leaf in good light.', 'التقط صورة كاملة للنبتة أو قرّب الكاميرا من الورقة المتأثرة مع إضاءة جيدة.')}</p></article>
