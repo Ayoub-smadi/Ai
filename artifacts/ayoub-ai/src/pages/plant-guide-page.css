@@ -12,3 +12,6 @@
 
 /* The public guide no longer shows the camera/QR library card. */
 .plant-guide-home-shell { grid-template-columns: minmax(0, 800px); max-width: 800px; }
+/* Keep the QR card, without restoring the removed camera prompt or URL text. */
+.plant-guide-home-shell { grid-template-columns: minmax(0,1.2fr) minmax(300px,.8fr); max-width: 1270px; }
+@media(max-width:760px){.plant-guide-home-shell{grid-template-columns:1fr;gap:24px}}

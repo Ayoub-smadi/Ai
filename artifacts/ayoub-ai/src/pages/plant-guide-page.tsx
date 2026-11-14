@@ -66,7 +66,16 @@ export function PlantGuideHomeFeature({ lang }: { lang: 'ar' | 'en' }) {
         <Link className="plant-guide-home-button" href="/plants">{isArabic ? 'تصفّح دليل النباتات' : 'Browse the plant guide'} {isArabic ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}</Link>
         <small>{isArabic ? 'القائمة مرجعية ولا تؤكد توفر كل صنف تجاريًا.' : 'Reference list only; it does not confirm stock availability.'}</small>
       </div>
-
+      <div className="plant-guide-home-qr-stage">
+        <div className="plant-guide-home-orbit plant-guide-home-orbit-one" />
+        <div className="plant-guide-home-orbit plant-guide-home-orbit-two" />
+        <div className="plant-guide-home-qr-card">
+          <div className="plant-guide-home-qr-label"><span><QrCode size={15} /> QADRI / PLANT LIBRARY</span><span className="plant-guide-live-dot" /></div>
+          <div className="plant-guide-home-qr-box"><QRCodeSVG value={pageUrl('/plants')} size={176} level="H" includeMargin title={isArabic ? 'رمز QR لدليل النباتات' : 'QR code to the plant guide'} /></div>
+        </div>
+        <div className="plant-guide-qr-leaf leaf-one"><Leaf size={28} /></div>
+        <div className="plant-guide-qr-leaf leaf-two"><Sprout size={25} /></div>
+      </div>
     </div>
   </section>;
 }
