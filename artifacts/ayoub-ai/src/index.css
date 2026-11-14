@@ -1235,3 +1235,7 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 /* Keep category text readable: give the column room and never split Arabic words mid-word. */
 .quote-pdf-page .quote-items-table th[data-quote-part="col-category"],.quote-pdf-page .quote-items-table td[data-quote-part="col-category"]{width:18%!important;min-width:18%!important;white-space:normal!important;word-break:normal!important;overflow-wrap:normal!important;text-align:center!important;direction:rtl!important}
 .quote-pdf-page .quote-items-table td[data-quote-part="col-category"] .quote-pdf-value{width:100%!important;white-space:normal!important;word-break:normal!important;overflow-wrap:normal!important;line-height:1.5!important}
+
+/* Align category content with the other quote columns in the PDF row. */
+.quote-pdf-page .quote-items-table td[data-quote-part="col-category"]{vertical-align:middle!important;text-align:center!important;padding:8px 6px!important}
+.quote-pdf-page .quote-items-table td[data-quote-part="col-category"] .quote-pdf-value{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;min-height:100%!important;margin:0 auto!important;line-height:1.55!important;direction:rtl!important}
