@@ -1269,3 +1269,6 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-stamp-picker{display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:0 10px;border:1px solid #d9e5d8;border-radius:7px;background:#fff;color:#315c3c;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
 .quote-stamp-picker input[type=file]{display:none}
 .quote-stamp-picker:hover{border-color:#6c9a6d;background:#f5faf4}
+.quote-signature-text-picker{display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:0 8px;border:1px solid #d9e5d8;border-radius:7px;background:#fff;color:#315c3c;font-size:10px;font-weight:700;white-space:nowrap}
+.quote-signature-text-picker input{width:190px;border:0;border-bottom:1px solid #cbdaca;background:transparent;color:#243d2a;font:inherit;font-weight:500;outline:none;padding:3px 2px}
+.quote-signature-text-picker input:focus{border-bottom-color:#4d8154}
