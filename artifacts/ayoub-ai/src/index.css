@@ -1334,6 +1334,6 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-pdf-page .quote-items-table td[data-quote-part="col-name"] .quote-pdf-value,.quote-pdf-page .quote-items-table td[data-quote-part="col-description"] .quote-pdf-value{font-size:11.5px!important;font-weight:700!important;line-height:1.5!important;color:#202820!important}
 .quote-items-table,.quote-items-table th,.quote-items-table td{border-color:#000!important;border-width:1px!important;border-style:solid!important}
 .quote-pdf-page .quote-items-table [data-quote-part="col-delete"]{display:none!important}
-.quote-item-image.quote-image-picker{width:84px;height:84px}
+.quote-item-image.quote-image-picker{width:128px;height:128px}
 .quote-pdf-page .quote-items-table td[data-quote-part="col-image"]{width:142px!important;min-width:142px!important}
 .quote-pdf-page .quote-item-image.quote-image-picker{width:128px!important;height:128px!important}
