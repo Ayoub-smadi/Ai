@@ -149,6 +149,11 @@ function hideSecondaryPageHeader(sheet: HTMLElement) {
   });
 }
 
+function hidePageFooter(sheet: HTMLElement) {
+  const footer = sheet.querySelector<HTMLElement>('.quote-sheet-footer');
+  if (footer) footer.style.display = 'none';
+}
+
 export async function exportQuotePdf(source: HTMLElement, documentNumber: string) {
   if (quotePdfExportInProgress) return;
   quotePdfExportInProgress = true;
@@ -247,7 +252,10 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
       pageBody.replaceChildren(...pageRows);
 
       wrapper.appendChild(page);
-      if (pageIndex < pages.length - 1) hideLastPageOnlyContent(page);
+      if (pageIndex < pages.length - 1) {
+        hideLastPageOnlyContent(page);
+        hidePageFooter(page);
+      }
       if (pageIndex > 0) hideSecondaryPageHeader(page);
       materializePrintableControls(page);
       pageSheets.push(page);
