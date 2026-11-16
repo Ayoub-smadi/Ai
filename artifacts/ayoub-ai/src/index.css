@@ -1293,3 +1293,15 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-totals-bar .quote-discount-label::placeholder{color:#ffffffaa}
 .quote-totals-bar .quote-totals,.quote-totals-bar .quote-totals *,.quote-totals-bar .quote-totals strong,.quote-totals-bar .quote-totals span,.quote-totals-bar .quote-totals label{color:#fff!important}
 .quote-totals-bar .quote-totals-controls input:not([type=checkbox]){color:#fff!important;-webkit-text-fill-color:#fff!important}
+.quote-totals-area{width:100%;display:grid;gap:6px}
+.quote-totals-area>.quote-totals-controls{justify-content:flex-start;padding:0 4px;background:transparent;border:0;color:#667067}
+.quote-totals-area>.quote-totals-controls label{color:#667067;font-size:9px}
+.quote-totals-area>.quote-totals-controls input:not([type=checkbox]){background:#fff;border:1px solid #d8ded8;color:#334238!important;-webkit-text-fill-color:#334238!important}
+.quote-totals-area>.quote-totals-controls input:focus{border-color:var(--quote-accent);background:#fff}
+.quote-totals-area>.quote-totals-controls .quote-tax-toggle{color:#667067}
+.quote-totals-area>.quote-totals-bar{border-radius:6px;box-shadow:0 4px 10px #183d231f}
+.quote-totals-area>.quote-totals-bar .quote-totals{padding:8px 14px;gap:0}
+.quote-totals-area>.quote-totals-bar .quote-totals>div{min-height:25px;padding:3px 0}
+.quote-totals-area>.quote-totals-bar .quote-total-subtotal span,.quote-totals-area>.quote-totals-bar .quote-total-subtotal strong{font-size:12px!important}
+.quote-totals-area>.quote-totals-bar .quote-grand-total{margin-top:2px;padding:6px 0 0!important}
+.quote-totals-area>.quote-totals-bar .quote-grand-total span,.quote-totals-area>.quote-totals-bar .quote-grand-total strong{font-size:14px!important}
