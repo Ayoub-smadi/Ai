@@ -1264,3 +1264,8 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-pdf-page .quote-totals .quote-grand-total{padding-top:12px!important;margin-top:3px!important}
 .quote-pdf-page .quote-totals .quote-grand-total>span{font-size:15px!important;font-weight:800!important;color:#183b25!important}
 .quote-pdf-page .quote-totals .quote-grand-total>strong{font-size:16px!important;font-weight:850!important;color:#183b25!important}
+
+/* Editable stamp control for quote PDFs. */
+.quote-stamp-picker{display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:0 10px;border:1px solid #d9e5d8;border-radius:7px;background:#fff;color:#315c3c;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.quote-stamp-picker input[type=file]{display:none}
+.quote-stamp-picker:hover{border-color:#6c9a6d;background:#f5faf4}
