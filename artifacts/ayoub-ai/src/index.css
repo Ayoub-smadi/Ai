@@ -1337,3 +1337,6 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-item-image.quote-image-picker{width:128px;height:128px}
 .quote-pdf-page .quote-items-table td[data-quote-part="col-image"]{width:142px!important;min-width:142px!important}
 .quote-pdf-page .quote-item-image.quote-image-picker{width:128px!important;height:128px!important}
+.quote-pdf-page .quote-items-table td[data-quote-part="col-image"]{text-align:center!important;vertical-align:middle!important;padding:7px!important}
+.quote-pdf-page .quote-item-image.quote-image-picker{display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;margin:0 auto!important;overflow:hidden!important}
+.quote-pdf-page .quote-item-image.quote-image-picker img{display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;margin:0 auto!important;object-fit:cover!important}
