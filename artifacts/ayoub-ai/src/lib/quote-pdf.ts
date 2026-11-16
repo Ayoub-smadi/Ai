@@ -180,9 +180,9 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
     const pageBottom = pageHeight - PAGE_PADDING_MM * CSS_PIXELS_PER_MM;
     const tableHeaderHeight = table.tHead?.getBoundingClientRect().height || 0;
     const baseRowCapacity = pageBottom - tableTop - tableHeaderHeight;
-    const footer = measureSheet.querySelector<HTMLElement>('.quote-sheet-footer');
-    const footerReserve = footer && footer.offsetHeight > 0 ? footer.offsetHeight + 18 : 0;
-    const rowCapacity = Math.max(0, baseRowCapacity - footerReserve);
+    // The contact footer is rendered only on the final page, so earlier pages
+    // must not reserve its height when deciding how many rows they can hold.
+    const rowCapacity = Math.max(0, baseRowCapacity);
 
     const bottomSelectors = [
       '.quote-below-table-grid',
