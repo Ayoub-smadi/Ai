@@ -1321,3 +1321,7 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-item-name-cell input,.quote-item-description-cell textarea{width:100%;text-align:center}
 .quote-item-description-cell textarea{min-height:42px;resize:vertical}
 .quote-pdf-page .quote-totals-bar .quote-grand-total,.quote-pdf-page .quote-totals-bar .quote-grand-total span,.quote-pdf-page .quote-totals-bar .quote-grand-total strong{border-top:0!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+.quote-pdf-page .quote-items-table tbody tr{height:auto!important;min-height:0!important}
+.quote-pdf-page .quote-items-table tbody td{height:auto!important;min-height:0!important;overflow:hidden!important;vertical-align:top!important}
+.quote-pdf-page .quote-items-table td[data-quote-part="col-name"],.quote-pdf-page .quote-items-table td[data-quote-part="col-description"]{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}
+.quote-pdf-page .quote-items-table td[data-quote-part="col-name"] .quote-pdf-value,.quote-pdf-page .quote-items-table td[data-quote-part="col-description"] .quote-pdf-value{white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.45!important}

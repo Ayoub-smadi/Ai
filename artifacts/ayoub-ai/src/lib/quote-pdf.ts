@@ -142,6 +142,13 @@ function hideLastPageOnlyContent(sheet: HTMLElement) {
   });
 }
 
+function hideSecondaryPageHeader(sheet: HTMLElement) {
+  ['.quote-meta-grid', '.quote-title-block'].forEach((selector) => {
+    const element = sheet.querySelector<HTMLElement>(selector);
+    if (element) element.style.display = 'none';
+  });
+}
+
 export async function exportQuotePdf(source: HTMLElement, documentNumber: string) {
   if (quotePdfExportInProgress) return;
   quotePdfExportInProgress = true;
@@ -241,6 +248,7 @@ export async function exportQuotePdf(source: HTMLElement, documentNumber: string
 
       wrapper.appendChild(page);
       if (pageIndex < pages.length - 1) hideLastPageOnlyContent(page);
+      if (pageIndex > 0) hideSecondaryPageHeader(page);
       materializePrintableControls(page);
       pageSheets.push(page);
     }
