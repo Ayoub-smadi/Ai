@@ -1316,3 +1316,8 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .quote-pdf-page .quote-totals-bar,.quote-pdf-page .quote-totals-bar .quote-totals,.quote-pdf-page .quote-totals-bar .quote-totals *{color:#fff!important}
 .quote-pdf-page .quote-totals-bar .quote-totals>div{border-bottom:0!important}
 .quote-pdf-page .quote-totals-bar .quote-grand-total{border-top:0!important;padding-top:6px!important}
+.quote-items-table th[data-quote-part="col-name"],.quote-items-table td[data-quote-part="col-name"]{width:17%!important;min-width:17%!important}
+.quote-items-table th[data-quote-part="col-description"],.quote-items-table td[data-quote-part="col-description"]{width:21%!important;min-width:21%!important}
+.quote-item-name-cell input,.quote-item-description-cell textarea{width:100%;text-align:center}
+.quote-item-description-cell textarea{min-height:42px;resize:vertical}
+.quote-pdf-page .quote-totals-bar .quote-grand-total,.quote-pdf-page .quote-totals-bar .quote-grand-total span,.quote-pdf-page .quote-totals-bar .quote-grand-total strong{border-top:0!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
