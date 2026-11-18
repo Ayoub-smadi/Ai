@@ -398,7 +398,7 @@ function FounderContactCard({ lang }: { lang: Lang }) {
       <div className="founder-card-id">
         <span className="founder-card-eyebrow">{tr(lang, 'AL-QADRI NURSERIES', 'مشاتل القادري')}</span>
         <h3 className="founder-card-name">م. ثامر القادري</h3>
-        <p className="founder-card-role">{tr(lang, 'Founder & General Manager', 'المؤسس والمدير العام')}</p>
+        <p className="founder-card-role">{tr(lang, 'General Manager', 'المدير العام')}</p>
       </div>
     </header>
     <div className="founder-card-rule" aria-hidden="true"><span /></div>

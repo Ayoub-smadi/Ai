@@ -653,7 +653,7 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
 .founder-bio-sign.is-visible{opacity:1;transform:none}
 .founder-bio-sign strong{font-size:13px;font-weight:700;letter-spacing:-.01em;color:#020618}
 .founder-bio-sign span{font:10px var(--app-font-mono);letter-spacing:.06em;color:#315c3c}
-.founder-card{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:11px;width:100%;padding:22px 20px 18px;border:1px solid #ffffff1f;border-radius:20px;background:linear-gradient(158deg,#0a1a12 0%,#04091a 42%,#020618 100%);color:#fff;box-shadow:0 30px 60px -28px #02061899,inset 0 1px 0 #ffffff14;transform:rotateX(var(--founder-tilt-x,0deg)) rotateY(var(--founder-tilt-y,0deg));transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.7,.3,1),box-shadow .45s}
+.founder-card{order:-1;position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:11px;width:100%;padding:22px 20px 18px;border:1px solid #ffffff1f;border-radius:20px;background:linear-gradient(158deg,#0a1a12 0%,#04091a 42%,#020618 100%);color:#fff;box-shadow:0 30px 60px -28px #02061899,inset 0 1px 0 #ffffff14;transform:rotateX(var(--founder-tilt-x,0deg)) rotateY(var(--founder-tilt-y,0deg));transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.7,.3,1),box-shadow .45s}
 .founder-card::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .35s;background:radial-gradient(240px 240px at var(--founder-glow-x,50%) var(--founder-glow-y,0%),#4f9c6230,transparent 70%)}
 .founder-card:hover::after{opacity:1}
 .founder-card:hover{box-shadow:0 40px 74px -26px #020618c0,inset 0 1px 0 #ffffff22}
@@ -665,8 +665,8 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
 .founder-card-arcs path.is-low{fill:#8ec79a;opacity:.34}
 @keyframes founder-card-drift{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}50%{transform:translate3d(-8px,7px,0) rotate(-5deg)}}
 .founder-card-head{display:grid;grid-template-columns:84px minmax(0,1fr);gap:15px;align-items:center;padding-block-start:2px}
-.founder-card-photo{position:relative;width:84px;height:84px;border-radius:50%;padding:3px;background:linear-gradient(145deg,#a8d8b2,#315c3c 52%,#8ec79a);box-shadow:0 14px 28px -12px #000d,inset 0 0 0 1px #ffffff14}
-.founder-card-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 30%;border:2px solid #04091a;border-radius:50%;background:#fff}
+.founder-card-photo{position:relative;width:92px;height:92px;border-radius:50%;padding:3px;background:linear-gradient(145deg,#c8f0ce,#315c3c 52%,#8ec79a);box-shadow:0 14px 28px -12px #000d,inset 0 0 0 1px #ffffff14}
+.founder-card-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 31%;border:2px solid #04091a;border-radius:50%;background:#fff;image-rendering:auto}
 .founder-card-eyebrow{display:block;font:9px var(--app-font-mono);letter-spacing:.2em;text-transform:uppercase;color:#8ec79a}
 .founder-card-name{margin:5px 0 0;font-size:21px;font-weight:700;line-height:1.2;letter-spacing:-.02em;color:#fff}
 .founder-card-role{margin:4px 0 0;font-size:11px;line-height:1.5;color:#ffffffa3}
@@ -693,7 +693,7 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
 .founder-card-ghost{border:1px solid #ffffff2e;background:#ffffff08;color:#ffffffd9}
 .founder-card-ghost:hover{transform:translateY(-2px);border-color:#fff;background:#fff;color:#020618}
 @media(max-width:1000px){.founder-bio-ticker{grid-template-columns:minmax(0,1fr) 300px;gap:28px;padding:28px}}
-@media(max-width:900px){.founder-bio-ticker{grid-template-columns:1fr;gap:26px;padding:24px 18px}.founder-card{width:min(340px,100%);margin-inline:auto}}
+@media(max-width:900px){.founder-bio-ticker{grid-template-columns:1fr;gap:26px;padding:24px 18px}.founder-card{order:-1;width:min(340px,100%);margin-inline:auto}}
 @media(max-width:700px){.founder-bio-ticker{width:calc(100% - 28px);margin-top:16px;border-radius:20px}.founder-bio-copy p{font-size:14.5px;line-height:2.05}}
 @media(prefers-reduced-motion:reduce){.founder-bio-cursor{animation:none}.founder-card-arcs{animation:none}.founder-card{transform:none!important}.founder-bio-sign{opacity:1;transform:none}.founder-card-contacts li:hover{transform:none}.founder-card-cta:hover,.founder-card-ghost:hover{transform:none}}
 /* Mobile header: reserve a separate phone row and keep both status cards in normal flow */
