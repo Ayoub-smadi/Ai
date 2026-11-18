@@ -340,10 +340,44 @@ function FounderBiographyTicker() {
     return () => window.clearTimeout(timer);
   }, [deleting, visibleWords, words.length]);
 
+  const { lang } = useLang();
   return <section className="founder-bio-ticker" dir="rtl" lang="ar" aria-label="نبذة عن المهندس ثامر القادري">
-    <p aria-hidden="true">{words.slice(0, visibleWords).join(' ')}<span className="founder-bio-cursor" /></p>
-    <span className="sr-only">{biography}</span>
+    <FounderContactCard lang={lang} />
+    <div className="founder-bio-copy">
+      <div className="founder-bio-label"><span>{tr(lang, 'FOUNDER STORY', 'حكاية المؤسس')}</span><i aria-hidden="true" /></div>
+      <p aria-hidden="true">{words.slice(0, visibleWords).join(' ')}<span className="founder-bio-cursor" /></p>
+      <span className="sr-only">{biography}</span>
+    </div>
   </section>;
+}
+
+function FounderContactCard({ lang }: { lang: Lang }) {
+  const contacts = [
+    { icon: <Phone size={14} />, label: tr(lang, 'Phone', 'الهاتف'), value: '+962 77 777 2211', href: 'tel:+962777772211', ltr: true },
+    { icon: <Mail size={14} />, label: tr(lang, 'Email', 'البريد الإلكتروني'), value: 'tamerqadri@gmail.com', href: 'mailto:tamerqadri@gmail.com', ltr: true },
+    { icon: <Globe2 size={14} />, label: tr(lang, 'Website', 'الموقع'), value: 'alqadrioffers.online', href: 'https://www.alqadrioffers.online', ltr: true },
+    { icon: <MapPinned size={14} />, label: tr(lang, 'Location', 'الموقع الجغرافي'), value: tr(lang, 'Jerash, Jordan', 'جرش — الأردن'), href: '', ltr: false },
+  ];
+  return <aside className="founder-card" aria-label={tr(lang, 'Business card of Eng. Thamer Al-Qadri', 'بطاقة المهندس ثامر القادري')}>
+    <svg className="founder-card-swoosh" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+      <path d="M200 0H96c-3 34-24 62-54 79-14 8-22 18-24 30 30-4 58-16 82-35 26-21 46-46 58-74H200z" />
+      <path d="M200 34h-58c-16 26-38 47-66 60-9 4-14 9-16 15 26-6 50-18 70-36 16-15 29-27 40-39h30z" className="is-mid" />
+      <path d="M200 72h-42c-11 16-25 29-43 38-6 3-9 6-11 10 20-8 37-20 51-35 8-9 14-13 19-13h26z" className="is-low" />
+    </svg>
+    <header className="founder-card-head">
+      <span className="founder-card-eyebrow">{tr(lang, 'AL-QADRI NURSERIES', 'مشاتل القادري')}</span>
+      <h3 className="founder-card-name">مهندس<span>ثامر القادري</span></h3>
+      <p className="founder-card-role">{tr(lang, 'Founder & General Manager', 'المؤسس والمدير العام')}</p>
+    </header>
+    <div className="founder-card-portrait"><img src="/founder/tamer-alqadri-portrait.png" alt={tr(lang, 'Eng. Thamer Al-Qadri', 'المهندس ثامر القادري')} loading="lazy" /></div>
+    <ul className="founder-card-contacts">
+      {contacts.map((item) => <li key={item.label}>
+        <span className="founder-card-icon">{item.icon}</span>
+        <span className="founder-card-meta"><small>{item.label}</small>{item.href ? <a href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel={item.href.startsWith('http') ? 'noreferrer' : undefined} dir={item.ltr ? 'ltr' : undefined}>{item.value}</a> : <strong dir={item.ltr ? 'ltr' : undefined}>{item.value}</strong>}</span>
+      </li>)}
+    </ul>
+    <a className="founder-card-cta" href="tel:+962777772211"><Phone size={14} />{tr(lang, 'Call now', 'اتصل الآن')}</a>
+  </aside>;
 }
 
 function AnnouncementTicker({ text, preview = false, brandColor = defaultAdminSettings.primaryColor }: { text: string; preview?: boolean; brandColor?: string }) {

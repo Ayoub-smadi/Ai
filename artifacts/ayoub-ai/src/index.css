@@ -642,12 +642,43 @@ html[dir="rtl"] .builder-question{align-self:flex-start;border-radius:12px 12px 
 
 
 /* Homepage founder biography ticker */
-.founder-bio-ticker{width:min(1160px,calc(100% - 48px));min-height:260px;margin:22px auto 0;padding:24px 30px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid #dfe9dc;border-radius:18px;background:linear-gradient(135deg,#f8fbf6,#eef5eb);color:#263b2b}
-.founder-bio-ticker p{width:100%;margin:0;text-align:center;font-size:15px;line-height:2.05;font-weight:500;white-space:normal;overflow-wrap:anywhere}
+.founder-bio-ticker{width:min(1160px,calc(100% - 48px));min-height:300px;margin:22px auto 0;padding:26px;display:grid;grid-template-columns:280px minmax(0,1fr);gap:28px;align-items:center;box-sizing:border-box;border:1px solid #dfe9dc;border-radius:18px;background:linear-gradient(135deg,#f8fbf6,#eef5eb);color:#263b2b}
+.founder-bio-copy{min-width:0}
+.founder-bio-copy p{width:100%;margin:0;text-align:center;font-size:15px;line-height:2.05;font-weight:500;white-space:normal;overflow-wrap:anywhere}
 .founder-bio-cursor{display:inline-block;width:2px;height:1.05em;margin-inline-start:4px;vertical-align:-.16em;background:#537a52;animation:founder-bio-caret .9s steps(1,end) infinite}
 @keyframes founder-bio-caret{50%{opacity:0}}
-@media(max-width:700px){.founder-bio-ticker{width:calc(100% - 28px);min-height:540px;margin-top:14px;padding:20px 16px;border-radius:14px}.founder-bio-ticker p{font-size:14px;line-height:1.95}}
-@media(prefers-reduced-motion:reduce){.founder-bio-cursor{animation:none}}
+.founder-bio-label{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;font:9px var(--app-font-mono);letter-spacing:.16em;text-transform:uppercase;color:#315c3c}
+.founder-bio-label i{width:44px;height:1px;background:linear-gradient(90deg,transparent,#315c3c66,transparent)}
+.founder-card{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:13px;padding:17px;border:1px solid #cfdccb;border-radius:16px;background:#fff;box-shadow:0 16px 34px #02061814;transition:transform .3s cubic-bezier(.2,.7,.3,1),box-shadow .3s}
+.founder-card:hover{transform:translateY(-4px);box-shadow:0 26px 48px #02061820}
+.founder-card:focus-within{border-color:#315c3c;box-shadow:0 0 0 3px #315c3c22,0 22px 42px #02061818}
+.founder-card-swoosh{position:absolute;inset-block-start:-16px;inset-inline-end:-18px;width:124px;height:124px;z-index:0;opacity:.15;animation:founder-card-drift 14s ease-in-out infinite}
+.founder-card-swoosh path{fill:#315c3c}
+.founder-card-swoosh path.is-mid{fill:#537a52}
+.founder-card-swoosh path.is-low{fill:#020618}
+.founder-card:hover .founder-card-swoosh{opacity:.26}
+@keyframes founder-card-drift{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}50%{transform:translate3d(-6px,5px,0) rotate(-4deg)}}
+.founder-card-head,.founder-card-portrait,.founder-card-contacts,.founder-card-cta{position:relative;z-index:1}
+.founder-card-head{padding-inline-end:44px}
+.founder-card-eyebrow{display:block;font:9px var(--app-font-mono);letter-spacing:.15em;text-transform:uppercase;color:#315c3c}
+.founder-card-name{display:flex;flex-direction:column;margin:7px 0 0;font-size:20px;line-height:1.15;font-weight:700;letter-spacing:-.03em;color:#315c3c}
+.founder-card-name span{color:#020618;font-size:16px;font-weight:600;margin-top:2px}
+.founder-card-role{margin:5px 0 0;font-size:10px;line-height:1.5;color:#263b2b99}
+.founder-card-portrait{height:126px;display:flex;align-items:flex-end;justify-content:center;border-radius:12px;background:linear-gradient(180deg,#ffffff,#eef5eb 72%,#dfe9dc);overflow:hidden}
+.founder-card-portrait img{height:122px;width:auto;display:block;mix-blend-mode:multiply;transition:transform .34s cubic-bezier(.2,.7,.3,1)}
+.founder-card:hover .founder-card-portrait img{transform:scale(1.03)}
+.founder-card-contacts{list-style:none;display:grid;gap:8px;margin:0;padding:12px 0 0;border-top:1px dashed #cfdccb}
+.founder-card-contacts li{display:flex;align-items:center;gap:9px;min-width:0}
+.founder-card-icon{flex:0 0 24px;width:24px;height:24px;display:grid;place-items:center;border-radius:8px;background:#315c3c;color:#fff}
+.founder-card-meta{min-width:0;display:flex;flex-direction:column;gap:1px}
+.founder-card-meta small{font-size:9px;color:#263b2b80}
+.founder-card-meta a,.founder-card-meta strong{font-size:11px;font-weight:600;color:#020618;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.founder-card-meta a:hover{color:#315c3c;text-decoration:underline;text-underline-offset:3px}
+.founder-card-cta{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:0 12px;border-radius:9px;background:#020618;color:#fff;font-size:11px;font-weight:600;text-decoration:none;transition:background .2s,transform .2s}
+.founder-card-cta:hover{background:#315c3c;transform:translateY(-1px)}
+@media(max-width:900px){.founder-bio-ticker{grid-template-columns:1fr;gap:20px;padding:22px 18px;min-height:0}.founder-card{width:min(320px,100%);margin-inline:auto}}
+@media(max-width:700px){.founder-bio-ticker{width:calc(100% - 28px);margin-top:14px;padding:20px 14px;border-radius:14px}.founder-bio-copy p{font-size:14px;line-height:1.95}}
+@media(prefers-reduced-motion:reduce){.founder-bio-cursor{animation:none}.founder-card-swoosh{animation:none}.founder-card,.founder-card:hover{transform:none}.founder-card-portrait img,.founder-card:hover .founder-card-portrait img{transform:none}.founder-card-cta:hover{transform:none}}
 
 /* Mobile header: reserve a separate phone row and keep both status cards in normal flow */
 @media(max-width:520px){

@@ -14,5 +14,11 @@
 - [ ] Supply `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` so sign-in uses the real Clerk instance instead of the public preview router. Without them the public site works and protected API requests are rejected with 401.
 - [ ] Supply `OPENAI_API_KEY` for agent test responses and plant photo diagnosis. Without it those endpoints return an explicit unavailable error rather than a simulated answer.
 
+## Homepage founder identity card
+- [x] Show the supplied Eng. Thamer Al-Qadri business card inside the homepage typewriter section (`FounderBiographyTicker`), next to the paragraph that is typed and deleted, as a distinct panel rather than a plain image.
+- [x] Recolor the card to the site palette: deep green `#315c3c`, navy `#020618`, paper white and the existing soft green band tints; the lime-green artwork of the source image is replaced by recolored SVG arcs.
+- [x] Keep every contact value from the supplied card and make them live links: `tel:+962777772211`, `mailto:tamerqadri@gmail.com`, `https://www.alqadrioffers.online`, and Jerash — Jordan as plain text.
+- [x] Cut the portrait out of the supplied card and fade its lower edge so it blends into the panel, with bilingual labels for English and Arabic visitors and reduced-motion fallbacks.
+
 ## Scope boundaries
 - Do not add live WhatsApp, Instagram, Messenger, customer inbox, public chat widget, document retrieval, invitations, or role administration in this migration.
