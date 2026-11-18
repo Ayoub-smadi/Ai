@@ -1465,3 +1465,6 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .export-meta-party{display:grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:5px;padding:11px 12px;border:1px solid #d1dbd5;background:#fff;color:#263a31;font-size:13px}
 .export-meta-party span{font-weight:800}.export-meta-party b{min-height:18px;color:#34453d;font-size:13px;font-weight:600}.export-meta-party small{grid-column:1/-1;padding-top:4px;border-top:1px dotted #b9c4bd;color:#65736b;font-size:12px}.export-meta-recipient{grid-column:1/-1;grid-template-columns:auto 1fr}.export-meta-recipient b{border-bottom:1px dotted #aeb8b2}
 @media(max-width:680px){.export-meta-grid{grid-template-columns:1fr}.export-meta-recipient{grid-column:auto}.export-meta-facility{grid-column:auto}.export-meta-facility b{min-width:90px}}
+
+.export-header-facility{display:inline-block;margin-inline-start:24px;padding:3px 12px;border:1px solid #263a31;border-radius:3px;font-style:normal;font-size:12px;font-weight:700;color:#263a31;white-space:nowrap}
+@media(max-width:680px){.export-header-facility{display:block;width:max-content;margin:6px auto 0;font-size:11px}}
