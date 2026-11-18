@@ -117,6 +117,15 @@ function preparePdfSheet(source: HTMLElement) {
     table.style.cssText += ';width:100%!important;min-width:0!important;table-layout:fixed!important;border-collapse:collapse!important;';
   }
 
+  sheet.querySelectorAll<HTMLElement>('[data-quote-part="col-image"],.quote-image-cell').forEach((cell) => {
+    cell.style.cssText += ';width:154px!important;min-width:154px!important;padding:7px!important;text-align:center!important;vertical-align:middle!important;';
+  });
+  sheet.querySelectorAll<HTMLElement>('.quote-item-image.quote-image-picker').forEach((imageBox) => {
+    imageBox.style.cssText += ';width:140px!important;height:140px!important;max-width:140px!important;max-height:140px!important;margin:0 auto!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;';
+    const image = imageBox.querySelector<HTMLImageElement>('img');
+    if (image) image.style.cssText += ';display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;';
+  });
+
   sheet.querySelectorAll<HTMLElement>('button,.quote-logo-edit-hint,input[type="file"]').forEach((element) => {
     element.style.display = 'none';
   });

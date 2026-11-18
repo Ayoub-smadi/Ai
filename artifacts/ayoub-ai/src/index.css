@@ -1490,3 +1490,11 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 /* Monetary values centered per the invoice reference */
 .export-lines-table td:nth-child(1),.export-lines-table td:nth-child(2){text-align:center;padding-inline:7px}
 .export-editor-row input:nth-of-type(5),.export-editor-row input:nth-of-type(6){text-align:center}
+
+/* Final quote image sizing: the editor and PDF use the same larger footprint. */
+.quote-items-table th[data-quote-part="col-image"],.quote-items-table td[data-quote-part="col-image"],.quote-items-table th.quote-image-cell,.quote-items-table td.quote-image-cell{width:154px!important;min-width:154px!important;padding:7px!important;text-align:center!important;vertical-align:middle!important}
+.quote-items-table .quote-item-image.quote-image-picker{width:140px!important;height:140px!important;max-width:140px!important;max-height:140px!important;margin:0 auto!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+.quote-items-table .quote-item-image.quote-image-picker img{display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important}
+.quote-pdf-page .quote-items-table th[data-quote-part="col-image"],.quote-pdf-page .quote-items-table td[data-quote-part="col-image"],.quote-pdf-page .quote-items-table th.quote-image-cell,.quote-pdf-page .quote-items-table td.quote-image-cell{width:154px!important;min-width:154px!important;padding:7px!important}
+.quote-pdf-page .quote-item-image.quote-image-picker{width:140px!important;height:140px!important;max-width:140px!important;max-height:140px!important}
+@media(max-width:900px){.quote-items-table .quote-item-image.quote-image-picker{width:126px!important;height:126px!important;max-width:126px!important;max-height:126px!important}.quote-items-table th[data-quote-part="col-image"],.quote-items-table td[data-quote-part="col-image"]{width:140px!important;min-width:140px!important}}
