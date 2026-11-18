@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { FileDown, LayoutDashboard, Plus, Printer, Save, Trash2, X } from 'lucide-react';
+import { FileDown, LayoutDashboard, Plus, Save, Trash2, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { createAdminDocumentId, localDateString } from '@/lib/admin-document-storage';
 
@@ -73,6 +73,7 @@ export default function ExportInvoicePage() {
   const [records, setRecords] = useState<ExportInvoice[]>(readInvoices);
   const [active, setActive] = useState<ExportInvoice | null>(null);
   const [search, setSearch] = useState('');
+  const [pdfBusy, setPdfBusy] = useState(false);
   const printRef = useRef<HTMLElement>(null);
   const filtered = useMemo(() => records.filter((record) => `${record.number} ${record.importer} ${record.source}`.toLocaleLowerCase('ar').includes(search.toLocaleLowerCase('ar').trim())), [records, search]);
   const total = active?.lines.reduce((sum, line) => sum + money(line), 0) || 0;
@@ -92,7 +93,25 @@ export default function ExportInvoicePage() {
     setRecords(next);
     if (active?.recordId === record.recordId) setActive(null);
   };
-  const print = () => { if (printRef.current) window.print(); };
+  const downloadPdf = async () => {
+    if (!printRef.current) return;
+    setPdfBusy(true);
+    try {
+      await document.fonts?.ready;
+      await Promise.all(Array.from(printRef.current.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+      const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#fff', useCORS: true, logging: false });
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+      const width = 190;
+      const height = canvas.height * width / canvas.width;
+      const fit = Math.min(1, 277 / height);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.96), 'JPEG', (210 - width * fit) / 2, 10, width * fit, height * fit);
+      pdf.save(`${active?.number || 'export-invoice'}.pdf`);
+    } catch (error) {
+      console.error('Export invoice PDF generation failed', error);
+      window.alert('تعذر تنزيل ملف PDF. أعد المحاولة بعد اكتمال المعاينة.');
+    } finally { setPdfBusy(false); }
+  };
 
   return <main className="admin-page export-invoice-page" dir="rtl">
     <div className="admin-head export-invoice-head">
@@ -100,12 +119,12 @@ export default function ExportInvoicePage() {
       <div className="admin-head-actions"><button className="btn secondary" onClick={() => setActive(blankInvoice())}><Plus size={14} />فاتورة جديدة</button><Link className="btn secondary" href="/admin"><LayoutDashboard size={14} />لوحة التحكم</Link></div>
     </div>
     <div className="export-invoice-layout">
-      <section className="panel export-invoice-preview-panel"><div className="export-toolbar"><span>المعاينة الرسمية</span><small>تتحدث تلقائياً مع كل تعديل</small><button className="btn secondary small" onClick={print} disabled={!active}><Printer size={13} />طباعة</button></div>
+      <section className="panel export-invoice-preview-panel"><div className="export-toolbar"><span>المعاينة الرسمية</span><small>تتحدث تلقائياً مع كل تعديل</small><button className="btn secondary small" onClick={downloadPdf} disabled={!active || pdfBusy}><FileDown size={13} />{pdfBusy ? 'جاري تجهيز PDF...' : 'تنزيل PDF'}</button></div>
         {active ? <article ref={printRef} className="export-invoice-sheet">
           <header className="export-invoice-brand"><div className="export-brand-mark">ق</div><div><h2>{active.companyName || 'مؤسسة القادري الزراعية'}</h2><p>{active.activity || 'استيراد وتصدير الاشتال الزراعية'}</p><small>{active.companyAddress || 'الأردن - جرش'}&nbsp;&nbsp; | &nbsp;&nbsp;هاتف: {active.phone || '0777772211'}</small></div><div className="export-invoice-number"><span>فاتورة رقم</span><strong>{active.number}</strong><small>{active.date}</small></div></header>
           <div className="export-invoice-rule" />
           <div className="export-meta-grid"><label>منشأة رقم:<b>{active.facilityNumber || '................'}</b></label><label>المصدر:<b>{active.source || '................'}</b></label><label>العنوان:<b>{active.sourceAddress || '................'}</b></label><label>المستورد:<b>{active.importer || '................'}</b></label><label>العنوان:<b>{active.importerAddress || '................'}</b></label><label>المصدر إليه:<b>{active.destination || '................'}</b></label></div>
-          <table className="export-lines-table"><thead><tr><th>الصنف</th><th>الوزن</th><th>الكمية</th><th>المنشأ</th><th>ملاحظات</th><th>دينار</th><th>فلس</th><th>القيمة</th></tr></thead><tbody>{active.lines.map((line) => <tr key={line.id}><td>{line.item || 'اسم الصنف'}</td><td>{line.weight || '—'}</td><td>{line.quantity || '—'}</td><td>{line.origin || 'أردني'}</td><td>{line.notes || '—'}</td><td>{line.dinars || '0'}</td><td>{line.fils || '000'}</td><td>{money(line).toFixed(3)}</td></tr>)}</tbody></table>
+          <table className="export-lines-table"><thead><tr><th colSpan={2}>القيمة الإجمالية</th><th rowSpan={2}>الصنف</th><th rowSpan={2}>الوزن</th><th rowSpan={2}>الكمية</th><th rowSpan={2}>المنشأ</th><th rowSpan={2}>ملاحظات</th></tr><tr><th>دينار</th><th>فلس</th></tr></thead><tbody>{active.lines.map((line) => <tr key={line.id}><td>{line.dinars || '0'}</td><td>{line.fils || '000'}</td><td>{line.item || 'اسم الصنف'}</td><td>{line.weight || '—'}</td><td>{line.quantity || '—'}</td><td>{line.origin || 'أردني'}</td><td>{line.notes || '—'}</td></tr>)}</tbody></table>
           <div className="export-total-row"><span>المجموع</span><strong>{Math.floor(total)} دينار و{Math.round((total - Math.floor(total)) * 1000)} فلس</strong></div>
           <div className="export-words"><b>المجموع كتابةً</b><span>{amountInWords(total)}</span></div>
           <p className="export-declaration">{active.declaration || 'نشهد أن هذه الفاتورة هي الوحيدة الصادرة عنا بشأن البضاعة المبينة فيها من منشأ أردني، منتجات زراعية، الشحن برا.'}</p>
