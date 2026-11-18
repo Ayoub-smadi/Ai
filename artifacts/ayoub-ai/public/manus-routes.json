@@ -117,6 +117,10 @@
       "title": "Official letters"
     },
     {
+      "path": "/admin/export-invoices",
+      "title": "Export invoices"
+    },
+    {
       "path": "/admin/catalog",
       "title": "Plant catalog management"
     },

@@ -22,3 +22,11 @@
 
 ## Scope boundaries
 - Do not add live WhatsApp, Instagram, Messenger, customer inbox, public chat widget, document retrieval, invitations, or role administration in this migration.
+
+
+## Export invoice builder
+- [x] Add an Admin sidebar action directly below `كتب رسمية` named `فواتير تصدير`, routed at `/admin/export-invoices` and protected by the existing AdminGuard.
+- [x] Build a complete dynamic export-invoice workspace for `مؤسسة القادري الزراعية`: `استيراد وتصدير الاشتال الزراعية`, facility number, Jordan/Jerash contact header, source and address, importer and address, destination/source-to, date, and invoice number.
+- [x] Support repeatable invoice lines with item, weight, quantity, origin defaulting to `أردني`, notes, dinars, and fils; calculate the total live, show `المجموع`, and spell the amount out in Arabic under `المجموع كتابةً`.
+- [x] Include live official preview, local save/edit/delete history, search, new invoice, print layout, `إضافة بند`, and the closing export declaration `لا مانع للتصدير`.
+- [x] Keep the form responsive and style the document as a distinctive, print-ready agricultural export invoice rather than a generic admin form.
