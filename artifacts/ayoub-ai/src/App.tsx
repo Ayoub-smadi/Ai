@@ -344,16 +344,7 @@ function FounderBiographyTicker() {
   const { lang } = useLang();
   const atEnd = visibleWords === words.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   return <section className="founder-bio-ticker" dir="rtl" lang="ar" aria-label="نبذة عن المهندس ثامر القادري">
-    <div className="founder-bio-copy">
-      <div className="founder-bio-label"><i aria-hidden="true" /><span>{tr(lang, 'FOUNDER STORY', 'حكاية المؤسس')}</span></div>
-      <p aria-hidden="true">{words.slice(0, visibleWords).join(' ')}<span className="founder-bio-cursor" /></p>
-      <span className="sr-only">{biography}</span>
-      <div className={`founder-bio-sign${atEnd ? ' is-visible' : ''}`}>
-        <strong>— م. ثامر القادري</strong>
-        <span>{tr(lang, 'Al-Qadri Nurseries · Jerash, Jordan', 'مشاتل القادري الزراعية · جرش، الأردن')}</span>
-      </div>
-    </div>
-    <FounderContactCard lang={lang} />
+    <FounderContactCard lang={lang} biography={biography} words={words} visibleWords={visibleWords} atEnd={atEnd} />
   </section>;
 }
 
@@ -373,7 +364,7 @@ function resetFounderCardTilt(event: { currentTarget: HTMLElement }) {
   event.currentTarget.style.removeProperty('--founder-tilt-y');
 }
 
-function FounderContactCard({ lang }: { lang: Lang }) {
+function FounderContactCard({ lang, biography, words, visibleWords, atEnd }: { lang: Lang; biography: string; words: string[]; visibleWords: number; atEnd: boolean }) {
   const siteUrl = 'https://www.alqadrioffers.online';
   const contacts = [
     { icon: <Phone size={15} />, label: tr(lang, 'Phone', 'الهاتف'), value: '+962 77 777 2211', href: 'tel:+962777772211' },
@@ -401,6 +392,15 @@ function FounderContactCard({ lang }: { lang: Lang }) {
         <p className="founder-card-role">{tr(lang, 'General Manager', 'المدير العام')}</p>
       </div>
     </header>
+    <div className="founder-bio-copy">
+      <div className="founder-bio-label"><i aria-hidden="true" /><span>{tr(lang, 'FOUNDER STORY', 'حكاية المؤسس')}</span></div>
+      <p aria-hidden="true">{words.slice(0, visibleWords).join(' ')}<span className="founder-bio-cursor" /></p>
+      <span className="sr-only">{biography}</span>
+      <div className={`founder-bio-sign${atEnd ? ' is-visible' : ''}`}>
+        <strong>— م. ثامر القادري</strong>
+        <span>{tr(lang, 'Al-Qadri Nurseries · Jerash, Jordan', 'مشاتل القادري الزراعية · جرش، الأردن')}</span>
+      </div>
+    </div>
     <div className="founder-card-rule" aria-hidden="true"><span /></div>
     <ul className="founder-card-contacts">
       {contacts.map((item) => <li key={item.label}>
