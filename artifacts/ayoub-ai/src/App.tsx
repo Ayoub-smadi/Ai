@@ -11,6 +11,7 @@ import {
   ShoppingBag, SlidersHorizontal, Sparkles, Store, Truck, Trash2, Upload, Users, Video, Wifi, X, Youtube, ImagePlus, MapPinned, RotateCcw, TreePine, Flower2, Droplets, Mountain, Sprout, Cloud, CloudLightning, CloudRain, CloudSnow, CloudSun, Sun, Wind, Clock3
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation, useRoute } from 'wouter';
+import { QRCodeSVG } from 'qrcode.react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   useCreateAgent, useCreateFaq, useCreateProduct, useCreateWorkspace, useDeleteAgent, useDeleteFaq,
@@ -341,42 +342,82 @@ function FounderBiographyTicker() {
   }, [deleting, visibleWords, words.length]);
 
   const { lang } = useLang();
+  const atEnd = visibleWords === words.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   return <section className="founder-bio-ticker" dir="rtl" lang="ar" aria-label="نبذة عن المهندس ثامر القادري">
-    <FounderContactCard lang={lang} />
     <div className="founder-bio-copy">
-      <div className="founder-bio-label"><span>{tr(lang, 'FOUNDER STORY', 'حكاية المؤسس')}</span><i aria-hidden="true" /></div>
+      <div className="founder-bio-label"><i aria-hidden="true" /><span>{tr(lang, 'FOUNDER STORY', 'حكاية المؤسس')}</span></div>
       <p aria-hidden="true">{words.slice(0, visibleWords).join(' ')}<span className="founder-bio-cursor" /></p>
       <span className="sr-only">{biography}</span>
+      <div className={`founder-bio-sign${atEnd ? ' is-visible' : ''}`}>
+        <strong>— م. ثامر القادري</strong>
+        <span>{tr(lang, 'Al-Qadri Nurseries · Jerash, Jordan', 'مشاتل القادري الزراعية · جرش، الأردن')}</span>
+      </div>
     </div>
+    <FounderContactCard lang={lang} />
   </section>;
 }
 
+const founderCardTilt = (event: { clientX: number; clientY: number; currentTarget: HTMLElement }) => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const ratioX = (event.clientX - bounds.left) / bounds.width - 0.5;
+  const ratioY = (event.clientY - bounds.top) / bounds.height - 0.5;
+  event.currentTarget.style.setProperty('--founder-tilt-x', `${(-ratioY * 8).toFixed(2)}deg`);
+  event.currentTarget.style.setProperty('--founder-tilt-y', `${(ratioX * 8).toFixed(2)}deg`);
+  event.currentTarget.style.setProperty('--founder-glow-x', `${((event.clientX - bounds.left) / bounds.width * 100).toFixed(1)}%`);
+  event.currentTarget.style.setProperty('--founder-glow-y', `${((event.clientY - bounds.top) / bounds.height * 100).toFixed(1)}%`);
+};
+
+function resetFounderCardTilt(event: { currentTarget: HTMLElement }) {
+  event.currentTarget.style.removeProperty('--founder-tilt-x');
+  event.currentTarget.style.removeProperty('--founder-tilt-y');
+}
+
 function FounderContactCard({ lang }: { lang: Lang }) {
+  const siteUrl = 'https://www.alqadrioffers.online';
   const contacts = [
-    { icon: <Phone size={14} />, label: tr(lang, 'Phone', 'الهاتف'), value: '+962 77 777 2211', href: 'tel:+962777772211', ltr: true },
-    { icon: <Mail size={14} />, label: tr(lang, 'Email', 'البريد الإلكتروني'), value: 'tamerqadri@gmail.com', href: 'mailto:tamerqadri@gmail.com', ltr: true },
-    { icon: <Globe2 size={14} />, label: tr(lang, 'Website', 'الموقع'), value: 'alqadrioffers.online', href: 'https://www.alqadrioffers.online', ltr: true },
-    { icon: <MapPinned size={14} />, label: tr(lang, 'Location', 'الموقع الجغرافي'), value: tr(lang, 'Jerash, Jordan', 'جرش — الأردن'), href: '', ltr: false },
+    { icon: <Phone size={15} />, label: tr(lang, 'Phone', 'الهاتف'), value: '+962 77 777 2211', href: 'tel:+962777772211' },
+    { icon: <Mail size={15} />, label: tr(lang, 'Email', 'البريد الإلكتروني'), value: 'tamerqadri@gmail.com', href: 'mailto:tamerqadri@gmail.com' },
+    { icon: <Globe2 size={15} />, label: tr(lang, 'Website', 'الموقع الإلكتروني'), value: 'alqadrioffers.online', href: siteUrl },
+    { icon: <MapPinned size={15} />, label: tr(lang, 'Location', 'الموقع'), value: tr(lang, 'Jerash, Jordan', 'جرش — الأردن'), href: '' },
   ];
-  return <aside className="founder-card" aria-label={tr(lang, 'Business card of Eng. Thamer Al-Qadri', 'بطاقة المهندس ثامر القادري')}>
-    <svg className="founder-card-swoosh" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
-      <path d="M200 0H96c-3 34-24 62-54 79-14 8-22 18-24 30 30-4 58-16 82-35 26-21 46-46 58-74H200z" />
-      <path d="M200 34h-58c-16 26-38 47-66 60-9 4-14 9-16 15 26-6 50-18 70-36 16-15 29-27 40-39h30z" className="is-mid" />
-      <path d="M200 72h-42c-11 16-25 29-43 38-6 3-9 6-11 10 20-8 37-20 51-35 8-9 14-13 19-13h26z" className="is-low" />
+  return <aside
+    className="founder-card"
+    dir="rtl"
+    aria-label={tr(lang, 'Business card of Eng. Thamer Al-Qadri', 'بطاقة تعريف المهندس ثامر القادري')}
+    onPointerMove={founderCardTilt}
+    onPointerLeave={resetFounderCardTilt}
+  >
+    <svg className="founder-card-arcs" viewBox="0 0 320 320" aria-hidden="true" focusable="false">
+      <path d="M320 0H158c-6 44-31 82-71 106-18 11-29 24-32 40 40-6 77-22 108-47 34-28 60-62 76-100H320z" />
+      <path d="M320 44h-70c-20 33-46 59-80 76-11 5-17 12-19 19 33-8 63-23 87-45 20-19 33-34 46-50h36z" className="is-mid" />
+      <path d="M320 96h-50c-14 20-31 36-54 47-8 4-12 8-14 13 25-10 46-25 63-43 10-11 17-17 23-17h32z" className="is-low" />
     </svg>
     <header className="founder-card-head">
-      <span className="founder-card-eyebrow">{tr(lang, 'AL-QADRI NURSERIES', 'مشاتل القادري')}</span>
-      <h3 className="founder-card-name">مهندس<span>ثامر القادري</span></h3>
-      <p className="founder-card-role">{tr(lang, 'Founder & General Manager', 'المؤسس والمدير العام')}</p>
+      <div className="founder-card-photo"><img src="/founder/tamer-alqadri-avatar.png" alt={tr(lang, 'Eng. Thamer Al-Qadri', 'المهندس ثامر القادري')} loading="lazy" /></div>
+      <div className="founder-card-id">
+        <span className="founder-card-eyebrow">{tr(lang, 'AL-QADRI NURSERIES', 'مشاتل القادري')}</span>
+        <h3 className="founder-card-name">م. ثامر القادري</h3>
+        <p className="founder-card-role">{tr(lang, 'Founder & General Manager', 'المؤسس والمدير العام')}</p>
+      </div>
     </header>
-    <div className="founder-card-portrait"><img src="/founder/tamer-alqadri-portrait.png" alt={tr(lang, 'Eng. Thamer Al-Qadri', 'المهندس ثامر القادري')} loading="lazy" /></div>
+    <div className="founder-card-rule" aria-hidden="true"><span /></div>
     <ul className="founder-card-contacts">
       {contacts.map((item) => <li key={item.label}>
         <span className="founder-card-icon">{item.icon}</span>
-        <span className="founder-card-meta"><small>{item.label}</small>{item.href ? <a href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel={item.href.startsWith('http') ? 'noreferrer' : undefined} dir={item.ltr ? 'ltr' : undefined}>{item.value}</a> : <strong dir={item.ltr ? 'ltr' : undefined}>{item.value}</strong>}</span>
+        <span className="founder-card-meta"><small>{item.label}</small>{item.href ? <a href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel={item.href.startsWith('http') ? 'noreferrer' : undefined} dir="ltr">{item.value}</a> : <strong>{item.value}</strong>}</span>
       </li>)}
     </ul>
-    <a className="founder-card-cta" href="tel:+962777772211"><Phone size={14} />{tr(lang, 'Call now', 'اتصل الآن')}</a>
+    <footer className="founder-card-foot">
+      <div className="founder-card-qr">
+        <div className="founder-card-qr-plate"><QRCodeSVG value={siteUrl} size={74} level="M" bgColor="#ffffff" fgColor="#020618" includeMargin title={tr(lang, 'QR code to Al-Qadri website', 'رمز QR لموقع القادري')} /></div>
+        <span>{tr(lang, 'Scan to open the site', 'امسح لفتح الموقع')}</span>
+      </div>
+      <div className="founder-card-actions">
+        <a className="founder-card-cta" href="tel:+962777772211"><Phone size={14} />{tr(lang, 'Call now', 'اتصل الآن')}</a>
+        <a className="founder-card-ghost" href="mailto:tamerqadri@gmail.com"><Mail size={14} />{tr(lang, 'Email', 'راسلنا')}</a>
+      </div>
+    </footer>
   </aside>;
 }
 
