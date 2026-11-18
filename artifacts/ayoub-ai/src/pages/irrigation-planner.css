@@ -1,0 +1,128 @@
+.irrigation-planner{max-width:1120px;margin:38px auto 34px;padding:clamp(20px,4vw,40px);border:1px solid #dbe2ed;border-radius:22px;background:linear-gradient(160deg,#f8fafc,#fff 52%,#f4f7fa);color:#020618;box-shadow:0 18px 55px #0206180c;direction:rtl}
+.irrigation-planner *{box-sizing:border-box}
+.irrigation-planner-head{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;padding-bottom:23px;border-bottom:1px solid #dce3ed}
+.irrigation-planner-title-block{max-width:760px}
+.irrigation-eyebrow{display:inline-flex;align-items:center;gap:7px;color:#0d5a77;font:700 9px var(--app-font-mono,monospace);letter-spacing:.08em}
+.irrigation-planner-head h2{margin:10px 0 8px;color:#020618;font-size:clamp(25px,3.5vw,38px);letter-spacing:-.04em;line-height:1.22}
+.irrigation-planner-head p{max-width:690px;margin:0;color:#5b687a;font-size:12px;line-height:1.8}
+.irrigation-head-mark{display:grid;place-items:center;flex:none;width:69px;height:69px;border:1px solid #c9d7e7;border-radius:18px;background:#eaf0f7;color:#0d5a77}
+.irrigation-head-mark span{margin-top:-6px;color:#526176;font:8px var(--app-font-mono,monospace)}
+.irrigation-form{padding-top:22px}
+.irrigation-form-section-head{display:flex;align-items:center;gap:11px;margin:0 0 15px}
+.irrigation-form-section-head>span{display:grid;place-items:center;width:29px;height:29px;flex:none;border:1px solid #d8bd72;border-radius:9px;background:#fffaf0;color:#020618;font:700 10px var(--app-font-mono,monospace)}
+.irrigation-form-section-head div{flex:1;min-width:0}
+.irrigation-form-section-head h3{margin:0;color:#020618;font-size:14px}
+.irrigation-form-section-head p{margin:4px 0 0;color:#697587;font-size:10px;line-height:1.7}
+.irrigation-fields-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:22px}
+.irrigation-field{display:grid;gap:7px;min-width:0;color:#334056;font-size:10px;font-weight:700}
+.irrigation-field>span{display:flex;align-items:center;gap:6px}
+.irrigation-field>span svg{color:#0d5a77}
+.irrigation-field input,.irrigation-field select{height:43px;width:100%;min-width:0;border:1px solid #d7deea;border-radius:10px;background:#fff;padding:0 12px;color:#020618;font:inherit;font-size:12px;font-weight:500;outline:none;transition:border-color .16s,box-shadow .16s}
+.irrigation-field input::placeholder{color:#98a1ae}
+.irrigation-field input:focus,.irrigation-field select:focus,.irrigation-plant-search:focus-within{border-color:#0d5a77;box-shadow:0 0 0 3px #0d5a7715}
+.plant-choice-heading{margin-top:4px}
+.plant-choice-heading>b{margin-inline-start:auto;padding:5px 9px;border:1px solid #dbe3ed;border-radius:999px;background:#fff;color:#526176;font-size:9px;white-space:nowrap}
+.irrigation-plant-search{position:relative;display:flex;align-items:center;gap:8px;max-width:440px;height:39px;margin:0 0 9px;padding:0 11px;border:1px solid #d7deea;border-radius:9px;background:#fff;color:#738198;transition:border-color .16s,box-shadow .16s}
+.irrigation-plant-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:#020618;font-size:11px}
+.irrigation-plant-search input::placeholder{color:#99a2af}
+.irrigation-plant-search button{display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:7px;background:#f0f3f7;color:#46536a;cursor:pointer}
+.irrigation-plant-picker{max-height:326px;overflow:auto;padding:2px;border:1px solid #e0e5ee;border-radius:13px;background:#f4f6f9;scrollbar-color:#b7c4d5 transparent;scrollbar-width:thin}
+.irrigation-plant-choice{display:grid;grid-template-columns:minmax(0,1fr) minmax(155px,230px);align-items:center;gap:12px;min-height:54px;padding:8px 10px;border-bottom:1px solid #e9edf2;background:#fff;transition:background .14s,border-color .14s}
+.irrigation-plant-choice:first-child{border-radius:10px 10px 0 0}
+.irrigation-plant-choice:last-of-type{border-bottom:0;border-radius:0 0 10px 10px}
+.irrigation-plant-choice.is-selected{background:#f3f7fb}
+.irrigation-plant-main{display:flex;align-items:center;gap:9px;min-width:0;cursor:pointer}
+.irrigation-plant-main>input{position:absolute;width:1px;height:1px;opacity:0}
+.irrigation-checkbox-mark{display:grid;place-items:center;width:20px;height:20px;flex:none;border:1px solid #c7d1df;border-radius:6px;background:#fff;color:transparent;transition:background .14s,border-color .14s,color .14s}
+.irrigation-plant-main>input:checked+.irrigation-checkbox-mark{border-color:#020618;background:#020618;color:#fff}
+.irrigation-plant-main>input:focus-visible+.irrigation-checkbox-mark{outline:3px solid #0d5a7730}
+.irrigation-plant-names{display:block;min-width:0}
+.irrigation-plant-names strong,.irrigation-plant-names em{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.irrigation-plant-names strong{color:#17233a;font-size:11px;font-weight:700}
+.irrigation-plant-names em{margin-top:3px;color:#778397;font:italic 9px var(--app-font-mono,monospace);direction:ltr;text-align:right}
+.irrigation-stage-select{position:relative;display:flex;align-items:center;min-width:0;color:#526176}
+.irrigation-stage-select select{width:100%;height:32px;appearance:none;border:1px solid #d6dfeb;border-radius:8px;background:#fff;padding:0 9px 0 27px;color:#334056;font-size:9px;outline:0}
+.irrigation-stage-select svg{position:absolute;left:9px;pointer-events:none}
+.irrigation-choice-category{justify-self:start;color:#758196;font-size:9px}
+.irrigation-picker-limit,.irrigation-no-plants{margin:0;padding:10px;color:#637187;font-size:10px;text-align:center}
+.irrigation-consent{display:flex;align-items:flex-start;gap:9px;margin:16px 0 13px;color:#5c687b;font-size:10px;line-height:1.75;cursor:pointer}
+.irrigation-consent input{width:15px;height:15px;flex:none;margin:2px 0 0;accent-color:#020618}
+.irrigation-error{margin:10px 0 0;padding:9px 11px;border:1px solid #e7c7c6;border-radius:8px;background:#fff7f6;color:#9a3d40;font-size:10px;line-height:1.65}
+.irrigation-form-actions{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-top:11px}
+.irrigation-primary-button,.irrigation-secondary-button,.irrigation-upload-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border:1px solid #020618;border-radius:9px;background:#020618;color:#fff;font-size:10px;font-weight:700;text-decoration:none;cursor:pointer;transition:transform .16s,background .16s,border-color .16s,box-shadow .16s}
+.irrigation-primary-button:hover{background:#0d5a77;border-color:#0d5a77;box-shadow:0 5px 14px #0d5a7726;transform:translateY(-1px)}
+.irrigation-primary-button:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+.irrigation-form-actions>span{display:inline-flex;align-items:center;gap:6px;color:#718096;font-size:9px}
+.irrigation-form-actions>span svg{color:#0d5a77}
+.irrigation-status-note{margin:14px 0 0;padding:10px 12px;border:1px solid #cddae9;border-radius:9px;background:#eff4fa;color:#233550;font-size:10px;line-height:1.7}
+.irrigation-results{margin-top:22px;padding:20px;border:1px solid #cbd6e4;border-radius:16px;background:#fff;box-shadow:0 9px 25px #02061809}
+.irrigation-results-header{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding-bottom:14px;border-bottom:1px solid #e4e9f0}
+.irrigation-results-header h3{margin:7px 0 4px;color:#020618;font-size:18px}
+.irrigation-results-header p{margin:0;color:#6d798b;font-size:10px;line-height:1.7}
+.irrigation-clear-button{display:inline-flex;align-items:center;gap:5px;flex:none;min-height:31px;padding:0 9px;border:1px solid #e0e4eb;border-radius:8px;background:#fff;color:#697487;font-size:9px;cursor:pointer}
+.irrigation-clear-button:hover{border-color:#bf7777;color:#9a3d40}
+.irrigation-plan-list{display:grid;gap:9px;margin-top:13px}
+.irrigation-plan-item{padding:14px;border:1px solid #e1e6ee;border-radius:12px;background:#fbfcfe}
+.irrigation-plan-item-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.irrigation-plan-item-head>div>span{color:#7a8799;font-size:8px}
+.irrigation-plan-item h4{margin:4px 0 2px;color:#020618;font-size:13px}
+.irrigation-plan-item em{color:#778397;font:italic 9px var(--app-font-mono,monospace);direction:ltr}
+.irrigation-check-badge{display:inline-flex;align-items:center;gap:5px;max-width:230px;padding:6px 9px;border:1px solid #d8e0ea;border-radius:999px;background:#fff;color:#36506d;font-size:8px;line-height:1.45;text-align:center}
+.irrigation-check-badge.is-due{border-color:#d8bd72;background:#fff9eb;color:#715514}
+.irrigation-water-advice{display:flex;align-items:flex-start;gap:8px;margin:11px 0 7px;color:#334056;font-size:10px;line-height:1.8}
+.irrigation-water-advice svg{flex:none;margin-top:2px;color:#0d5a77}
+.irrigation-region-note{display:flex;align-items:flex-start;gap:6px;margin:6px 0;color:#59677b;font-size:9px;line-height:1.7}
+.irrigation-region-note svg{flex:none;margin-top:2px;color:#0d5a77}
+.irrigation-frequency-note{display:block;margin-top:8px;padding-top:7px;border-top:1px dashed #dce2eb;color:#7a8799;font-size:8px;line-height:1.65}
+.irrigation-alert-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:13px;padding:12px 13px;border:1px solid #d6dfeb;border-radius:11px;background:#f2f6fa}
+.irrigation-alert-row>div{display:grid;gap:5px}
+.irrigation-alert-row strong{display:flex;align-items:center;gap:6px;color:#233550;font-size:10px}
+.irrigation-alert-row strong svg{color:#0d5a77}
+.irrigation-alert-row small{max-width:660px;color:#6d798b;font-size:8px;line-height:1.65}
+.irrigation-secondary-button{min-height:34px;flex:none;border-color:#cbd5e3;background:#fff;color:#020618;font-size:9px}
+.irrigation-secondary-button:hover{border-color:#0d5a77;background:#eff5f9;color:#0d5a77}
+.soil-advisor{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(210px,.7fr);gap:18px;align-items:stretch;margin-top:23px;padding:19px;border:1px solid #dce3ed;border-radius:16px;background:#f5f7fa}
+.soil-advisor-copy{min-width:0}
+.soil-advisor-copy h3{margin:9px 0 6px;color:#020618;font-size:18px;letter-spacing:-.02em}
+.soil-advisor-copy>p{max-width:640px;margin:0;color:#657287;font-size:10px;line-height:1.8}
+.soil-advisor-location{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:11px 0;color:#536278;font-size:9px}
+.soil-advisor-location>span:first-child{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border:1px solid #d4deea;border-radius:99px;background:#fff;color:#233550}
+.soil-advisor-location svg{color:#0d5a77}
+.soil-photo-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap}
+.soil-photo-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.irrigation-upload-button{min-height:37px;border-color:#cbd5e3;background:#fff;color:#233550;font-size:9px}
+.irrigation-upload-button:hover{border-color:#0d5a77;color:#0d5a77}
+.soil-analyze-button{min-height:37px;font-size:9px}
+.soil-advisor-caveat{display:flex;align-items:flex-start;gap:6px;margin-top:10px;color:#758196;font-size:8px;line-height:1.65}
+.soil-advisor-caveat svg{flex:none;margin-top:1px;color:#0d5a77}
+.soil-photo-preview{position:relative;min-height:185px;overflow:hidden;border:1px dashed #c6d2e0;border-radius:12px;background:linear-gradient(145deg,#edf2f7,#fff);color:#718096}
+.soil-photo-preview>div{display:flex;min-height:185px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px;text-align:center}
+.soil-photo-preview>div svg{color:#0d5a77}
+.soil-photo-preview>div strong{color:#44536a;font-size:10px}
+.soil-photo-preview>div span{max-width:220px;color:#8792a4;font-size:8px;line-height:1.6}
+.soil-photo-preview img{display:block;width:100%;height:100%;min-height:185px;max-height:250px;object-fit:cover}
+.soil-photo-preview>button{position:absolute;top:8px;left:8px;display:grid;place-items:center;width:29px;height:29px;border:1px solid #fff;border-radius:8px;background:#020618d9;color:#fff;cursor:pointer}
+.soil-advisor .irrigation-error{grid-column:1/-1}
+.soil-advice-result{grid-column:1/-1;display:grid;gap:13px;padding:16px;border:1px solid #ccd8e7;border-radius:12px;background:#fff}
+.soil-advice-result h4{margin:0;color:#233550;font-size:13px;line-height:1.75}
+.soil-advice-result>div>strong{color:#020618;font-size:10px}
+.soil-advice-result ul{margin:7px 0 0;padding-right:19px;color:#5e6b7e;font-size:9px;line-height:1.8}
+.soil-recommendations{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.soil-recommendations article{padding:10px;border:1px solid #e1e6ed;border-radius:9px;background:#f9fafc}
+.soil-recommendations b{color:#233550;font-size:10px}
+.soil-recommendations p,.soil-recommendations small{display:block;margin:5px 0 0;color:#667388;font-size:9px;line-height:1.7}
+.soil-recommendations small{color:#8a6b2f}
+.soil-advice-caveat{margin:0;padding-top:10px;border-top:1px solid #e7ebf1;color:#788498;font-size:8px;line-height:1.7}
+.irrigation-privacy-footnote{display:flex;align-items:flex-start;gap:6px;margin:13px 0 0;color:#8490a2;font-size:8px;line-height:1.7}
+.irrigation-privacy-footnote svg{flex:none;margin-top:1px;color:#0d5a77}
+.irrigation-spinner{animation:irrigation-spin .85s linear infinite}
+@keyframes irrigation-spin{to{transform:rotate(360deg)}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:760px){.irrigation-planner{margin:24px 14px;padding:20px 15px;border-radius:16px}.soil-advisor{grid-template-columns:1fr}.soil-photo-preview,.soil-photo-preview>div{min-height:150px}.soil-photo-preview img{max-height:230px}.soil-advisor .irrigation-error{grid-column:auto}}
+@media(max-width:560px){.irrigation-planner-head{gap:12px}.irrigation-head-mark{width:52px;height:52px;border-radius:14px}.irrigation-head-mark svg{width:24px}.irrigation-fields-grid{grid-template-columns:1fr;gap:10px}.irrigation-form-section-head{align-items:flex-start}.irrigation-form-section-head>span{margin-top:1px}.irrigation-form-section-head p{font-size:9px}.irrigation-plant-choice{grid-template-columns:minmax(0,1fr);gap:7px;padding:9px}.irrigation-stage-select{margin-right:29px;max-width:270px}.irrigation-choice-category{margin-right:29px}.irrigation-form-actions{align-items:stretch;flex-direction:column}.irrigation-form-actions .irrigation-primary-button{width:100%}.irrigation-form-actions>span{align-items:flex-start}.irrigation-results{padding:14px}.irrigation-results-header{align-items:flex-start}.irrigation-results-header h3{font-size:15px}.irrigation-clear-button{font-size:8px}.irrigation-plan-item{padding:11px}.irrigation-plan-item-head{flex-direction:column}.irrigation-check-badge{max-width:100%}.irrigation-alert-row{align-items:flex-start;flex-direction:column}.irrigation-alert-row .irrigation-secondary-button{width:100%}.soil-advisor{padding:14px}.soil-photo-actions>*{flex:1}.soil-recommendations{grid-template-columns:1fr}.irrigation-privacy-footnote{font-size:7px}}
+@media(prefers-reduced-motion:reduce){.irrigation-planner *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+.irrigation-acknowledge-button{display:inline-flex;align-items:center;justify-content:center;min-height:32px;margin-top:10px;padding:0 10px;border:1px solid #cbb56f;border-radius:8px;background:#fff9eb;color:#614d1e;font-size:9px;font-weight:700;cursor:pointer}
+.irrigation-acknowledge-button:hover{border-color:#8a6c27;background:#fff3d6}
+.soil-analysis-share{display:block;margin-top:8px;color:#506176;font-size:8px;line-height:1.7}
+.soil-no-recommendations{margin:10px 0;padding:10px 12px;border:1px solid #ddd1ad;border-radius:9px;background:#fffaf0;color:#6d5723;font-size:9px;line-height:1.7}

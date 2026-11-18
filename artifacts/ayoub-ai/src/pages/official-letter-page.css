@@ -1,0 +1,410 @@
+/* Form and preview shell */
+.official-letter-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr);
+  gap: 20px;
+  align-items: start;
+}
+.official-letter-form { padding: 18px; }
+.official-letter-form-head,
+.official-letter-history-head,
+.official-letter-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.official-letter-form-head { margin-bottom: 16px; }
+.official-letter-form-head h2,
+.official-letter-history-head h2 { margin: 4px 0 0; color: #315c3c; font-size: 17px; }
+.official-letter-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.official-letter-fields label { display: grid; gap: 6px; color: #637566; font-size: 11px; }
+.official-letter-fields input,
+.official-letter-fields textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #d9e5d8;
+  border-radius: 7px;
+  background: #fbfdfb;
+  padding: 10px;
+  color: #294530;
+  outline: none;
+  font: inherit;
+  font-size: 12px;
+}
+.official-letter-fields input:focus,
+.official-letter-fields textarea:focus { border-color: #6c9a6d; box-shadow: 0 0 0 3px #6c9a6d1c; }
+.official-letter-fields textarea { resize: vertical; line-height: 1.8; }
+.official-letter-image-editor { display: grid; gap: 11px; padding: 12px; border: 1px solid #dfe9de; border-radius: 9px; background: #f8fbf7; }
+.official-letter-image-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.official-letter-image-editor-head > div { display: grid; gap: 4px; }
+.official-letter-image-editor-head strong { color: #315c3c; font-size: 12px; }
+.official-letter-image-editor-head small { color: #7b887c; font-size: 10px; }
+.official-letter-file-input { display: none; }
+.official-letter-image-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
+.official-letter-image-item { position: relative; display: grid; gap: 5px; min-width: 0; padding: 6px; border: 1px solid #e1e9df; border-radius: 7px; background: #fff; }
+.official-letter-image-item img { width: 100%; height: 76px; border-radius: 4px; object-fit: cover; }
+.official-letter-image-item span { overflow: hidden; color: #647566; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.official-letter-image-item button { position: absolute; top: 9px; left: 9px; display: grid; width: 27px; height: 27px; place-items: center; border: 0; border-radius: 50%; background: #fff; color: #a54840; box-shadow: 0 1px 5px #172a1926; cursor: pointer; }
+.official-letter-extra-text { display: grid; gap: 6px; color: #637566; font-size: 11px; }
+.official-letter-field-wide { grid-column: 1 / -1; }
+.official-letter-save { width: 100%; justify-content: center; margin-top: 14px; }
+.official-letter-status { margin: 11px 0 0; color: #315c3c; font-size: 12px; }
+.official-letter-history { margin-top: 24px; border-top: 1px solid #e5eee4; padding-top: 16px; }
+.official-letter-history-head { margin-bottom: 8px; }
+.official-letter-history-head h2 { font-size: 14px; }
+.official-letter-history-head > span {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50px;
+  background: #eaf3e8;
+  color: #315c3c;
+  font-size: 10px;
+}
+.official-letter-record {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #e6eee4;
+  background: transparent;
+  color: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+.official-letter-record:hover .official-letter-open { color: #176b7d; }
+.official-letter-record-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 8px;
+  background: #eaf3e8;
+  color: #315c3c;
+}
+.official-letter-record-copy { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.official-letter-record-copy strong {
+  overflow: hidden;
+  color: #315c3c;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.official-letter-record-copy small { color: #7b887c; font-size: 9px; }
+.official-letter-open { color: #77867a; font-size: 10px; }
+.official-letter-preview-panel { overflow: hidden; padding: 12px; }
+.official-letter-preview-toolbar { padding: 2px 4px 11px; color: #315c3c; font-size: 12px; font-weight: 700; }
+.official-letter-preview-toolbar small { color: #89988b; font-size: 10px; font-weight: 400; }
+.official-letter-paper-scroll { max-width: 100%; overflow: auto; padding: 6px; background: #edf1ee; }
+
+/* Letter is positioned in inches to mirror the supplied 612 × 792 pt page. */
+.official-letter-paper {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 8.5in;
+  height: auto;
+  min-height: 11in;
+  margin: 0 auto;
+  padding: 0 0 .55in;
+  background: #fff;
+  box-shadow: 0 3px 20px #12231a1b;
+  color: #1f2937;
+  direction: rtl;
+  text-align: right;
+  font-family: 'Times New Roman', 'Noto Sans Arabic', Tahoma, serif;
+  font-size: 12pt;
+  line-height: 1.35;
+}
+.official-letter-top-rule {
+  position: absolute;
+  top: .94in;
+  right: .65in;
+  left: .65in;
+  height: 1px;
+  background: #6fa83a;
+}
+.official-letter-header-row {
+  position: absolute;
+  top: .96in;
+  right: .65in;
+  left: .65in;
+  display: flex;
+  height: .4in;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 .12in;
+  background: #f1f4f4;
+  color: #175b78;
+  font-size: 12pt;
+}
+.official-letter-header-row strong { font-size: 12.7pt; font-weight: 400; }
+.official-letter-header-row span { white-space: nowrap; }
+.official-letter-header-row b { font-weight: 400; }
+.official-letter-title {
+  position: absolute;
+  top: 1.5in;
+  right: .65in;
+  left: .65in;
+  display: block;
+  height: .43in;
+  margin: 0;
+  background: #175b78;
+  color: #fff;
+  text-align: center;
+  font-size: 18pt;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.official-letter-title-text {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0 .12in;
+  line-height: 1.2;
+  text-align: center;
+  transform: translateY(-4px);
+}
+.official-letter-recipient,
+.official-letter-attention {
+  position: absolute;
+  right: .65in;
+  left: .65in;
+  display: flex;
+  height: .45in;
+  align-items: center;
+  gap: 5px;
+  padding: 0 .12in;
+  border: 1px solid #d7dede;
+  border-top: 0;
+  font-size: 14pt;
+  line-height: 1.2;
+}
+.official-letter-recipient { top: 1.92in; color: #175b78; }
+.official-letter-attention { top: 2.39in; color: #1f2937; }
+.official-letter-recipient b,
+.official-letter-attention b { color: #6fa83a; font-size: 14pt; font-weight: 400; }
+.official-letter-project-grid {
+  position: absolute;
+  top: 2.92in;
+  right: .65in;
+  left: .65in;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: .67in;
+  background: #eaf4f3;
+  color: #175b78;
+}
+.official-letter-project-grid > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 3px;
+  padding: 2px 10px 0;
+  border: 1px solid #d8e7e5;
+  font-size: 12pt;
+  line-height: 1.25;
+}
+.official-letter-project-grid > div + div { border-right: 0; }
+.official-letter-project-grid b { color: #6fa83a; font-size: 11.3pt; font-weight: 400; }
+.official-letter-page-number { position: absolute; top: .78in; left: .65in; color: #6fa83a; font-size: 10pt; }
+.official-letter-content { position: relative; margin: 0; padding: 3.98in .65in 0; }
+.official-letter-greeting {
+  margin: 0 0 .24in;
+  color: #1f2937;
+  font-size: 16pt;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.official-letter-body {
+  min-height: 2.8in;
+  color: #1f2937;
+  font-size: 16pt;
+  line-height: 1.34;
+  text-align: justify;
+  overflow-wrap: anywhere;
+}
+.official-letter-body p { margin: 0 0 .13in; text-indent: .12in; }
+.official-letter-attachments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: .14in; margin: .22in 0; }
+.official-letter-attachments img { display: block; width: 100%; max-width: 100%; height: 2.5in; object-fit: contain; break-inside: avoid; }
+.official-letter-extra-preview { margin: .18in 0; color: #1f2937; font-size: 14pt; line-height: 1.6; text-align: justify; overflow-wrap: anywhere; }
+.official-letter-extra-preview p { margin: 0 0 .12in; white-space: pre-wrap; }
+.official-letter-closing {
+  margin: .25in 0 0;
+  color: #1f2937;
+  text-align: center;
+  font-size: 14pt;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.official-letter-signature { position: relative; display: grid; grid-template-columns: 3.62in 1fr; justify-items: center; gap: .08in; margin: .34in .65in 0; color: #175b78; text-align: center; direction: ltr; }
+.official-letter-signature > strong {
+  grid-column: 1;
+  grid-row: 1;
+  width: 2.18in;
+  margin: 0;
+  color: #175b78;
+  font-size: 12pt;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.official-letter-signature img {
+  grid-column: 1;
+  grid-row: 2;
+  display: block;
+  width: 2.18in;
+  max-width: none;
+  height: 1.29in;
+  object-fit: fill;
+}
+.official-letter-signature b {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  width: 100%;
+  color: #175b78;
+  font-size: 14pt;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.official-letter-paper--smart .official-letter-attachments { gap: .12in; margin: .16in 0; }
+.official-letter-paper--smart[data-smart-density="spacious"] .official-letter-body { min-height: 2.8in; font-size: 16pt; line-height: 1.42; }
+.official-letter-paper--smart[data-smart-density="spacious"] .official-letter-extra-preview { font-size: 14pt; line-height: 1.55; }
+.official-letter-paper--smart[data-smart-density="spacious"] .official-letter-attachments img { height: 2.8in; }
+.official-letter-paper--smart[data-smart-density="balanced"] .official-letter-body { min-height: 1.9in; font-size: 13.5pt; line-height: 1.34; }
+.official-letter-paper--smart[data-smart-density="balanced"] .official-letter-extra-preview { font-size: 12.5pt; line-height: 1.45; }
+.official-letter-paper--smart[data-smart-density="balanced"] .official-letter-attachments img { height: 2.1in; }
+.official-letter-paper--smart[data-smart-density="compact"] .official-letter-body { min-height: 1.1in; font-size: 12pt; line-height: 1.24; }
+.official-letter-paper--smart[data-smart-density="compact"] .official-letter-extra-preview { font-size: 11pt; line-height: 1.35; }
+.official-letter-paper--smart[data-smart-density="compact"] .official-letter-attachments img { height: 1.6in; }
+.official-letter-page .admin-head-actions { flex-wrap: wrap; }
+.official-letter-page .admin-head-actions .btn { white-space: nowrap; }
+@media (max-width: 1100px) {
+  .official-letter-workspace { grid-template-columns: 1fr; }
+  .official-letter-preview-panel { order: 1; }
+  .official-letter-form { order: 2; }
+}
+@media (max-width: 600px) {
+  .official-letter-form { padding: 14px; }
+  .official-letter-fields { grid-template-columns: 1fr; }
+  .official-letter-field-wide { grid-column: auto; }
+  .official-letter-preview-panel { padding: 8px; }
+  .official-letter-preview-toolbar { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .official-letter-paper-scroll { margin: 0 -2px; }
+  .official-letter-page .admin-head-actions { width: 100%; }
+  .official-letter-page .admin-head-actions .btn { flex: 1; justify-content: center; }
+}
+@media print {
+  @page { size: letter portrait; margin: 0; }
+  .official-letter-page > .admin-head,
+  .official-letter-form,
+  .official-letter-preview-toolbar { display: none !important; }
+  .official-letter-workspace { display: block !important; }
+  .official-letter-preview-panel { padding: 0 !important; border: 0 !important; box-shadow: none !important; }
+  .official-letter-paper-scroll { overflow: visible !important; padding: 0 !important; background: #fff !important; }
+  .official-letter-paper { margin: 0 !important; box-shadow: none !important; }
+}
+
+/* Multi-page block editor */
+.official-letter-pages-editor { display: grid; gap: 12px; margin-top: 14px; padding: 12px; border: 1px solid #dfe9de; border-radius: 9px; background: #f8fbf7; }
+.official-letter-pages-editor-head, .official-letter-page-editor-head, .official-letter-block-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.official-letter-pages-editor-head > div, .official-letter-page-editor-head > div { display: grid; gap: 4px; }
+.official-letter-pages-editor-head strong, .official-letter-page-editor-head strong { color: #315c3c; font-size: 12px; }
+.official-letter-pages-editor-head small, .official-letter-page-editor-head small { color: #7b887c; font-size: 10px; }
+.official-letter-page-editor { display: grid; gap: 10px; padding: 11px; border: 1px solid #dbe8da; border-radius: 8px; background: #fff; }
+.official-letter-block-editor { display: grid; gap: 9px; }
+.official-letter-block-card { display: grid; gap: 8px; padding: 10px; border: 1px solid #e1e9df; border-radius: 8px; background: #fbfdfb; }
+.official-letter-block-card-head strong { color: #176079; font-size: 11px; }
+.official-letter-block-card textarea { box-sizing: border-box; width: 100%; border: 1px solid #d9e5d8; border-radius: 7px; background: #fff; padding: 10px; color: #294530; outline: none; font: inherit; font-size: 12px; line-height: 1.8; resize: vertical; }
+.official-letter-block-card textarea:focus { border-color: #6c9a6d; box-shadow: 0 0 0 3px #6c9a6d1c; }
+.official-letter-insert-actions, .official-letter-page-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.official-letter-page-actions { padding-top: 2px; border-top: 1px dashed #dbe8da; }
+.official-letter-add-image { width: fit-content; justify-content: center; cursor: pointer; }
+.official-letter-additional-page { box-sizing: border-box; width: 8.5in; min-height: 11in; margin-top: .18in; padding: .65in; break-before: page; page-break-before: always; background: #fff; box-shadow: 0 3px 20px #12231a1b; }
+.official-letter-additional-header { display: flex; justify-content: space-between; gap: 10px; padding-bottom: .12in; border-bottom: 1px solid #6fa83a; color: #175b78; font-size: 12pt; }
+.official-letter-additional-header span { color: #6fa83a; }
+.official-letter-additional-content { padding-top: .28in; }
+.official-letter-additional-content .official-letter-extra-preview { font-size: 16pt; }
+.official-letter-additional-content .official-letter-attachments { margin: .18in 0; }
+@media (max-width: 600px) {
+  .official-letter-pages-editor-head { align-items: flex-start; flex-direction: column; }
+  .official-letter-page-actions .btn { flex: 1; justify-content: center; }
+}
+
+/* Direct manipulation canvas for text and image elements */
+.official-letter-free-layer { position: absolute; inset: 0; z-index: 8; pointer-events: none; }
+.official-letter-canvas-block { position: absolute; box-sizing: border-box; min-width: 44px; min-height: 34px; border: 1px dashed #4d8c68; border-radius: 5px; background: #ffffffd9; pointer-events: auto; cursor: move; overflow: visible; }
+.official-letter-canvas-block:hover { border-color: #176079; box-shadow: 0 0 0 2px #17607924; }
+.official-letter-canvas-block-label { position: absolute; top: -18px; right: 0; display: none; padding: 2px 5px; border-radius: 3px; background: #176079; color: #fff; font: 9px/1.2 Tahoma, sans-serif; white-space: nowrap; pointer-events: none; }
+.official-letter-canvas-block:hover .official-letter-canvas-block-label { display: block; }
+.official-letter-canvas-block textarea { box-sizing: border-box; width: 100%; height: 100%; min-height: 32px; padding: 8px; border: 0; outline: 0; resize: none; background: transparent; color: #1f2937; direction: rtl; text-align: right; font: 16pt/1.34 'Times New Roman', 'Noto Sans Arabic', Tahoma, serif; }
+.official-letter-canvas-images { display: grid; width: 100%; height: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; box-sizing: border-box; }
+.official-letter-canvas-images img { display: block; width: 100%; height: 100%; min-height: 20px; object-fit: contain; pointer-events: none; }
+.official-letter-canvas-images span { display: grid; height: 100%; place-items: center; color: #758578; font: 10px Tahoma, sans-serif; }
+.official-letter-resize-handle { position: absolute; right: -6px; bottom: -6px; width: 12px; height: 12px; border: 2px solid #fff; border-radius: 50%; background: #176079; cursor: nwse-resize; box-shadow: 0 1px 4px #10281c55; }
+.official-letter-additional-page { position: relative; }
+.official-letter-additional-content { position: absolute; inset: 0; padding: 0; }
+.official-letter-exporting .official-letter-canvas-block { border-color: transparent; background: transparent; box-shadow: none; }
+.official-letter-exporting .official-letter-canvas-block-label,
+.official-letter-exporting .official-letter-resize-handle { display: none !important; }
+.official-letter-exporting .official-letter-canvas-block textarea { border: 0; }
+@media print {
+  .official-letter-canvas-block-label, .official-letter-resize-handle { display: none !important; }
+}
+
+/* Word-like selection toolbar and eight resize handles */
+.official-letter-canvas-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px; margin-bottom: 8px; border: 1px solid #dfe9de; border-radius: 8px; background: #f8fbf7; }
+.official-letter-canvas-toolbar .btn { min-height: 28px; }
+.official-letter-canvas-toolbar select { min-height: 28px; border: 1px solid #d9e5d8; border-radius: 5px; background: #fff; color: #315c3c; font: 10px Tahoma, sans-serif; padding: 0 5px; }
+.official-letter-selection-count { margin-left: auto; color: #315c3c; font-size: 10px; }
+.official-letter-toolbar-divider { width: 1px; height: 22px; background: #d9e5d8; }
+.official-letter-canvas-block.is-selected { border: 2px solid #176079; box-shadow: 0 0 0 2px #17607924; }
+.official-letter-canvas-block--images.is-selected { background: #ffffffee; }
+.official-letter-resize-handle { display: none; z-index: 3; }
+.official-letter-canvas-block.is-selected .official-letter-resize-handle { display: block; }
+.official-letter-resize-handle--nw { top: -6px; left: -6px; right: auto; bottom: auto; cursor: nwse-resize; }
+.official-letter-resize-handle--n { top: -6px; left: calc(50% - 6px); right: auto; bottom: auto; cursor: ns-resize; }
+.official-letter-resize-handle--ne { top: -6px; right: -6px; bottom: auto; cursor: nesw-resize; }
+.official-letter-resize-handle--e { top: calc(50% - 6px); right: -6px; bottom: auto; cursor: ew-resize; }
+.official-letter-resize-handle--se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.official-letter-resize-handle--s { bottom: -6px; left: calc(50% - 6px); right: auto; cursor: ns-resize; }
+.official-letter-resize-handle--sw { bottom: -6px; left: -6px; right: auto; cursor: nesw-resize; }
+.official-letter-resize-handle--w { top: calc(50% - 6px); left: -6px; right: auto; bottom: auto; cursor: ew-resize; }
+.official-letter-exporting .official-letter-canvas-block.is-selected { border-color: transparent; box-shadow: none; }
+@media (max-width: 700px) {
+  .official-letter-selection-count { width: 100%; margin: 0; }
+  .official-letter-toolbar-divider { display: none; }
+}
+
+/* Keep every visual page exactly Letter-sized for clean PDF page breaks. */
+.official-letter-paper { min-height: 11in; }
+.official-letter-additional-page { margin-top: 0; height: 11in; min-height: 11in; overflow: hidden; break-before: page; page-break-before: always; }
+.official-letter-last-page-footer { position: absolute; right: .65in; bottom: .45in; left: .65in; }
+.official-letter-last-page-footer .official-letter-closing { margin: 0 0 .16in; }
+.official-letter-last-page-footer .official-letter-signature { margin: 0; }
+.official-letter-additional-page-footer { position: absolute; right: .65in; bottom: .45in; left: .65in; }
+.official-letter-additional-page-footer .official-letter-closing { margin: 0 0 .16in; }
+.official-letter-additional-page-footer .official-letter-signature { margin: 0; }
+.official-letter-additional-page-footer .official-letter-signature img { height: 1.05in; }
+
+/* Each export unit is captured independently, so page N never spills into page N+1. */
+.official-letter-paper { height: auto; min-height: 0; padding: 0; }
+.official-letter-export-page { position: relative; box-sizing: border-box; width: 8.5in; height: 11in; min-height: 11in; overflow: hidden; background: #fff; }
+.official-letter-first-page { box-shadow: 0 3px 20px #12231a1b; }
+@media print {
+  .official-letter-export-page { break-after: page; page-break-after: always; }
+  .official-letter-export-page:last-child { break-after: auto; page-break-after: auto; }
+}
