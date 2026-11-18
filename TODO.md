@@ -30,3 +30,9 @@
 - [x] Support repeatable invoice lines with item, weight, quantity, origin defaulting to `أردني`, notes, dinars, and fils; calculate the total live, show `المجموع`, and spell the amount out in Arabic under `المجموع كتابةً`.
 - [x] Include live official preview, local save/edit/delete history, search, new invoice, print layout, `إضافة بند`, and the closing export declaration `لا مانع للتصدير`.
 - [x] Keep the form responsive and style the document as a distinctive, print-ready agricultural export invoice rather than a generic admin form.
+
+
+## Real-world 3D landscape walkthrough
+- [x] Replace the previous CSS/isometric illustration with a real Three.js WebGL scene using perspective camera, real depth, lighting, shadows, ground, garden boundary, and 3D geometry for trees, water, lawn, paths, lights, and pergola.
+- [x] Add a dedicated `ابدأ المشي داخل الحديقة` mode with pointer-lock mouse look, WASD/arrow movement, sprint with Shift, bounded movement, ESC exit, and an on-screen Arabic usage hint.
+- [x] Keep the scene editable: AI concept prompt, add/remove landscape elements, per-element scale and rotation controls, automatic local persistence, and export action.

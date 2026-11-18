@@ -79,9 +79,11 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@types/three": "^0.187.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "qrcode.react": "4.2.0",
-    "read-excel-file": "^9.3.12"
+    "read-excel-file": "^9.3.12",
+    "three": "^0.187.0"
   }
 }
