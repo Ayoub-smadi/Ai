@@ -1486,3 +1486,7 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .export-lines-table td:nth-child(1),.export-lines-table td:nth-child(2){text-align:right;padding-inline-start:12px;padding-inline-end:9px;font-variant-numeric:tabular-nums}
 .export-editor-row input{text-align:right;font-variant-numeric:tabular-nums}
 .export-editor-row input:nth-of-type(5),.export-editor-row input:nth-of-type(6){text-align:right}
+
+/* Monetary values centered per the invoice reference */
+.export-lines-table td:nth-child(1),.export-lines-table td:nth-child(2){text-align:center;padding-inline:7px}
+.export-editor-row input:nth-of-type(5),.export-editor-row input:nth-of-type(6){text-align:center}
