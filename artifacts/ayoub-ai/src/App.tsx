@@ -57,6 +57,7 @@ import StoreCartPage from '@/pages/store-cart-page';
 import StoreCheckoutPage from '@/pages/store-checkout-page';
 import AboutUsPage from '@/pages/about-us-page';
 import LandscapeEditorPage from '@/pages/landscape-editor-page';
+import Landscape3DPage from '@/pages/landscape-3d-page';
 import AdminClientsPage from '@/pages/admin-clients-page';
 import AlternativeQuoteExportButton from '@/components/alternative-quote-export';
 import { exportQuotePdf, preloadQuotePdf } from '@/lib/quote-pdf';
@@ -1610,6 +1611,7 @@ function PublicPreviewRouter() {
     <Route path="/plants/:plantId" component={PublicPlantDetailRoute} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
     <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
+    <Route path="/landscape-3d"><AccountGate><PublicPageNav /><Landscape3DPage /></AccountGate></Route>
     <Route path="/admin/login" component={AdminLoginPage} />
     <Route path="/account" component={AccountProfilePage} />
     <Route path="/sign-in/*?" component={AccountPage} />
@@ -1649,6 +1651,7 @@ function Router() {
     <Route path="/plants/:plantId" component={PublicPlantDetailRoute} />
     <Route path="/plant-treatment" component={PublicPlantTreatmentRoute} />
     <Route path="/landscape-editor" component={PublicLandscapeEditorRoute} />
+    <Route path="/landscape-3d"><AccountGate><PublicPageNav /><Landscape3DPage /></AccountGate></Route>
     <Route path="/sign-in/*?" component={AdminLoginPage} />
     <Route path="/sign-up/*?"><SignUp routing="path" path={`${basePath}/sign-up`} /></Route>
     <Route path="/admin/login" component={AdminLoginPage} />

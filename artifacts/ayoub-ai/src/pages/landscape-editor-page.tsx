@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Search, Sparkles, Trash2, TreePine } from 'lucide-react';
+import { ArrowRight, Box, Search, Sparkles, Trash2, TreePine } from 'lucide-react';
 import { Link } from 'wouter';
 import { getManagedPlants, type ManagedPlant } from '@/data/managed-plants';
 import LandscapePlan, {
@@ -240,7 +240,7 @@ export default function LandscapeEditorPage() {
         <p>ابدأ من لوحة بيضاء، وارسم حدود الأرض والعناصر بنفسك. تحفظ تغييراتك تلقائيًا.</p>
       </div>
       <div className="landscape-studio-header-actions">
-        <span className={`landscape-studio-save-state${saveError ? ' has-error' : ''}`} role="status">{saveError ? 'تعذر الحفظ؛ مساحة التخزين ممتلئة' : 'يحفظ تلقائيًا على هذا الجهاز'}</span>
+        <Link className="landscape-studio-3d-button" href="/landscape-3d"><Box size={15} /><span>سكيب 3D</span><small>صمّم مشهدًا عبقريًا</small></Link>
         <button type="button" className="landscape-studio-ai-button" aria-expanded={aiChatOpen} onClick={() => setAiChatOpen((open) => !open)}><Sparkles size={14} />مساعد AI</button>
         <button type="button" onClick={clearPlan}><Trash2 size={14} />مسح المخطط</button>
       </div>

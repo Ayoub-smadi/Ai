@@ -44,3 +44,6 @@
   .landscape-studio-plant-list { display: flex; max-height: 190px; overflow: auto; }
   .landscape-studio-plant { flex: 0 0 190px; }
 }
+
+.landscape-studio-3d-button{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:7px 12px;border:1px solid #78a67d;border-radius:10px;background:linear-gradient(135deg,#285f37,#193f27);color:#fff;text-decoration:none;box-shadow:0 7px 18px #214d2d2b;transition:transform .18s,box-shadow .18s}.landscape-studio-3d-button:hover{transform:translateY(-2px);box-shadow:0 10px 22px #214d2d42}.landscape-studio-3d-button small{font-size:9px;color:#cce8cf;border-inline-start:1px solid #ffffff55;padding-inline-start:7px}
+@media(max-width:760px){.landscape-studio-3d-button{flex:1;justify-content:center}}

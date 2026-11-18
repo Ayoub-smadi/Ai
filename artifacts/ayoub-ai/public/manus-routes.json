@@ -183,6 +183,10 @@
     {
       "path": "/settings",
       "title": "Settings"
+    },
+    {
+      "path": "/landscape-3d",
+      "title": "سكيب 3D"
     }
   ]
 }
