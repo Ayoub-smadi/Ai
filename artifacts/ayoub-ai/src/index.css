@@ -1481,3 +1481,8 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .export-brand-subline p{display:block;margin:0;line-height:1.5}
 .export-header-facility{flex:0 0 auto;margin:0;padding:5px 13px;line-height:1.35}
 .export-brand-main>small{display:block;margin-top:10px;line-height:1.5}
+
+/* Keep monetary values anchored to the cell edge in preview, editor, and PDF */
+.export-lines-table td:nth-child(1),.export-lines-table td:nth-child(2){text-align:right;padding-inline-start:12px;padding-inline-end:9px;font-variant-numeric:tabular-nums}
+.export-editor-row input{text-align:right;font-variant-numeric:tabular-nums}
+.export-editor-row input:nth-of-type(5),.export-editor-row input:nth-of-type(6){text-align:right}
