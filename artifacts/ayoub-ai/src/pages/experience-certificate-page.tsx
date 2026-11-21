@@ -45,13 +45,13 @@ export default function ExperienceCertificatePage() {
         <label>اسم الموقّع<input value={form.signer} onChange={(e) => update('signer', e.target.value)} /></label><label>صفة الموقّع<input value={form.signerTitle} onChange={(e) => update('signerTitle', e.target.value)} /></label>
       </div>{status && <p className="experience-status" role="status">{status}</p>}</section>
       <section className="experience-preview-wrap"><div className="experience-preview-label">المعاينة الرسمية</div><article className="experience-paper" ref={paperRef}><div className="experience-paper-border">
-        <header className="experience-paper-header"><img src="/alqadri-logo.png" alt="شعار مؤسسة القادري الزراعية" /><div><strong>{form.company || '—'}</strong><span>جرش - الأردن</span></div></header>
+        <header className="experience-paper-header"><img src="/alqadri-logo.png" alt="شعار مؤسسة القادري الزراعية" /><div><strong>{form.company || '—'}</strong></div></header>
         <h2>شهادة خبرة</h2><div className="experience-paper-rule" />
         <p className="experience-intro">تشهد <b>{form.company || 'المؤسسة'}</b> والمسجلة بالسجل التجاري رقم <b>(505999)</b> ورقم وطني للمنشأة <b>100960051</b> ورقم رخصة مهن <b>(2020463)</b> بأن السيد/السيدة:</p>
         <h3>{form.employeeName || '—'}</h3><p className="experience-role">{form.jobTitle || '—'}</p><p className="experience-body">{form.paragraph || '—'}</p>
         <p className="experience-period">وذلك خلال الفترة من <b>{formatDate(form.startDate)}</b> إلى <b>{formatDate(form.endDate)}</b>.</p>{form.includeSalary && <p className="experience-salary">وبراتب شهري قدره: <b>{form.salary || '—'}</b>.</p>}
         <p className="experience-closing">وقد أعطيت له/لها هذه الشهادة بناءً على طلبه/طلبها دون أدنى مسؤولية على المؤسسة.</p>
-        <footer className="experience-signature"><div><strong>{form.signer || '—'}</strong><span>{form.signerTitle || '—'}</span></div><img className="experience-stamp" src="/quote-signature-stamp.png" alt="ختم المؤسسة" /></footer>
+        <footer className="experience-signature"><div className="experience-signature-stack"><strong>{form.signerTitle || 'المدير العام'}/ {form.signer || 'ثامر القادري'}</strong><img className="experience-stamp" src="/quote-signature-stamp.png" alt="ختم المؤسسة" /></div></footer>
       </div></article></section>
     </div>
   </main>;
