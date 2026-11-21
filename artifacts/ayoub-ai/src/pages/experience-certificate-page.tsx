@@ -51,7 +51,7 @@ export default function ExperienceCertificatePage() {
         <h3>{form.employeeName || '—'}</h3><p className="experience-role">{form.jobTitle || '—'}</p><p className="experience-body">{form.paragraph || '—'}</p>
         <p className="experience-period">وذلك خلال الفترة من <b>{formatDate(form.startDate)}</b> إلى <b>{formatDate(form.endDate)}</b>.</p>{form.includeSalary && <p className="experience-salary">وبراتب شهري قدره: <b>{form.salary || '—'}</b>.</p>}
         <p className="experience-closing">وقد أعطيت له/لها هذه الشهادة بناءً على طلبه/طلبها دون أدنى مسؤولية على المؤسسة.</p>
-        <footer className="experience-signature"><div className="experience-signature-stack"><strong>{form.signerTitle || 'المدير العام'}/ {form.signer || 'ثامر القادري'}</strong><img className="experience-stamp" src="/quote-signature-stamp.png" alt="ختم المؤسسة" /></div></footer>
+        <footer className="experience-signature"><div className="experience-signature-stack"><strong>{form.signerTitle || 'المدير العام'} <span className="experience-signature-separator">/</span> {form.signer || 'ثامر القادري'}</strong><img className="experience-stamp" src="/quote-signature-stamp.png" alt="ختم المؤسسة" /></div></footer>
       </div></article></section>
     </div>
   </main>;

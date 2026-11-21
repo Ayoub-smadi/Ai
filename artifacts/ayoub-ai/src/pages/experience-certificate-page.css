@@ -6,3 +6,9 @@
 .experience-signature-stack>strong{font-size:14px;line-height:1.5}
 .experience-signature-stack .experience-stamp{margin:0 auto}
 @media(max-width:650px){.experience-signature-stack{min-width:150px}.experience-signature-stack>strong{font-size:9px}}
+
+/* Keep the signer and stamp together on the left side of the certificate. */
+.experience-signature{right:auto!important;left:76px!important;justify-content:flex-start!important}
+.experience-signature-stack{align-items:center!important;text-align:center;gap:6px}
+.experience-signature-separator{display:inline!important;font-size:inherit!important;color:inherit!important;margin-inline:4px}
+@media(max-width:650px){.experience-signature{right:auto!important;left:23px!important}.experience-signature-stack{gap:4px}}
