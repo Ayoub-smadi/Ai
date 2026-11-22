@@ -1,14 +1,55 @@
-.experience-page{max-width:1440px}.experience-page-head{align-items:center}.experience-actions{display:flex;gap:8px;flex-wrap:wrap}.experience-layout{display:grid;grid-template-columns:minmax(290px,390px) minmax(0,1fr);gap:18px;align-items:start}.experience-editor{overflow:hidden}.experience-editor .panel-head{color:#274b35}.experience-editor .panel-head>svg{color:#5f8d68}.experience-fields{display:grid;grid-template-columns:1fr 1fr;gap:13px;padding:20px}.experience-fields label{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:700;color:#294333}.experience-fields input,.experience-fields textarea{width:100%;border:1px solid #d6e1d7;border-radius:9px;background:#fff;padding:10px 11px;color:#20382a;outline:0;font-size:12px}.experience-fields textarea{resize:vertical;line-height:1.8}.experience-fields input:focus,.experience-fields textarea:focus{border-color:#4f855b;box-shadow:0 0 0 3px #4f855b18}.experience-field-full{grid-column:1/-1}.experience-check{display:flex!important;flex-direction:row!important;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #d6e1d7;border-radius:9px;background:#f7fbf6}.experience-check input{width:18px;height:18px;accent-color:#315c3c}.experience-status{margin:0;padding:0 20px 18px;color:#47754f;font-size:11px}.experience-preview-wrap{min-width:0}.experience-preview-label{margin:0 0 9px;color:#55745d;font:10px var(--app-font-mono);letter-spacing:.12em}.experience-paper{width:100%;max-width:980px;aspect-ratio:1.414/1;margin:0 auto;padding:17px;background:#f4f6ef;box-shadow:0 16px 36px #19352520}.experience-paper-border{position:relative;width:100%;height:100%;min-height:520px;padding:43px 76px 34px;border:1px solid #5d8064;background:radial-gradient(circle at 50% 45%,#fff 0,#fffdf8 65%,#f2f6ee 100%);color:#233b2b;text-align:center;overflow:hidden}.experience-paper-border:before{content:'';position:absolute;inset:11px;border:1px solid #b8cdb9;pointer-events:none}.experience-paper-header{position:relative;display:flex;align-items:center;justify-content:center;gap:15px}.experience-paper-header img{width:68px;height:68px;object-fit:contain}.experience-paper-header div{display:flex;flex-direction:column;align-items:center;gap:4px}.experience-paper-header strong{font-size:24px;color:#23462d}.experience-paper-header span{font-size:12px;color:#6a826d}.experience-paper h2{position:relative;margin:35px 0 11px;font-family:Georgia,serif;font-size:32px;letter-spacing:.03em;color:#315c3c}.experience-paper-rule{width:110px;height:3px;margin:0 auto 23px;background:#a5c09f}.experience-intro,.experience-body,.experience-period,.experience-closing,.experience-salary{position:relative;margin:0 auto;color:#405847;font-size:13px;line-height:2;max-width:720px}.experience-intro{font-size:12px;line-height:2.1}.experience-paper h3{position:relative;margin:7px 0 2px;font-size:26px;color:#1f3e29}.experience-role{position:relative;margin:0 0 17px;color:#5c7b62;font-size:14px;font-weight:700}.experience-body{margin-top:16px}.experience-period{margin-top:12px}.experience-salary{margin-top:7px;color:#315c3c}.experience-closing{margin-top:8px;font-size:11px;color:#69806d}.experience-signature{position:absolute;right:76px;bottom:42px;left:76px;display:flex;align-items:end;justify-content:space-between;text-align:center}.experience-signature>div:first-child{display:grid;gap:5px;min-width:170px}.experience-signature strong{font-size:14px}.experience-signature span{font-size:11px;color:#607766}.experience-stamp{display:block;width:112px;height:74px;object-fit:contain;object-position:center}.experience-paper-border:after{content:' ';position:absolute;left:27px;bottom:24px;width:34px;height:34px;border-left:2px solid #7da17c;border-bottom:2px solid #7da17c;opacity:.65}@media(max-width:950px){.experience-layout{grid-template-columns:1fr}.experience-editor{order:2}.experience-paper{max-width:100%}}@media(max-width:650px){.experience-page{padding-inline:13px}.experience-page-head{align-items:flex-start;flex-direction:column}.experience-fields{grid-template-columns:1fr;padding:15px}.experience-field-full{grid-column:auto}.experience-paper{padding:8px}.experience-paper-border{min-height:470px;padding:31px 22px 24px}.experience-paper-header img{width:45px;height:45px}.experience-paper-header strong{font-size:17px}.experience-paper-header span{font-size:9px}.experience-paper h2{margin-top:25px;font-size:23px}.experience-intro,.experience-body,.experience-period,.experience-salary{font-size:9px;line-height:1.8}.experience-intro{font-size:8px}.experience-paper h3{font-size:18px}.experience-role{font-size:10px;margin-bottom:10px}.experience-closing{font-size:8px}.experience-signature{right:23px;bottom:26px;left:23px}.experience-signature strong{font-size:10px}.experience-signature span{font-size:8px}.experience-stamp{width:70px;height:48px}.experience-paper-border:after{left:17px;bottom:16px;width:23px;height:23px}}
 
-/* Certificate signature: signer title/name sits directly above the stamp. */
-.experience-signature{justify-content:center!important}
-.experience-signature-stack{display:flex!important;flex-direction:column;align-items:center;gap:3px;min-width:190px}
-.experience-signature-stack>strong{font-size:14px;line-height:1.5}
-.experience-signature-stack .experience-stamp{margin:0 auto}
-@media(max-width:650px){.experience-signature-stack{min-width:150px}.experience-signature-stack>strong{font-size:9px}}
 
-/* Keep the signer and stamp together on the left side of the certificate. */
-.experience-signature{right:auto!important;left:76px!important;justify-content:flex-start!important}
-.experience-signature-stack{align-items:center!important;text-align:center;gap:6px}
-.experience-signature-separator{display:inline!important;font-size:inherit!important;color:inherit!important;margin-inline:4px}
-@media(max-width:650px){.experience-signature{right:auto!important;left:23px!important}.experience-signature-stack{gap:4px}}
+/* A4 certificate layout: balanced page proportions and a dedicated signature area. */
+.experience-paper{
+  box-sizing:border-box;
+  width:100%;
+  max-width:794px;
+  height:auto!important;
+  min-height:0!important;
+  aspect-ratio:210 / 297!important;
+  padding:14px;
+}
+.experience-paper-border{
+  box-sizing:border-box;
+  height:100%!important;
+  min-height:0!important;
+  padding:58px 76px 34px;
+  display:flex;
+  flex-direction:column;
+}
+.experience-paper-header{flex:0 0 auto}
+.experience-paper h2{margin-top:30px;margin-bottom:10px}
+.experience-paper-rule{margin-bottom:25px}
+.experience-body{margin-top:18px}
+.experience-signature{
+  position:relative!important;
+  inset:auto!important;
+  direction:ltr;
+  flex:0 0 112px;
+  width:100%;
+  margin-top:auto;
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-start!important;
+  text-align:center;
+}
+.experience-signature-stack{
+  width:230px;
+  min-width:230px!important;
+  align-items:center!important;
+  justify-content:flex-end;
+  gap:8px;
+  direction:rtl;
+}
+.experience-signature-stack>strong{white-space:nowrap;line-height:1.6}
+.experience-stamp{width:124px;height:78px}
+@media(max-width:650px){
+  .experience-paper{padding:8px;max-width:none}
+  .experience-paper-border{padding:35px 28px 24px}
+  .experience-paper h2{margin-top:23px}
+  .experience-signature{flex-basis:82px}
+  .experience-signature-stack{width:165px;min-width:165px!important;gap:4px}
+  .experience-signature-stack>strong{font-size:9px;white-space:nowrap}
+  .experience-stamp{width:82px;height:52px}
+}
