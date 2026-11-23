@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Box, Download, Eye, Lightbulb, MousePointer2, Sparkles, TreePine, Waves, X } from 'lucide-react';
 import { Link } from 'wouter';
 import * as THREE from 'three';
+import { userStorageKey } from '@/lib/user-account';
 import './landscape-3d-page.css';
 
 type SceneObject = { id: string; type: 'tree' | 'water' | 'lawn' | 'path' | 'light' | 'pergola'; label: string; x: number; y: number; scale: number; rotate: number };
 const STORAGE_KEY = 'qadri-landscape-3d-v2';
+const PLAN_STORAGE_KEY = 'qadri-site-plan-v1';
 const defaults: SceneObject[] = [
   { id: 'lawn-1', type: 'lawn', label: 'المسطح الأخضر', x: 0, y: 0, scale: 1.3, rotate: 0 },
   { id: 'water-1', type: 'water', label: 'عنصر مائي', x: 7, y: -3, scale: 1, rotate: 0 },
@@ -15,7 +17,52 @@ const defaults: SceneObject[] = [
 ];
 const labels: Record<SceneObject['type'], string> = { tree: 'شجرة', water: 'ماء', lawn: 'مسطح أخضر', path: 'ممشى', light: 'إضاءة', pergola: 'برغولا' };
 const icons = { tree: TreePine, water: Waves, lawn: Box, path: Box, light: Lightbulb, pergola: Box };
-function readScene(): SceneObject[] { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); return Array.isArray(value) && value.length ? value : defaults; } catch { return defaults; } }
+const planStorageKey = () => userStorageKey(PLAN_STORAGE_KEY);
+const clampScene = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+function scenePosition(x = 50, y = 50) { return { x: clampScene((x - 50) * 0.28, -13, 13), y: clampScene((y - 50) * 0.24, -11, 11) }; }
+function sceneType(category = '', name = ''): SceneObject['type'] {
+  const value = `${category} ${name}`.toLocaleLowerCase('ar');
+  if (/ماء|بركة|مسبح|نافورة|water|pool/.test(value)) return 'water';
+  if (/ممشى|مسار|طريق|ممر|path|road/.test(value)) return 'path';
+  if (/إضاءة|انارة|مصباح|light/.test(value)) return 'light';
+  if (/برغولا|جلسة|مبنى|building|pergola/.test(value)) return 'pergola';
+  if (/عشب|مسطح|نجيل|lawn|حديقة/.test(value)) return 'lawn';
+  return 'tree';
+}
+function convertPlanToScene(): SceneObject[] | null {
+  try {
+    const raw = localStorage.getItem(planStorageKey());
+    if (!raw) return null;
+    const plan = JSON.parse(raw) as { items?: Array<Record<string, unknown>>; landscapeDrawings?: Array<Record<string, unknown>> };
+    const objects: SceneObject[] = [];
+    (plan.landscapeDrawings || []).forEach((drawing, index) => {
+      const tool = String(drawing.tool || '');
+      const type = tool === 'water' ? 'water' : tool === 'path-area' ? 'path' : tool === 'building' ? 'pergola' : 'lawn';
+      const position = scenePosition(Number(drawing.x) || 50, Number(drawing.y) || 50);
+      const width = Number(drawing.width) || 14;
+      const height = Number(drawing.height) || 14;
+      objects.push({ id: `plan-drawing-${index}`, type, label: type === 'water' ? 'عنصر مائي من المخطط' : type === 'path' ? 'ممشى من المخطط' : type === 'pergola' ? 'منشأة من المخطط' : 'مسطح أخضر من المخطط', x: position.x, y: position.y, scale: clampScene(Math.max(width, height) / 18, .6, 1.8), rotate: Number(drawing.rotation) || 0 });
+    });
+    (plan.items || []).forEach((item, itemIndex) => {
+      const quantity = Math.min(24, Math.max(1, Math.round(Number(item.quantity) || 1)));
+      const savedPositions = Array.isArray(item.landscapeInstances) ? item.landscapeInstances as Array<Record<string, unknown>> : [];
+      const positions = savedPositions.length ? savedPositions : Array.from({ length: quantity }, (_, index) => ({ x: Number(item.landscapeX) || 50 + (index % 4) * 5, y: Number(item.landscapeY) || 50 + Math.floor(index / 4) * 5 }));
+      const type = sceneType(String(item.category || ''), String(item.name || ''));
+      positions.slice(0, quantity).forEach((point, index) => {
+        const position = scenePosition(Number(point.x) || 50, Number(point.y) || 50);
+        objects.push({ id: `plan-item-${itemIndex}-${index}`, type, label: String(item.name || labels[type]), x: position.x, y: position.y, scale: clampScene((Number(item.landscapeSize) || 58) / 58, .5, 1.8), rotate: 0 });
+      });
+    });
+    return objects.length ? objects : null;
+  } catch { return null; }
+}
+function readScene(convertPlan = false): SceneObject[] {
+  if (convertPlan) {
+    const converted = convertPlanToScene();
+    if (converted) return converted;
+  }
+  try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); return Array.isArray(value) && value.length ? value : defaults; } catch { return defaults; }
+}
 function material(color: number, roughness = .8, metalness = 0) { return new THREE.MeshStandardMaterial({ color, roughness, metalness }); }
 function makeTree(scale: number) { const group = new THREE.Group(); const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.22, .34, 1.9, 8), material(0x79533a)); trunk.position.y = .95; group.add(trunk); const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25, 2), material(0x3d8149, .95)); crown.position.y = 2.25; crown.scale.set(1, 1.15, 1); group.add(crown); const crown2 = new THREE.Mesh(new THREE.IcosahedronGeometry(.7, 1), material(0x6ba858)); crown2.position.set(.45, 2.75, .15); group.add(crown2); group.scale.setScalar(1.8 * scale); return group; }
 function makeObject(item: SceneObject) { const group = new THREE.Group(); if (item.type === 'tree') group.add(makeTree(item.scale)); if (item.type === 'water') { const pond = new THREE.Mesh(new THREE.CylinderGeometry(2.1 * item.scale, 2.1 * item.scale, .12, 48), new THREE.MeshStandardMaterial({ color: 0x4ba9c2, roughness: .12, metalness: .15, transparent: true, opacity: .82 })); pond.position.y = .08; group.add(pond); } if (item.type === 'lawn') { const lawn = new THREE.Mesh(new THREE.CylinderGeometry(3.6 * item.scale, 3.6 * item.scale, .18, 48), material(0x6eae5a)); lawn.position.y = .08; group.add(lawn); } if (item.type === 'path') { const path = new THREE.Mesh(new THREE.BoxGeometry(2.2 * item.scale, .12, 7 * item.scale), material(0xb7a57d)); path.position.y = .08; group.add(path); for (let z = -2.5; z <= 2.5; z += 1) { const tile = new THREE.Mesh(new THREE.BoxGeometry(2 * item.scale, .16, .72), material(0xd8c7a2)); tile.position.set(0, .16, z * item.scale); group.add(tile); } } if (item.type === 'light') { const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, 1.2, 12), material(0x343c37, .5, .2)); pole.position.y = .6; const bulb = new THREE.Mesh(new THREE.SphereGeometry(.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffd36b, emissive: 0xffa51f, emissiveIntensity: 2 })); bulb.position.y = 1.25; group.add(pole, bulb); } if (item.type === 'pergola') { const wood = material(0x9a6c45); [-1.5, 1.5].forEach((x) => [-1.5, 1.5].forEach((z) => { const post = new THREE.Mesh(new THREE.BoxGeometry(.18, 2.6, .18), wood); post.position.set(x, 1.3, z); group.add(post); })); const roof = new THREE.Mesh(new THREE.BoxGeometry(3.4, .18, 3.4), wood); roof.position.y = 2.65; group.add(roof); } group.position.set(item.x, 0, item.y); group.rotation.y = item.rotate * Math.PI / 180; return group; }
@@ -23,7 +70,8 @@ function makeObject(item: SceneObject) { const group = new THREE.Group(); if (it
 export default function Landscape3DPage() {
   const mountRef = useRef<HTMLDivElement>(null);
   const cameraState = useRef({ x: 0, y: 2.2, z: 18, yaw: 0, pitch: -0.08 });
-  const [objects, setObjects] = useState<SceneObject[]>(readScene);
+  const convertPlan = new URLSearchParams(window.location.search).get('convert') === '1';
+  const [objects, setObjects] = useState<SceneObject[]>(() => readScene(convertPlan));
   const [selected, setSelected] = useState<string | null>('lawn-1');
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<'design' | 'walk'>('design');

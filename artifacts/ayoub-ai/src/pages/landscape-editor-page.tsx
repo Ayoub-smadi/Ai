@@ -240,7 +240,7 @@ export default function LandscapeEditorPage() {
         <p>ابدأ من لوحة بيضاء، وارسم حدود الأرض والعناصر بنفسك. تحفظ تغييراتك تلقائيًا.</p>
       </div>
       <div className="landscape-studio-header-actions">
-        <Link className="landscape-studio-3d-button" href="/landscape-3d"><Box size={15} /><span>سكيب 3D</span><small>صمّم مشهدًا عبقريًا</small></Link>
+        <Link className="landscape-studio-3d-button" href="/landscape-3d?convert=1"><Box size={15} /><span>تحويل التصميم إلى 3D</span><small>حوّل مخططك إلى مشهد قابل للمشي</small></Link>
         <button type="button" className="landscape-studio-ai-button" aria-expanded={aiChatOpen} onClick={() => setAiChatOpen((open) => !open)}><Sparkles size={14} />مساعد AI</button>
         <button type="button" onClick={clearPlan}><Trash2 size={14} />مسح المخطط</button>
       </div>
