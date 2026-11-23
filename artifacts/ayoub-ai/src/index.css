@@ -1547,3 +1547,27 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
   .invoice-form-grid label,.invoice-bottom-fields>label,.invoice-adjustments label{font-size:12px}
   .invoice-form-grid input,.invoice-bottom-fields textarea,.invoice-adjustments input{font-size:13px}
 }
+
+
+/* Clear invoice classification controls and registry badges */
+.invoice-kind-groups{gap:15px;padding:18px}
+.invoice-kind-group{grid-template-columns:122px 1fr;gap:12px}
+.invoice-kind-group>strong{font-size:14px;font-weight:800;color:#2b5138}
+.invoice-kind-group>div{gap:9px}
+.invoice-kind-group button{min-width:112px;min-height:42px;justify-content:center;padding:9px 13px;border-radius:9px;font-size:14px;font-weight:650;box-shadow:0 2px 5px #183d2608}
+.invoice-kind-group button:hover{border-color:#83a98b;background:#f6fbf6;color:#245d36}
+.invoice-kind-group button.selected{border-width:2px;box-shadow:0 4px 10px #34744822;font-weight:800}
+.invoice-kind-group button.selected .invoice-check-empty{display:none}
+.invoice-workspace-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.invoice-workspace-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #d2e4d5;border-radius:7px;background:#f1f8f1;color:#326744;font-size:11px;line-height:1.2}
+.invoice-workspace-tag b{font-size:9px;color:#78927d;font-weight:700}
+.invoice-workspace-tag strong{font-size:12px;color:#245d36}
+.invoice-workspace-tag.is-empty{border-color:#e1e7e2;background:#f8faf8;color:#7c887f;font-size:11px}
+.invoice-workspace-phone{margin:6px 0 0!important;color:#78847c;font-size:12px!important;direction:ltr;text-align:right}
+@media(max-width:650px){
+  .invoice-kind-group{grid-template-columns:1fr;gap:7px}
+  .invoice-kind-group>strong{font-size:13px}
+  .invoice-kind-group button{min-width:105px;min-height:40px;font-size:13px}
+  .invoice-workspace-tag{font-size:10px}
+  .invoice-workspace-tag strong{font-size:11px}
+}
