@@ -1576,3 +1576,7 @@ html[dir="rtl"] .public-home .public-topline>.weather-above-logo{grid-column:1;j
 .invoice-print-kinds{gap:9px;align-items:center}
 .invoice-print-kinds span{display:inline-flex;align-items:center;min-height:33px;padding:7px 12px;border-width:1.5px;border-radius:8px;font-size:13px;font-weight:800;line-height:1.25;white-space:nowrap}
 @media(max-width:650px){.invoice-print-kinds{gap:7px}.invoice-print-kinds span{min-height:30px;padding:6px 10px;font-size:12px}}
+
+/* Larger stamp for purchase-order and official-document previews/PDF */
+.operations-page .official-preview-footer img{width:108px;height:74px}
+@media(max-width:600px){.operations-page .official-preview-footer img{display:none}}
