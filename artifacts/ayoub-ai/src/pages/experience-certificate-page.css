@@ -20,15 +20,15 @@
 .experience-preview-label{margin:0 0 9px;color:#55745d;font:10px var(--app-font-mono);letter-spacing:.12em}
 
 /* True A4 portrait canvas */
-.experience-paper{box-sizing:border-box;width:100%;max-width:794px;height:auto!important;min-height:0!important;aspect-ratio:210 / 297!important;margin:0 auto;padding:14px;background:#e8eee5;box-shadow:0 18px 45px #19352524}
+.experience-paper{box-sizing:border-box;width:100%;max-width:794px;height:auto!important;min-height:0!important;aspect-ratio:210 / 297!important;margin:0 auto;padding:14px;background:#e8eee5;box-shadow:0 18px 45px #19352524;direction:rtl}
 .experience-paper-border{position:relative;box-sizing:border-box;width:100%;height:100%!important;min-height:0!important;overflow:hidden;padding:42px 65px 30px;border:1px solid #62816a;background:#fffdf8;color:#293e31;text-align:center;display:flex;flex-direction:column}
 .experience-paper-border:before{content:'';position:absolute;inset:10px;border:1px solid #d2dfd1;pointer-events:none}
 .experience-paper-border:after{content:none}
 .experience-paper-header,.experience-paper h2,.experience-paper-rule,.experience-paper p,.experience-paper h3,.experience-signature{position:relative;z-index:1}
-.experience-paper-header{display:flex;align-items:center;justify-content:center;gap:16px;flex:0 0 auto;padding-bottom:20px;border-bottom:1px solid #c9d9c9;overflow:visible}
+.experience-paper-header{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;padding-bottom:20px;border-bottom:1px solid #c9d9c9;overflow:visible}
 .experience-paper-header img{width:72px;height:72px;object-fit:contain;padding:7px;border:1px solid #b9cdbb;border-radius:50%;background:#f7faf4;box-sizing:border-box}
-.experience-paper-header div{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;min-width:0;overflow:visible}
-.experience-paper-header strong{display:block;max-width:100%;overflow:visible;white-space:nowrap;font-size:22px;line-height:1.5;color:#23462d;letter-spacing:-.02em}
+.experience-paper-header div{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;min-width:0;overflow:visible;text-align:center}
+.experience-paper-header strong{display:block;width:100%;max-width:100%;overflow:visible;white-space:normal;direction:rtl;unicode-bidi:plaintext;font-family:Tahoma,Arial,sans-serif;font-size:22px;line-height:1.7;color:#23462d;letter-spacing:0}
 .experience-paper-header div:after{content:none}
 .experience-paper h2{margin:28px 0 9px;padding:0 4px 5px;font-family:var(--app-font-sans,'Noto Kufi Arabic',Tahoma,sans-serif);font-size:31px;line-height:1.6;letter-spacing:0;color:#315c3c}
 .experience-paper-rule{width:88px;height:4px;margin:0 auto 20px;border-radius:10px;background:#9ab697;box-shadow:24px 0 0 -1px #d4e0d0,-24px 0 0 -1px #d4e0d0}
@@ -73,7 +73,7 @@
   .experience-field-full{grid-column:auto}
   .experience-paper{padding:8px;max-width:none}
   .experience-paper-border{padding:30px 25px 22px}
-  .experience-paper-header{gap:10px;padding-bottom:14px}
+  .experience-paper-header{gap:7px;padding-bottom:14px}
   .experience-paper-header img{width:48px;height:48px;padding:5px}
   .experience-paper-header strong{font-size:15px}
   .experience-paper-header div:after{content:none}
