@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { ArrowRight, Box, Search, Sparkles, Trash2, TreePine } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { getManagedPlants, type ManagedPlant } from '@/data/managed-plants';
 import LandscapePlan, {
   type LandscapeAiPlant,
@@ -15,6 +15,7 @@ import './landscape-editor-unified.css';
 
 const STORAGE_KEY = 'qadri-site-plan-v1';
 const CUSTOM_TOOLS_STORAGE_KEY = 'qadri-landscape-custom-tools-v1';
+const PLAN_PREVIEW_STORAGE_KEY = 'qadri-landscape-plan-preview-v1';
 const scopedKey = (key: string) => userStorageKey(key);
 type LegacyPlanItem = {
   id?: string;
@@ -114,6 +115,7 @@ function readSavedPlan(): LandscapeQuote {
 }
 
 export default function LandscapeEditorPage() {
+  const [, setLocation] = useLocation();
   const [plan, setPlan] = useState<LandscapeQuote>(readSavedPlan);
   const [saveError, setSaveError] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
@@ -230,6 +232,21 @@ export default function LandscapeEditorPage() {
   const clearPlan = () => {
     setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeCustomStamps: [], landscapeTextNotes: [], landscapeShowGrid: false }));
   };
+  const convertDesignTo3D = async (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    try {
+      const canvasElement = document.querySelector<HTMLElement>('.landscape-canvas');
+      if (canvasElement) {
+        const { default: html2canvas } = await import('html2canvas');
+        const rendered = await html2canvas(canvasElement, { backgroundColor: '#fff', scale: 1, useCORS: true, logging: false });
+        localStorage.setItem(scopedKey(PLAN_PREVIEW_STORAGE_KEY), rendered.toDataURL('image/png'));
+      }
+    } catch (error) {
+      console.error('Landscape 2D preview capture failed:', error);
+    } finally {
+      setLocation('/landscape-3d?convert=1');
+    }
+  };
 
   return <main className="landscape-studio-page" dir="rtl">
     <header className="landscape-studio-header">
@@ -240,7 +257,7 @@ export default function LandscapeEditorPage() {
         <p>ابدأ من لوحة بيضاء، وارسم حدود الأرض والعناصر بنفسك. تحفظ تغييراتك تلقائيًا.</p>
       </div>
       <div className="landscape-studio-header-actions">
-        <Link className="landscape-studio-3d-button" href="/landscape-3d?convert=1"><Box size={15} /><span>تحويل التصميم إلى 3D</span><small>حوّل مخططك إلى مشهد قابل للمشي</small></Link>
+        <Link className="landscape-studio-3d-button" href="/landscape-3d?convert=1" onClick={convertDesignTo3D}><Box size={15} /><span>تحويل التصميم إلى 3D</span><small>نفس مخططك وألوانه داخل مشهد قابل للمشي</small></Link>
         <button type="button" className="landscape-studio-ai-button" aria-expanded={aiChatOpen} onClick={() => setAiChatOpen((open) => !open)}><Sparkles size={14} />مساعد AI</button>
         <button type="button" onClick={clearPlan}><Trash2 size={14} />مسح المخطط</button>
       </div>
