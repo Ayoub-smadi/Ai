@@ -15,7 +15,6 @@ import './landscape-editor-unified.css';
 
 const STORAGE_KEY = 'qadri-site-plan-v1';
 const CUSTOM_TOOLS_STORAGE_KEY = 'qadri-landscape-custom-tools-v1';
-const PLAN_PREVIEW_STORAGE_KEY = 'qadri-landscape-plan-preview-v1';
 const scopedKey = (key: string) => userStorageKey(key);
 type LegacyPlanItem = {
   id?: string;
@@ -232,20 +231,9 @@ export default function LandscapeEditorPage() {
   const clearPlan = () => {
     setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeCustomStamps: [], landscapeTextNotes: [], landscapeShowGrid: false }));
   };
-  const convertDesignTo3D = async (event: MouseEvent<HTMLAnchorElement>) => {
+  const convertDesignTo3D = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    try {
-      const canvasElement = document.querySelector<HTMLElement>('.landscape-canvas');
-      if (canvasElement) {
-        const { default: html2canvas } = await import('html2canvas');
-        const rendered = await html2canvas(canvasElement, { backgroundColor: '#fff', scale: 1, useCORS: true, logging: false });
-        localStorage.setItem(scopedKey(PLAN_PREVIEW_STORAGE_KEY), rendered.toDataURL('image/png'));
-      }
-    } catch (error) {
-      console.error('Landscape 2D preview capture failed:', error);
-    } finally {
-      setLocation('/landscape-3d?convert=1');
-    }
+    setLocation('/landscape-3d?convert=1');
   };
 
   return <main className="landscape-studio-page" dir="rtl">
