@@ -64,7 +64,7 @@ export default function AdminTruckLoadPlannerPage() {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
       let pageCount = 0;
-      const rowsPerPage = 10;
+      const rowsPerPage = 6;
 
       for (const truck of trucks) {
         const chunks = truck.lines.length
@@ -90,8 +90,17 @@ export default function AdminTruckLoadPlannerPage() {
           eyebrow.append(brand, eyebrowText);
           wrapper.appendChild(eyebrow);
           const title = document.createElement('h1');
-          title.textContent = `حمولة البراد رقم ${numberFormat.format(truck.number)}`;
-          title.style.cssText = 'display:block;position:relative;font-size:36px;line-height:1.55;color:#244630;margin:0 0 14px;text-align:right;font-weight:800;white-space:nowrap;min-height:58px;';
+          title.dir = 'rtl';
+          title.style.cssText = 'display:flex;position:relative;align-items:baseline;justify-content:flex-start;gap:16px;font-size:36px;line-height:1.7;color:#244630;margin:0 0 18px;text-align:right;font-weight:800;white-space:nowrap;min-height:62px;';
+          const titleText = document.createElement('span');
+          titleText.dir = 'rtl';
+          titleText.textContent = 'حمولة البراد رقم';
+          titleText.style.cssText = 'display:block;direction:rtl;unicode-bidi:isolate;';
+          const titleNumber = document.createElement('span');
+          titleNumber.dir = 'ltr';
+          titleNumber.textContent = numberFormat.format(truck.number);
+          titleNumber.style.cssText = 'display:block;direction:ltr;unicode-bidi:isolate;';
+          title.append(titleText, titleNumber);
           wrapper.appendChild(title);
           const subtitle = document.createElement('div');
           subtitle.dir = 'rtl';
@@ -100,8 +109,8 @@ export default function AdminTruckLoadPlannerPage() {
           subtitleLabel.dir = 'rtl';
           subtitleLabel.textContent = 'تاريخ إصدار البيان: ';
           const subtitleValue = document.createElement('span');
-          subtitleValue.dir = 'ltr';
-          subtitleValue.textContent = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
+          subtitleValue.dir = 'rtl';
+          subtitleValue.textContent = new Intl.DateTimeFormat('ar-JO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
           subtitle.append(subtitleLabel, subtitleValue);
           wrapper.appendChild(subtitle);
 
@@ -161,7 +170,7 @@ export default function AdminTruckLoadPlannerPage() {
                   const image = document.createElement('img');
                   image.src = line.image;
                   image.alt = line.name;
-                  image.style.cssText = 'display:block;width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid #dfe8de;margin-inline:auto;';
+                  image.style.cssText = 'display:block;width:140px;height:140px;object-fit:cover;border-radius:10px;border:1px solid #dfe8de;margin-inline:auto;';
                   cell.appendChild(image);
                 }
                 row.appendChild(cell);
