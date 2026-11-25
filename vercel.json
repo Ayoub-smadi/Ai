@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "PORT=5173 BASE_PATH=/ pnpm --filter @workspace/ayoub-ai build",
+  "buildCommand": "PORT=5173 BASE_PATH=/ pnpm --filter @workspace/ayoub-ai build && pnpm --filter @workspace/api-server build:function",
   "outputDirectory": "artifacts/ayoub-ai/dist/public",
   "framework": "vite",
   "rewrites": [

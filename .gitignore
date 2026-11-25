@@ -4,6 +4,7 @@
 dist
 tmp
 out-tsc
+/api/express-app.cjs
 *.tsbuildinfo
 .expo
 .expo-shared
