@@ -64,7 +64,7 @@ export default function AdminTruckLoadPlannerPage() {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
       let pageCount = 0;
-      const rowsPerPage = 20;
+      const rowsPerPage = 10;
 
       for (const truck of trucks) {
         const chunks = truck.lines.length
@@ -73,24 +73,24 @@ export default function AdminTruckLoadPlannerPage() {
         for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
           wrapper = document.createElement('div');
           wrapper.dir = 'rtl';
-          wrapper.style.cssText = 'position:fixed;left:-20000px;top:0;width:1100px;z-index:-1;padding:46px;box-sizing:border-box;background:#fff;color:#20372a;font-family:Arial,sans-serif;direction:rtl;';
+          wrapper.style.cssText = 'position:fixed;left:-20000px;top:0;width:1000px;z-index:-1;padding:42px;box-sizing:border-box;background:#fff;color:#20372a;font-family:Arial,sans-serif;direction:rtl;line-height:1.55;';
           document.body.appendChild(wrapper);
 
           const eyebrow = document.createElement('div');
           eyebrow.textContent = 'QADRI AI · بيان توزيع حمولة الأشجار';
-          eyebrow.style.cssText = 'color:#6d806d;font-size:20px;font-weight:800;letter-spacing:.04em;text-align:right;margin-bottom:14px;line-height:1.5;';
+          eyebrow.style.cssText = 'display:block;position:relative;color:#6d806d;font-size:21px;font-weight:800;letter-spacing:.04em;text-align:right;margin:0 0 18px;line-height:1.7;white-space:nowrap;min-height:36px;';
           wrapper.appendChild(eyebrow);
           const title = document.createElement('h1');
           title.textContent = `حمولة البراد رقم ${numberFormat.format(truck.number)}`;
-          title.style.cssText = 'font-size:38px;line-height:1.45;color:#244630;margin:0 0 10px;text-align:right;font-weight:800;';
+          title.style.cssText = 'display:block;position:relative;font-size:36px;line-height:1.55;color:#244630;margin:0 0 14px;text-align:right;font-weight:800;white-space:nowrap;min-height:58px;';
           wrapper.appendChild(title);
           const subtitle = document.createElement('div');
           subtitle.textContent = `تاريخ إصدار البيان: ${new Intl.DateTimeFormat('ar-JO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}`;
-          subtitle.style.cssText = 'font-size:18px;color:#728173;text-align:right;margin-bottom:24px;line-height:1.6;font-weight:700;';
+          subtitle.style.cssText = 'display:block;position:relative;font-size:19px;color:#728173;text-align:right;margin:0 0 28px;line-height:1.7;font-weight:800;white-space:nowrap;min-height:34px;';
           wrapper.appendChild(subtitle);
 
           const summary = document.createElement('div');
-          summary.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;';
+          summary.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:30px;';
           const treesInTruck = truck.lines.reduce((sum, line) => sum + line.quantity, 0);
           const summaryItems = [
             ['الوزن المحمّل', formatKg(truck.totalKg)],
@@ -99,26 +99,26 @@ export default function AdminTruckLoadPlannerPage() {
           ];
           for (const [label, value] of summaryItems) {
             const card = document.createElement('div');
-            card.style.cssText = 'min-height:96px;padding:18px;border:1px solid #dfe8dd;border-radius:12px;background:#f7faf5;text-align:right;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;line-height:1.5;';
+            card.style.cssText = 'min-height:104px;padding:18px;border:1px solid #dfe8dd;border-radius:12px;background:#f7faf5;text-align:right;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;line-height:1.6;font-weight:800;';
             const cardLabel = document.createElement('div');
             cardLabel.textContent = label;
-            cardLabel.style.cssText = 'color:#778678;font-size:16px;font-weight:800;margin-bottom:8px;line-height:1.5;';
+            cardLabel.style.cssText = 'color:#778678;font-size:18px;font-weight:800;margin-bottom:8px;line-height:1.6;';
             const cardValue = document.createElement('strong');
             cardValue.textContent = value;
-            cardValue.style.cssText = 'color:#2d5738;font-size:26px;font-weight:800;line-height:1.4;';
+            cardValue.style.cssText = 'color:#2d5738;font-size:28px;font-weight:800;line-height:1.5;';
             card.append(cardLabel, cardValue);
             summary.appendChild(card);
           }
           wrapper.appendChild(summary);
 
           const table = document.createElement('table');
-          table.style.cssText = 'width:100%;border-collapse:collapse;border:1px solid #e0e8de;font-size:18px;table-layout:fixed;';
+          table.style.cssText = 'width:100%;border-collapse:collapse;border:1px solid #bfcfbc;font-size:20px;table-layout:fixed;font-weight:800;';
           const thead = document.createElement('thead');
           const headerRow = document.createElement('tr');
           for (const label of ['الصورة', 'الصنف', 'عدد الأشجار', 'وزن الشجرة', 'إجمالي وزن الصنف']) {
             const th = document.createElement('th');
             th.textContent = label;
-            th.style.cssText = 'padding:18px 14px;background:#edf4ea;color:#37593d;text-align:center;border:1px solid #cbd9c8;font-size:18px;font-weight:800;line-height:1.5;vertical-align:middle;';
+            th.style.cssText = 'padding:18px 14px;background:#edf4ea;color:#37593d;text-align:center;border:1px solid #bfcfbc;font-size:20px;font-weight:800;line-height:1.6;vertical-align:middle;';
             headerRow.appendChild(th);
           }
           thead.appendChild(headerRow);
@@ -140,7 +140,7 @@ export default function AdminTruckLoadPlannerPage() {
               for (const [index, value] of values.entries()) {
                 const cell = document.createElement('td');
                 cell.textContent = value;
-                cell.style.cssText = 'padding:16px 14px;color:#394b3d;text-align:center;border:1px solid #d5e0d2;font-size:18px;font-weight:800;vertical-align:middle;line-height:1.5;';
+                cell.style.cssText = 'padding:18px 14px;color:#394b3d;text-align:center;border:1px solid #c8d7c5;font-size:20px;font-weight:800;vertical-align:middle;line-height:1.6;';
                 if (index === 0 && line.image) {
                   const image = document.createElement('img');
                   image.src = line.image;
