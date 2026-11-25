@@ -110,6 +110,7 @@ export default function Landscape3DPage() {
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; mount.appendChild(renderer.domElement);
     const hemi = new THREE.HemisphereLight(0xdff7ff, 0x536a48, 2.2); scene.add(hemi); const sun = new THREE.DirectionalLight(0xfff1c5, 3.5); sun.position.set(-12, 24, 10); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); scene.add(sun);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), material(0x6f9f61)); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+    const helperGrid = new THREE.GridHelper(28, 28, 0x35563b, 0x83a681); helperGrid.position.y = .13; scene.add(helperGrid);
     const border = new THREE.Mesh(new THREE.BoxGeometry(32, .35, 28), material(0x9f8661)); border.position.y = -.2; scene.add(border);
     const garden = new THREE.Mesh(new THREE.BoxGeometry(29, .18, 25), material(0x76b168)); garden.position.y = .02; garden.receiveShadow = true; scene.add(garden);
     const objectsGroup = new THREE.Group(); objects.forEach((item) => { const group = makeObject(item); group.userData.objectId = item.id; group.traverse((child) => { if (child instanceof THREE.Mesh) { child.castShadow = true; child.receiveShadow = true; } }); objectsGroup.add(group); }); scene.add(objectsGroup);

@@ -38,7 +38,7 @@ const emptyPlan = (): LandscapeQuote => ({
   landscapeDefaultShape: 'circle',
   landscapeAnnotations: [],
   landscapeDrawings: [],
-  landscapeShowGrid: false,
+  landscapeShowGrid: true,
 });
 const pointFor = (index: number) => ({ x: 34 + (index % 4) * 11, y: 35 + (Math.floor(index / 4) % 4) * 11 });
 
@@ -107,6 +107,7 @@ function readSavedPlan(): LandscapeQuote {
       landscapeCustomTools: tools ?? (Array.isArray(saved.landscapeCustomTools) ? saved.landscapeCustomTools : []),
       landscapeCustomStamps: Array.isArray(saved.landscapeCustomStamps) ? saved.landscapeCustomStamps : [],
       landscapeTextNotes: Array.isArray(saved.landscapeTextNotes) ? saved.landscapeTextNotes : [],
+      landscapeShowGrid: true,
     };
   } catch {
     return emptyPlan();
@@ -229,7 +230,7 @@ export default function LandscapeEditorPage() {
     }));
   };
   const clearPlan = () => {
-    setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeCustomStamps: [], landscapeTextNotes: [], landscapeShowGrid: false }));
+    setPlan((current) => ({ ...current, items: [], landscapeDrawings: [], landscapeAnnotations: [], landscapeCustomStamps: [], landscapeTextNotes: [], landscapeShowGrid: true }));
   };
   const convertDesignTo3D = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();

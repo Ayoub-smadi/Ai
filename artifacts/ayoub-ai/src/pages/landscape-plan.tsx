@@ -71,13 +71,6 @@ type DrawingDrag = { id: string; pointerId: number; startClientX: number; startC
 type AnnotationDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
 const drawingTools: Array<{ id: LandscapeDrawingTool; label: string; mode: 'freehand' | 'rectangle' }> = [
   { id: 'boundary', label: 'حدود الأرض', mode: 'freehand' },
-  { id: 'building', label: 'مبنى', mode: 'rectangle' },
-  { id: 'entrance', label: 'مدخل', mode: 'rectangle' },
-  { id: 'path', label: 'مسار / شارع', mode: 'freehand' },
-  { id: 'lawn', label: 'مسطح أخضر', mode: 'rectangle' },
-  { id: 'parking', label: 'مواقف', mode: 'rectangle' },
-  { id: 'paving', label: 'ساحة', mode: 'rectangle' },
-  { id: 'water', label: 'ماء', mode: 'rectangle' },
 ];
 const rectangleTools = new Set<LandscapeDrawingTool>(['building', 'entrance', 'lawn', 'parking', 'paving', 'water']);
 const drawingLabels: Record<LandscapeDrawingTool, string> = {
@@ -688,20 +681,18 @@ export default function LandscapePlan({
 
     {viewMode === 'plan' && <div className="landscape-drawing-tools">
       <div className="landscape-drawing-tool-row" role="toolbar" aria-label="أدوات رسم المخطط">
-        <button type="button" className={activeTool === 'select' && !activeCustomToolId ? 'active' : ''} aria-pressed={activeTool === 'select' && !activeCustomToolId} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); }}>تحديد / تحريك</button>
         {drawingTools.map((tool) => <button key={tool.id} type="button" className={activeTool === tool.id ? 'active' : ''} aria-pressed={activeTool === tool.id} onClick={() => { if (activeTool === 'boundary' && boundaryPoints.length) finishBoundary(); if (tool.id === 'boundary') { setBoundaryPoints([]); setPreviewDrawing(null); } setIsPlacingText(false); clearSelection(); setActiveCustomToolId(null); setActiveTool(tool.id); }}>{tool.label}</button>)}
-        <button type="button" className={showTextComposer || isPlacingText ? 'active' : ''} aria-pressed={showTextComposer || isPlacingText} onClick={() => { setShowTextComposer((value) => !value); setIsPlacingText(false); setActiveTool('select'); setActiveCustomToolId(null); clearSelection(); }}>إضافة نص</button>
+
       </div>
       <div className="landscape-custom-tool-manager">
         <div className="landscape-custom-tool-heading"><strong>أدوات مخصصة</strong><button type="button" onClick={() => { setShowCustomToolForm((value) => !value); setCustomToolError(''); }}>+ إضافة زر</button></div>
         {!!customTools.some((tool) => tool.icon) && <div className="landscape-custom-tool-list">{customTools.filter((tool) => tool.icon).map((tool) => <div className="landscape-custom-tool" key={tool.id}><button type="button" className={activeCustomToolId === tool.id ? 'active' : ''} aria-pressed={activeCustomToolId === tool.id} onClick={() => { setIsPlacingText(false); clearSelection(); setActiveTool('select'); setActiveCustomToolId(activeCustomToolId === tool.id ? null : tool.id); }}>{tool.icon && <img src={tool.icon} alt="" />}<span>{tool.name}</span></button><button type="button" className="landscape-custom-tool-remove" title="حذف الأداة" aria-label={`حذف أداة ${tool.name}`} onClick={() => removeCustomTool(tool.id)}>×</button></div>)}</div>}
         {showCustomToolForm && <div className="landscape-custom-tool-form"><label>اسم الزر<input value={customToolName} onChange={(event) => setCustomToolName(event.target.value)} placeholder="مثال: نافورة" /></label><label className="landscape-custom-tool-upload"><ImagePlus size={16} />إرفاق الأيقونة<input type="file" accept="image/*" onChange={handleCustomToolIconChange} /></label>{customToolIcon && <img className="landscape-custom-tool-preview" src={customToolIcon} alt="معاينة الأيقونة" />}{customToolError && <small role="alert">{customToolError}</small>}<div><button type="button" onClick={() => { setShowCustomToolForm(false); setCustomToolError(''); }}>إلغاء</button><button type="button" disabled={!customToolName.trim() || !customToolIcon} onClick={saveCustomTool}>حفظ الزر</button></div></div>}
       </div>
-      {showTextComposer && <div className="landscape-text-note-creator"><label>اكتب النص الذي تريد وضعه على المخطط<textarea rows={2} value={draftText} onChange={(event) => setDraftText(event.target.value)} placeholder="مثال: المسافة 3 م" /></label><div><button type="button" disabled={!draftText.trim()} onClick={() => { setIsPlacingText(true); setActiveTool('select'); setActiveCustomToolId(null); }}>{isPlacingText ? 'انقر على المخطط لوضع النص' : 'اختيار مكان النص'}</button>{isPlacingText && <button type="button" onClick={() => setIsPlacingText(false)}>إلغاء</button>}</div>{isPlacingText && <small>انقر في المكان المطلوب على اللوحة؛ بعد ذلك يمكنك سحب النص وتغيير حجمه.</small>}</div>}
       <div className="landscape-drawing-hints">
         <small>{isPlacingText ? 'انقر في المكان المطلوب لوضع النص.' : activeCustomToolId ? `انقر على اللوحة لوضع «${customTools.find((tool) => tool.id === activeCustomToolId)?.name || 'الأيقونة'}»، ثم اسحب كل نسخة لموقعها.` : activeTool === 'boundary' ? 'اسحب من نقطة البداية إلى نهاية الضلع ثم أفلت؛ كرر لكل ضلع مستقيم، ثم اضغط إنهاء حدود الأرض.' : activeTool === 'path' ? 'اسحب لرسم مسار حر، ثم حدّده لتغيير حجمه أو سماكته.' : activeTool === 'select' ? 'اسحب أي عنصر لتحريكه. اختر أداة رسم ثم اسحب على المساحة البيضاء للإنشاء.' : `اسحب على اللوحة لتحديد حجم «${drawingLabels[activeTool]}»، ويمكنك تعديله بعد الرسم.`}</small>
         {activeTool === 'boundary' && <><button type="button" className="landscape-finish-boundary" disabled={boundaryPoints.length < 3 || !!drawSession.current} onClick={finishBoundary}>إنهاء حدود الأرض{boundaryPoints.length > 0 ? ` (${boundaryPoints.length} نقاط)` : ''}</button><button type="button" className="landscape-cancel-boundary" onClick={cancelBoundary}>إلغاء</button></>}
-        <label><input type="checkbox" checked={quote.landscapeShowGrid === true} onChange={(event) => onGridChange(event.target.checked)} />شبكة مساعدة</label>
+        <span className="landscape-grid-status">شبكة مساعدة مفعلة</span>
         <button type="button" className="landscape-undo-drawing" disabled={!drawings.length} onClick={() => { onDrawingsChange(drawings.slice(0, -1)); setSelectedDrawingId(null); }}><Undo2 size={13} />تراجع عن آخر رسم</button>
       </div>
     </div>}
