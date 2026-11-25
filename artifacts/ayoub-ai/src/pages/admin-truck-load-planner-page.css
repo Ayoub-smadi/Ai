@@ -68,13 +68,13 @@
 .truck-load-utilization{display:flex;justify-content:space-between;color:#859087;font-size:10px}
 .truck-load-utilization strong{color:#527a54;font-size:10px}
 .truck-load-manifest-list{margin-top:14px;border:1px solid #edf0eb;border-radius:10px;overflow:hidden}
-.truck-load-manifest-columns,.truck-load-manifest-line{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(80px,.7fr) minmax(62px,.55fr) minmax(85px,.7fr) minmax(95px,.75fr);align-items:center;gap:8px;padding:9px 11px}
-.truck-load-manifest-columns{background:#edf4ea;color:#37593d;font-size:11px;font-weight:800}
+.truck-load-manifest-columns,.truck-load-manifest-line{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(0,1.35fr) minmax(90px,.75fr) minmax(105px,.8fr) minmax(115px,.85fr);align-items:center;gap:10px;padding:11px 13px}
+.truck-load-manifest-columns{background:#edf4ea;color:#37593d;font-size:13px;font-weight:800;line-height:1.5}
 .truck-load-manifest-columns span:last-child,.truck-load-manifest-line b{text-align:left}
-.truck-load-manifest-line{border-top:1px solid #eef1ec;color:#394b3d;font-size:12px;font-weight:700}
-.truck-load-manifest-line strong{overflow-wrap:anywhere;color:#263d2c;font-size:13px;font-weight:800}
-.truck-load-manifest-line span{color:#394b3d;font-weight:700}.truck-load-line-image{display:grid;place-items:center;min-height:46px}.truck-load-line-image img{width:46px;height:46px;object-fit:cover;border:1px solid #dfe8de;border-radius:7px}
-.truck-load-manifest-line b{color:#274832;font-size:12px;font-weight:800}
+.truck-load-manifest-line{border-top:1px solid #eef1ec;color:#394b3d;font-size:13px;font-weight:700;line-height:1.5}
+.truck-load-manifest-line strong{overflow-wrap:anywhere;color:#263d2c;font-size:14px;font-weight:800}
+.truck-load-manifest-line span{color:#394b3d;font-weight:700}.truck-load-line-image{display:grid;place-items:center;min-height:112px}.truck-load-line-image img{width:104px;height:104px;object-fit:cover;border:1px solid #dfe8de;border-radius:10px}
+.truck-load-manifest-line b{color:#274832;font-size:13px;font-weight:800}
 .truck-load-no-items{padding:12px;color:#89948a;font-size:11px;font-weight:700;text-align:center}
 .truck-load-manifest-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;color:#869087;font-size:10px}
 .truck-load-manifest-foot strong{color:#4a694c}
@@ -92,3 +92,5 @@
 
 @media(max-width:650px){.truck-load-capacity-row{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px 0 18px}.truck-load-capacity-hint{grid-column:auto}.truck-load-manifest-foot{align-items:flex-start;flex-direction:column}.truck-load-download-button{width:100%;min-height:36px}}
 @media print{.truck-load-download-button,.truck-load-pdf-status{display:none!important}}
+
+@media(max-width:650px){.truck-load-manifest{overflow-x:auto}.truck-load-manifest-list{min-width:650px}.truck-load-manifest-columns,.truck-load-manifest-line{grid-template-columns:minmax(80px,.9fr) minmax(120px,1.35fr) minmax(75px,.75fr) minmax(90px,.8fr) minmax(100px,.85fr);gap:6px;padding:9px 7px}.truck-load-line-image{min-height:68px}.truck-load-line-image img{width:62px;height:62px}}

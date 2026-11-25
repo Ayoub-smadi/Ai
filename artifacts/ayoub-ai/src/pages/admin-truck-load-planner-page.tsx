@@ -73,24 +73,24 @@ export default function AdminTruckLoadPlannerPage() {
         for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
           wrapper = document.createElement('div');
           wrapper.dir = 'rtl';
-          wrapper.style.cssText = 'position:fixed;left:-20000px;top:0;width:900px;z-index:-1;padding:40px;box-sizing:border-box;background:#fff;color:#20372a;font-family:Arial,sans-serif;direction:rtl;';
+          wrapper.style.cssText = 'position:fixed;left:-20000px;top:0;width:1100px;z-index:-1;padding:46px;box-sizing:border-box;background:#fff;color:#20372a;font-family:Arial,sans-serif;direction:rtl;';
           document.body.appendChild(wrapper);
 
           const eyebrow = document.createElement('div');
           eyebrow.textContent = 'QADRI AI · بيان توزيع حمولة الأشجار';
-          eyebrow.style.cssText = 'color:#6d806d;font-size:16px;font-weight:700;letter-spacing:.04em;text-align:right;margin-bottom:10px;';
+          eyebrow.style.cssText = 'color:#6d806d;font-size:20px;font-weight:800;letter-spacing:.04em;text-align:right;margin-bottom:14px;line-height:1.5;';
           wrapper.appendChild(eyebrow);
           const title = document.createElement('h1');
           title.textContent = `حمولة البراد رقم ${numberFormat.format(truck.number)}`;
-          title.style.cssText = 'font-size:30px;line-height:1.3;color:#244630;margin:0 0 7px;text-align:right;';
+          title.style.cssText = 'font-size:38px;line-height:1.45;color:#244630;margin:0 0 10px;text-align:right;font-weight:800;';
           wrapper.appendChild(title);
           const subtitle = document.createElement('div');
           subtitle.textContent = `تاريخ إصدار البيان: ${new Intl.DateTimeFormat('ar-JO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}`;
-          subtitle.style.cssText = 'font-size:14px;color:#728173;text-align:right;margin-bottom:22px;';
+          subtitle.style.cssText = 'font-size:18px;color:#728173;text-align:right;margin-bottom:24px;line-height:1.6;font-weight:700;';
           wrapper.appendChild(subtitle);
 
           const summary = document.createElement('div');
-          summary.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;';
+          summary.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;';
           const treesInTruck = truck.lines.reduce((sum, line) => sum + line.quantity, 0);
           const summaryItems = [
             ['الوزن المحمّل', formatKg(truck.totalKg)],
@@ -99,26 +99,26 @@ export default function AdminTruckLoadPlannerPage() {
           ];
           for (const [label, value] of summaryItems) {
             const card = document.createElement('div');
-            card.style.cssText = 'padding:14px;border:1px solid #dfe8dd;border-radius:12px;background:#f7faf5;text-align:right;';
+            card.style.cssText = 'min-height:96px;padding:18px;border:1px solid #dfe8dd;border-radius:12px;background:#f7faf5;text-align:right;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;line-height:1.5;';
             const cardLabel = document.createElement('div');
             cardLabel.textContent = label;
-            cardLabel.style.cssText = 'color:#778678;font-size:12px;margin-bottom:6px;';
+            cardLabel.style.cssText = 'color:#778678;font-size:16px;font-weight:800;margin-bottom:8px;line-height:1.5;';
             const cardValue = document.createElement('strong');
             cardValue.textContent = value;
-            cardValue.style.cssText = 'color:#2d5738;font-size:18px;';
+            cardValue.style.cssText = 'color:#2d5738;font-size:26px;font-weight:800;line-height:1.4;';
             card.append(cardLabel, cardValue);
             summary.appendChild(card);
           }
           wrapper.appendChild(summary);
 
           const table = document.createElement('table');
-          table.style.cssText = 'width:100%;border-collapse:collapse;border:1px solid #e0e8de;font-size:14px;';
+          table.style.cssText = 'width:100%;border-collapse:collapse;border:1px solid #e0e8de;font-size:18px;table-layout:fixed;';
           const thead = document.createElement('thead');
           const headerRow = document.createElement('tr');
-          for (const label of ['الصنف', 'عدد الأشجار', 'الصورة', 'وزن الشجرة', 'إجمالي وزن الصنف']) {
+          for (const label of ['الصورة', 'الصنف', 'عدد الأشجار', 'وزن الشجرة', 'إجمالي وزن الصنف']) {
             const th = document.createElement('th');
             th.textContent = label;
-            th.style.cssText = 'padding:12px 10px;background:#edf4ea;color:#37593d;text-align:right;border-bottom:1px solid #dce6d9;font-size:13px;';
+            th.style.cssText = 'padding:18px 14px;background:#edf4ea;color:#37593d;text-align:right;border-bottom:1px solid #dce6d9;font-size:18px;font-weight:800;line-height:1.5;';
             headerRow.appendChild(th);
           }
           thead.appendChild(headerRow);
@@ -136,16 +136,16 @@ export default function AdminTruckLoadPlannerPage() {
           } else {
             for (const line of rows) {
               const row = document.createElement('tr');
-              const values = [line.name, `${numberFormat.format(line.quantity)} شجرة`, '', formatKg(line.weightKg), formatKg(line.lineTotalKg)];
+              const values = ['', line.name, `${numberFormat.format(line.quantity)} شجرة`, formatKg(line.weightKg), formatKg(line.lineTotalKg)];
               for (const [index, value] of values.entries()) {
                 const cell = document.createElement('td');
                 cell.textContent = value;
-                cell.style.cssText = 'padding:10px;color:#394b3d;text-align:right;border-bottom:1px solid #e8ede6;font-size:15px;font-weight:700;vertical-align:middle;';
-                if (index === 2 && line.image) {
+                cell.style.cssText = 'padding:16px 14px;color:#394b3d;text-align:right;border-bottom:1px solid #e8ede6;font-size:18px;font-weight:800;vertical-align:middle;line-height:1.5;';
+                if (index === 0 && line.image) {
                   const image = document.createElement('img');
                   image.src = line.image;
                   image.alt = line.name;
-                  image.style.cssText = 'display:block;width:58px;height:58px;object-fit:cover;border-radius:8px;border:1px solid #dfe8de;margin-inline:auto;';
+                  image.style.cssText = 'display:block;width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid #dfe8de;margin-inline:auto;';
                   cell.appendChild(image);
                 }
                 row.appendChild(cell);
@@ -156,10 +156,6 @@ export default function AdminTruckLoadPlannerPage() {
           table.appendChild(tbody);
           wrapper.appendChild(table);
 
-          const footer = document.createElement('div');
-          footer.textContent = chunks.length > 1 ? `صفحة ${chunkIndex + 1} من ${chunks.length} · كل الأوزان تقديرية حسب البيانات المدخلة.` : 'كل الأوزان تقديرية حسب البيانات المدخلة. يرجى التأكد من الحمولة قبل التحميل.';
-          footer.style.cssText = 'margin-top:18px;padding-top:12px;border-top:1px solid #e5eae3;color:#768276;font-size:12px;text-align:right;';
-          wrapper.appendChild(footer);
 
           await document.fonts.ready;
           const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false, windowWidth: 1000 });
@@ -238,7 +234,7 @@ export default function AdminTruckLoadPlannerPage() {
           <header className="truck-load-manifest-head"><span className="truck-load-number"><Truck size={17} />البراد {numberFormat.format(truck.number)}</span><div className="truck-load-total"><strong>{formatKg(truck.totalKg)}</strong><small>من {formatKg(plan.capacityKg)}</small></div></header>
           <div className="truck-load-progress" role="progressbar" aria-valuenow={Math.round(fill)} aria-valuemin={0} aria-valuemax={100} aria-label={`نسبة إشغال البراد ${truck.number}`}><span style={{ width: `${fill}%` }} /></div>
           <div className="truck-load-utilization"><span>استغلال السعة · {numberFormat.format(trees)} شجرة</span><strong>{numberFormat.format(fill)}٪</strong></div>
-          <div className="truck-load-manifest-list"><div className="truck-load-manifest-columns"><span>الصنف</span><span>الكمية</span><span>الصورة</span><span>وزن الشجرة</span><span>إجمالي الوزن</span></div>{truck.lines.length ? truck.lines.map((line) => <div className="truck-load-manifest-line" key={line.id}><strong>{line.name}</strong><span>{numberFormat.format(line.quantity)} شجرة</span><span className="truck-load-line-image">{line.image ? <img src={line.image} alt="" /> : '—'}</span><span>{formatKg(line.weightKg)}</span><b>{formatKg(line.lineTotalKg)}</b></div>) : <div className="truck-load-no-items">لا توجد أشجار موزعة في هذا البراد حاليًا.</div>}</div>
+          <div className="truck-load-manifest-list"><div className="truck-load-manifest-columns"><span>الصورة</span><span>الصنف</span><span>الكمية</span><span>وزن الشجرة</span><span>إجمالي الوزن</span></div>{truck.lines.length ? truck.lines.map((line) => <div className="truck-load-manifest-line" key={line.id}><span className="truck-load-line-image">{line.image ? <img src={line.image} alt="" /> : '—'}</span><strong>{line.name}</strong><span>{numberFormat.format(line.quantity)} شجرة</span><span>{formatKg(line.weightKg)}</span><b>{formatKg(line.lineTotalKg)}</b></div>) : <div className="truck-load-no-items">لا توجد أشجار موزعة في هذا البراد حاليًا.</div>}</div>
           <footer className="truck-load-manifest-foot"><span>{numberFormat.format(truck.lines.length)} أصناف · فرق الخطة {formatKg(plan.balanceSpreadKg)}</span><button type="button" className="truck-load-download-button" onClick={() => void downloadPdfs([truck], `qadri-truck-${truck.number}.pdf`)} disabled={!plan.complete || pdfBusy}><Download size={14} />PDF لهذا البراد</button></footer>
         </article>;
       })}</div>}
