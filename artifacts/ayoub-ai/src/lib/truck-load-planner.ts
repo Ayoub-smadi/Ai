@@ -1,6 +1,6 @@
-export type DraftItem = { id: string; name: string; quantity: string; weightKg: string };
+export type DraftItem = { id: string; name: string; quantity: string; weightKg: string; image?: string };
 export type PlannerDraft = { truckCount: string; capacityTons: string; items: DraftItem[] };
-export type ManifestLine = { id: string; name: string; quantity: number; weightKg: number; lineTotalKg: number };
+export type ManifestLine = { id: string; name: string; quantity: number; weightKg: number; lineTotalKg: number; image?: string };
 export type TruckManifest = { number: number; totalKg: number; lines: ManifestLine[] };
 export type LoadPlan = {
   capacityKg: number;
@@ -68,7 +68,7 @@ export function calculatePlan(draft: PlannerDraft): LoadPlan {
     const lineTotalKg = quantity * weightKg;
     plan.totalTrees += quantity;
     plan.totalKg += lineTotalKg;
-    const line = { id: item.id, name, quantity, weightKg, lineTotalKg };
+    const line = { id: item.id, name, quantity, weightKg, lineTotalKg, image: item.image || '' };
     if (weightKg > capacityKg + 0.000001) {
       plan.oversized.push(line);
       plan.unassigned.push(line);

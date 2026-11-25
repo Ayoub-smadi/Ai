@@ -7,7 +7,7 @@ import './admin-truck-load-planner-page.css';
 const STORAGE_KEY = 'qadri-truck-load-planner-v1';
 const MAX_TRUCKS = 1000;
 const makeId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const emptyRow = (): DraftItem => ({ id: makeId(), name: '', quantity: '', weightKg: '' });
+const emptyRow = (): DraftItem => ({ id: makeId(), name: '', quantity: '', weightKg: '', image: '' });
 const initialDraft = (): PlannerDraft => ({ truckCount: '', capacityTons: '', items: [emptyRow()] });
 
 function readDraft(): PlannerDraft {
@@ -22,6 +22,7 @@ function readDraft(): PlannerDraft {
         name: typeof item?.name === 'string' ? item.name : '',
         quantity: typeof item?.quantity === 'string' ? item.quantity : '',
         weightKg: typeof item?.weightKg === 'string' ? item.weightKg : '',
+        image: typeof item?.image === 'string' ? item.image : '',
       })),
     };
   } catch {
@@ -42,7 +43,7 @@ export default function AdminTruckLoadPlannerPage() {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(draft)); } catch { /* Keep the calculator usable if browser storage is unavailable. */ }
   }, [draft]);
 
-  const updateItem = (id: string, key: 'name' | 'quantity' | 'weightKg', value: string) => {
+  const updateItem = (id: string, key: 'name' | 'quantity' | 'weightKg' | 'image', value: string) => {
     setDraft((current) => ({ ...current, items: current.items.map((item) => item.id === id ? { ...item, [key]: value } : item) }));
   };
   const addItem = () => setDraft((current) => ({ ...current, items: [...current.items, emptyRow()] }));
@@ -114,7 +115,7 @@ export default function AdminTruckLoadPlannerPage() {
           table.style.cssText = 'width:100%;border-collapse:collapse;border:1px solid #e0e8de;font-size:14px;';
           const thead = document.createElement('thead');
           const headerRow = document.createElement('tr');
-          for (const label of ['الصنف', 'عدد الأشجار', 'وزن الشجرة', 'إجمالي وزن الصنف']) {
+          for (const label of ['الصنف', 'عدد الأشجار', 'الصورة', 'وزن الشجرة', 'إجمالي وزن الصنف']) {
             const th = document.createElement('th');
             th.textContent = label;
             th.style.cssText = 'padding:12px 10px;background:#edf4ea;color:#37593d;text-align:right;border-bottom:1px solid #dce6d9;font-size:13px;';
@@ -127,7 +128,7 @@ export default function AdminTruckLoadPlannerPage() {
           if (rows.length === 0) {
             const row = document.createElement('tr');
             const cell = document.createElement('td');
-            cell.colSpan = 4;
+            cell.colSpan = 5;
             cell.textContent = 'لا توجد أشجار موزّعة في هذا البراد.';
             cell.style.cssText = 'padding:18px 10px;color:#768276;text-align:center;border-bottom:1px solid #e6ece4;';
             row.appendChild(cell);
@@ -135,11 +136,18 @@ export default function AdminTruckLoadPlannerPage() {
           } else {
             for (const line of rows) {
               const row = document.createElement('tr');
-              const values = [line.name, `${numberFormat.format(line.quantity)} شجرة`, formatKg(line.weightKg), formatKg(line.lineTotalKg)];
-              for (const value of values) {
+              const values = [line.name, `${numberFormat.format(line.quantity)} شجرة`, '', formatKg(line.weightKg), formatKg(line.lineTotalKg)];
+              for (const [index, value] of values.entries()) {
                 const cell = document.createElement('td');
                 cell.textContent = value;
-                cell.style.cssText = 'padding:12px 10px;color:#394b3d;text-align:right;border-bottom:1px solid #e8ede6;';
+                cell.style.cssText = 'padding:10px;color:#394b3d;text-align:right;border-bottom:1px solid #e8ede6;font-size:15px;font-weight:700;vertical-align:middle;';
+                if (index === 2 && line.image) {
+                  const image = document.createElement('img');
+                  image.src = line.image;
+                  image.alt = line.name;
+                  image.style.cssText = 'display:block;width:58px;height:58px;object-fit:cover;border-radius:8px;border:1px solid #dfe8de;margin-inline:auto;';
+                  cell.appendChild(image);
+                }
                 row.appendChild(cell);
               }
               tbody.appendChild(row);
@@ -207,11 +215,12 @@ export default function AdminTruckLoadPlannerPage() {
       {plan.invalidTruckCount && <div className="truck-load-alert truck-load-alert-error" role="alert"><AlertTriangle size={17} /><span>أدخل عددًا صحيحًا من 1 إلى {numberFormat.format(MAX_TRUCKS)} براد.</span></div>}
 
       <div className="truck-load-table-heading"><div><h3>الأصناف والأوزان</h3><p>سيضع النظام الأشجار الأثقل أولًا، ثم يختار البراد الأقل وزنًا مع احترام سعته.</p></div><button type="button" className="truck-load-add-button" onClick={addItem}><Plus size={16} />إضافة صنف</button></div>
-      <div className="truck-load-column-head"><span>اسم الصنف</span><span>العدد الكامل</span><span>وزن الشجرة</span><span aria-hidden="true" /></div>
+      <div className="truck-load-column-head"><span>اسم الصنف</span><span>العدد الكامل</span><span>وزن الشجرة</span><span>صورة الصنف</span><span aria-hidden="true" /></div>
       <div className="truck-load-rows">{draft.items.map((item, index) => <div className="truck-load-row" key={item.id}>
         <label><span className="truck-load-mobile-label">الصنف</span><input type="text" value={item.name} onChange={(event) => updateItem(item.id, 'name', event.target.value)} placeholder={`اسم الصنف ${index + 1}`} /></label>
         <label><span className="truck-load-mobile-label">عدد الأشجار</span><input type="number" min="1" step="1" inputMode="numeric" value={item.quantity} onChange={(event) => updateItem(item.id, 'quantity', event.target.value)} placeholder="مثال: 30" /></label>
         <label><span className="truck-load-mobile-label">وزن الشجرة (كغ)</span><div className="truck-load-weight-input"><input type="number" min="0.01" step="0.1" inputMode="decimal" value={item.weightKg} onChange={(event) => updateItem(item.id, 'weightKg', event.target.value)} placeholder="مثال: 45" /><b>كغ</b></div></label>
+        <label className="truck-load-image-field"><span className="truck-load-mobile-label">صورة الصنف</span><span className="truck-load-image-picker">{item.image ? <img src={item.image} alt="" /> : <span>إضافة صورة</span>}<input type="file" accept="image/*" aria-label={`إضافة صورة ${item.name || `الصنف ${index + 1}`}`} onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => updateItem(item.id, 'image', String(reader.result || '')); reader.readAsDataURL(file); event.target.value = ''; }} /></span></label>
         <button type="button" className="truck-load-remove-button" onClick={() => removeItem(item.id)} aria-label={`حذف الصنف ${item.name || index + 1}`} title="حذف الصنف"><Trash2 size={16} /></button>
       </div>)}</div>
       <div className="truck-load-input-footer"><button type="button" className="btn secondary truck-load-reset" onClick={reset}><RotateCcw size={14} />تفريغ المدخلات</button><small>يتم حفظ عدد البرادات والسعة والأصناف تلقائيًا في هذا المتصفح.</small></div>
@@ -229,7 +238,7 @@ export default function AdminTruckLoadPlannerPage() {
           <header className="truck-load-manifest-head"><span className="truck-load-number"><Truck size={17} />البراد {numberFormat.format(truck.number)}</span><div className="truck-load-total"><strong>{formatKg(truck.totalKg)}</strong><small>من {formatKg(plan.capacityKg)}</small></div></header>
           <div className="truck-load-progress" role="progressbar" aria-valuenow={Math.round(fill)} aria-valuemin={0} aria-valuemax={100} aria-label={`نسبة إشغال البراد ${truck.number}`}><span style={{ width: `${fill}%` }} /></div>
           <div className="truck-load-utilization"><span>استغلال السعة · {numberFormat.format(trees)} شجرة</span><strong>{numberFormat.format(fill)}٪</strong></div>
-          <div className="truck-load-manifest-list"><div className="truck-load-manifest-columns"><span>الصنف</span><span>الكمية</span><span>وزن الصنف</span></div>{truck.lines.length ? truck.lines.map((line) => <div className="truck-load-manifest-line" key={line.id}><strong>{line.name}</strong><span>{numberFormat.format(line.quantity)} شجرة</span><b>{formatKg(line.lineTotalKg)}</b></div>) : <div className="truck-load-no-items">لا توجد أشجار موزعة في هذا البراد حاليًا.</div>}</div>
+          <div className="truck-load-manifest-list"><div className="truck-load-manifest-columns"><span>الصنف</span><span>الكمية</span><span>الصورة</span><span>وزن الشجرة</span><span>إجمالي الوزن</span></div>{truck.lines.length ? truck.lines.map((line) => <div className="truck-load-manifest-line" key={line.id}><strong>{line.name}</strong><span>{numberFormat.format(line.quantity)} شجرة</span><span className="truck-load-line-image">{line.image ? <img src={line.image} alt="" /> : '—'}</span><span>{formatKg(line.weightKg)}</span><b>{formatKg(line.lineTotalKg)}</b></div>) : <div className="truck-load-no-items">لا توجد أشجار موزعة في هذا البراد حاليًا.</div>}</div>
           <footer className="truck-load-manifest-foot"><span>{numberFormat.format(truck.lines.length)} أصناف · فرق الخطة {formatKg(plan.balanceSpreadKg)}</span><button type="button" className="truck-load-download-button" onClick={() => void downloadPdfs([truck], `qadri-truck-${truck.number}.pdf`)} disabled={!plan.complete || pdfBusy}><Download size={14} />PDF لهذا البراد</button></footer>
         </article>;
       })}</div>}
