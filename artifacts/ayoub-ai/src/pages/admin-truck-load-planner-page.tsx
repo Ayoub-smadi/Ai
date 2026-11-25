@@ -77,16 +77,32 @@ export default function AdminTruckLoadPlannerPage() {
           document.body.appendChild(wrapper);
 
           const eyebrow = document.createElement('div');
-          eyebrow.textContent = 'QADRI AI · بيان توزيع حمولة الأشجار';
-          eyebrow.style.cssText = 'display:block;position:relative;color:#6d806d;font-size:21px;font-weight:800;letter-spacing:.04em;text-align:right;margin:0 0 18px;line-height:1.7;white-space:nowrap;min-height:36px;';
+          eyebrow.dir = 'rtl';
+          eyebrow.style.cssText = 'display:flex;position:relative;align-items:center;justify-content:space-between;gap:32px;color:#6d806d;font-size:21px;font-weight:800;text-align:right;margin:0 0 18px;line-height:1.7;white-space:nowrap;min-height:36px;';
+          const brand = document.createElement('span');
+          brand.dir = 'ltr';
+          brand.textContent = 'QADRI AI';
+          brand.style.cssText = 'display:block;direction:ltr;unicode-bidi:isolate;color:#56765b;font-weight:800;';
+          const eyebrowText = document.createElement('span');
+          eyebrowText.dir = 'rtl';
+          eyebrowText.textContent = 'بيان توزيع حمولة الأشجار';
+          eyebrowText.style.cssText = 'display:block;direction:rtl;unicode-bidi:isolate;color:#6d806d;font-weight:800;';
+          eyebrow.append(brand, eyebrowText);
           wrapper.appendChild(eyebrow);
           const title = document.createElement('h1');
           title.textContent = `حمولة البراد رقم ${numberFormat.format(truck.number)}`;
           title.style.cssText = 'display:block;position:relative;font-size:36px;line-height:1.55;color:#244630;margin:0 0 14px;text-align:right;font-weight:800;white-space:nowrap;min-height:58px;';
           wrapper.appendChild(title);
           const subtitle = document.createElement('div');
-          subtitle.textContent = `تاريخ إصدار البيان: ${new Intl.DateTimeFormat('ar-JO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}`;
+          subtitle.dir = 'rtl';
           subtitle.style.cssText = 'display:block;position:relative;font-size:19px;color:#728173;text-align:right;margin:0 0 28px;line-height:1.7;font-weight:800;white-space:nowrap;min-height:34px;';
+          const subtitleLabel = document.createElement('span');
+          subtitleLabel.dir = 'rtl';
+          subtitleLabel.textContent = 'تاريخ إصدار البيان: ';
+          const subtitleValue = document.createElement('span');
+          subtitleValue.dir = 'ltr';
+          subtitleValue.textContent = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
+          subtitle.append(subtitleLabel, subtitleValue);
           wrapper.appendChild(subtitle);
 
           const summary = document.createElement('div');
