@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { Camera, ImagePlus, RotateCcw, Sprout, X } from 'lucide-react';
+import { Camera, ImagePlus, LoaderCircle, RotateCcw, Sprout, X } from 'lucide-react';
 
 export default function PlantTreatmentPage({ lang = 'ar' }: { lang?: 'ar' | 'en' }) {
   const isArabic = lang === 'ar';
@@ -9,6 +9,8 @@ export default function PlantTreatmentPage({ lang = 'ar' }: { lang?: 'ar' | 'en'
   const [photo, setPhoto] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const [analysis, setAnalysis] = useState<{ summaryAr: string; observationsAr: string[]; stressLevel: string; wateringAdviceAr: string; caveatAr: string } | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -65,7 +67,7 @@ export default function PlantTreatmentPage({ lang = 'ar' }: { lang?: 'ar' | 'en'
     setCameraError('');
     stopCamera();
     const reader = new FileReader();
-    reader.onload = () => setPhoto(String(reader.result));
+    reader.onload = () => { setPhoto(String(reader.result)); setAnalysis(null); };
     reader.readAsDataURL(file);
     event.target.value = '';
   };
@@ -75,8 +77,8 @@ export default function PlantTreatmentPage({ lang = 'ar' }: { lang?: 'ar' | 'en'
       <div className="plant-treatment-copy">
         <span className="plant-treatment-eyebrow"><Sprout size={15} /> {isArabic ? 'خدمة للمزارع والمهندس الزراعي' : 'For growers and agronomists'}</span>
         <h1>{isArabic ? 'صوّر نبتتك، واستعد لفهم ما تحتاجه' : 'Photograph your plant and prepare to understand what it needs'}</h1>
-        <p>{isArabic ? 'التقط صورة واضحة للنبتة أو أوراقها المصابة، لتكون جاهزة للمشاركة مع خدمة التشخيص الذكي عند تفعيلها.' : 'Capture a clear photo of the plant or affected leaves. It will be ready to use when smart diagnosis is enabled.'}</p>
-        <div className="plant-treatment-status"><span /> {isArabic ? 'التصوير متاح الآن · تحليل الذكاء الاصطناعي سيُفعّل عند ربط الخدمة' : 'Photo capture is available · AI analysis will be enabled after connecting the service'}</div>
+        <p>{isArabic ? 'التقط صورة واضحة للنبتة أو أوراقها المصابة، ثم اطلب تحليلًا زراعيًا حذرًا يساعدك على فهم العلامات الظاهرة وإرشادات الري.' : 'Capture a clear photo of the plant or affected leaves, then request a cautious agricultural analysis of visible signs and watering guidance.'}</p>
+        <div className="plant-treatment-status"><span /> {isArabic ? 'تحليل زراعي بالذكاء الاصطناعي · لا يُستخدم للطب البشري أو الأسئلة غير الزراعية' : 'Agricultural AI analysis · not for human medicine or non-agricultural questions'}</div>
       </div>
     </section>
 
@@ -97,10 +99,12 @@ export default function PlantTreatmentPage({ lang = 'ar' }: { lang?: 'ar' | 'en'
         <input ref={fileRef} className="plant-treatment-file-input" type="file" accept="image/*" capture="environment" onChange={choosePhoto} aria-label={isArabic ? 'اختر صورة للنبتة' : 'Choose a plant photo'} />
       </div>
 
-      {photo && <button type="button" className="plant-treatment-retake" onClick={() => setPhoto(null)}><RotateCcw size={14} />{isArabic ? 'إزالة الصورة والبدء من جديد' : 'Remove photo and start again'}</button>}
-      <p className="plant-treatment-privacy">{isArabic ? 'تبقى الصورة على جهازك في هذه المرحلة ولا تُرسل إلى أي خدمة. لن يظهر تشخيص آلي حتى يتم ربط واجهة الذكاء الاصطناعي.' : 'For now, your photo stays on your device and is not sent anywhere. Automated diagnosis will be available after the AI service is connected.'}</p>
+      {photo && <div className="plant-treatment-ai-actions"><button type="button" className="btn plant-treatment-primary" disabled={analyzing} onClick={async () => { setAnalyzing(true); setCameraError(''); try { const response = await fetch('/api/plant-advisor/analyze-plant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plantName: 'نبات غير محدد', ageYears: 1, currentLiters: 10, imageDataUrl: photo }) }); const data = await response.json() as { summaryAr?: string; observationsAr?: string[]; stressLevel?: string; wateringAdviceAr?: string; caveatAr?: string; error?: string }; if (!response.ok || !data.summaryAr) throw new Error(data.error || 'AI_REQUEST_FAILED'); setAnalysis({ summaryAr: data.summaryAr, observationsAr: data.observationsAr || [], stressLevel: data.stressLevel || 'غير واضح', wateringAdviceAr: data.wateringAdviceAr || '', caveatAr: data.caveatAr || '' }); } catch (error) { setCameraError(error instanceof Error && error.message === 'AI_NOT_CONFIGURED' ? 'تحليل AI غير مفعّل على الخادم بعد.' : 'تعذر تحليل الصورة الآن. جرّب صورة أوضح.'); } finally { setAnalyzing(false); } }}>{analyzing ? <LoaderCircle size={15} className="animate-spin" /> : <Sprout size={15} />}{analyzing ? 'جارٍ التحليل…' : 'حلّل النبتة بالـAI'}</button></div>}
+      {analysis && <section className="plant-treatment-result" aria-live="polite"><strong>نتيجة التحليل الزراعي: {analysis.stressLevel}</strong><p>{analysis.summaryAr}</p>{analysis.observationsAr.length > 0 && <ul>{analysis.observationsAr.map((observation) => <li key={observation}>{observation}</li>)}</ul>}<p><b>إرشاد الري:</b> {analysis.wateringAdviceAr}</p><small>{analysis.caveatAr}</small></section>}
+      {photo && <button type="button" className="plant-treatment-retake" onClick={() => { setPhoto(null); setAnalysis(null); }}><RotateCcw size={14} />{isArabic ? 'إزالة الصورة والبدء من جديد' : 'Remove photo and start again'}</button>}
+      <p className="plant-treatment-privacy">{isArabic ? 'ترسل الصورة إلى خادم التحليل الزراعي فقط عند الضغط على زر التحليل، ولا يظهر تشخيص قطعي من صورة واحدة.' : 'The image is sent to the agricultural analysis server only after you press analyze. One image cannot provide a definitive diagnosis.'}</p>
     </section>
 
-    <section className="plant-treatment-next"><span className="plant-treatment-next-icon"><Sprout size={18} /></span><div><strong>{isArabic ? 'الخطوة التالية' : 'Next step'}</strong><p>{isArabic ? 'سيتم تفعيل تحليل الصورة وإرشادات العناية بعد ربط واجهة API الخاصة بالذكاء الاصطناعي.' : 'Image analysis and care guidance will be enabled after connecting the AI API.'}</p></div></section>
+    <section className="plant-treatment-next"><span className="plant-treatment-next-icon"><Sprout size={18} /></span><div><strong>{isArabic ? 'مساعد زراعي فقط' : 'Agriculture-only assistant'}</strong><p>{isArabic ? 'يمكنك استخدام التحليل هنا، أو فتح المحادثة العامة للأسئلة عن النبات والتربة والري واللاندسكيب.' : 'Use the analysis here, or open the public chat for plant, soil, irrigation and landscape questions.'}</p></div></section>
   </main>;
 }

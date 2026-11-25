@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import agentsRouter from "./agents";
+import agricultureChatRouter from "./agriculture-chat";
 import channelsRouter from "./channels";
 import clientStorageRouter from "./client-storage";
 import dashboardRouter from "./dashboard";
@@ -14,6 +15,7 @@ import workspacesRouter from "./workspaces";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(agricultureChatRouter);
 router.use(landscapeAiRouter);
 router.use(plantAdvisorRouter);
 router.use(workspacesRouter);

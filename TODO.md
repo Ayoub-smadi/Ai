@@ -13,6 +13,8 @@
 - [ ] Apply the checked-in Drizzle migrations (`pnpm --filter @workspace/db run migrate`) only after the Neon connection is confirmed; never use `push-force` against production.
 - [ ] Supply `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` so sign-in uses the real Clerk instance instead of the public preview router. Without them the public site works and protected API requests are rejected with 401.
 - [ ] Supply `OPENAI_API_KEY` for agent test responses and plant photo diagnosis. Without it those endpoints return an explicit unavailable error rather than a simulated answer.
+- [ ] Use one server-side OpenAI key/model for the public agricultural assistant and keep every AI surface limited to agriculture; non-agricultural questions must return the exact out-of-scope response.
+- [ ] Connect `/chat`, `/plant-treatment`, `/landscape-editor`, and `/plants` to the agricultural AI behavior without exposing provider credentials in the Vite bundle.
 
 ## Homepage founder identity card
 - [x] Show the supplied Eng. Thamer Al-Qadri business card inside the homepage typewriter section (`FounderBiographyTicker`), next to the paragraph that is typed and deleted, as a distinct panel rather than a plain image.

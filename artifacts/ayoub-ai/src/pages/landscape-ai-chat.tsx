@@ -261,7 +261,7 @@ export default function LandscapeAiChat({ quote, onItemChange, onDrawingsChange,
         {messages.map((message, index) => <div className={`landscape-ai-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'user' ? 'أنت' : 'مساعد Landscape'}</b><p>{message.content}</p></div>)}
         {busy && <div className="landscape-ai-message assistant is-loading"><b>مساعد Landscape</b><p><LoaderCircle size={15} className="landscape-ai-spinner" /> جارٍ تحليل الطلب وتحديث المخطط…</p></div>}
       </div>
-      {!configured && <p className="landscape-ai-setup-note" role="status">المحادثة غير مفعّلة الآن. أضف مفتاح OpenAI باسم <code>LANDSCAPE_OPENAI_API_KEY</code> إلى أسرار خادم API لتفعيلها.</p>}
+      {!configured && <p className="landscape-ai-setup-note" role="status">المحادثة غير مفعّلة الآن. أضف مفتاح OpenAI باسم <code>OPENAI_API_KEY</code> إلى متغيرات خادم API لتفعيلها.</p>}
       {statusError && <p className="landscape-ai-error" role="alert">لم نتمكن من التحقق من اتصال AI. تأكد من تشغيل خدمة API ثم أعد تحميل الصفحة.</p>}
       {requestError && <p className="landscape-ai-error" role="alert">{requestError}</p>}
       <form className="landscape-ai-compose" onSubmit={sendMessage}>
