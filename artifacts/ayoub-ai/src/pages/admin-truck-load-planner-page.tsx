@@ -118,7 +118,7 @@ export default function AdminTruckLoadPlannerPage() {
           for (const label of ['الصورة', 'الصنف', 'عدد الأشجار', 'وزن الشجرة', 'إجمالي وزن الصنف']) {
             const th = document.createElement('th');
             th.textContent = label;
-            th.style.cssText = 'padding:18px 14px;background:#edf4ea;color:#37593d;text-align:right;border-bottom:1px solid #dce6d9;font-size:18px;font-weight:800;line-height:1.5;';
+            th.style.cssText = 'padding:18px 14px;background:#edf4ea;color:#37593d;text-align:center;border:1px solid #cbd9c8;font-size:18px;font-weight:800;line-height:1.5;vertical-align:middle;';
             headerRow.appendChild(th);
           }
           thead.appendChild(headerRow);
@@ -130,7 +130,7 @@ export default function AdminTruckLoadPlannerPage() {
             const cell = document.createElement('td');
             cell.colSpan = 5;
             cell.textContent = 'لا توجد أشجار موزّعة في هذا البراد.';
-            cell.style.cssText = 'padding:18px 10px;color:#768276;text-align:center;border-bottom:1px solid #e6ece4;';
+            cell.style.cssText = 'padding:18px 10px;color:#768276;text-align:center;border:1px solid #d9e3d7;';
             row.appendChild(cell);
             tbody.appendChild(row);
           } else {
@@ -140,7 +140,7 @@ export default function AdminTruckLoadPlannerPage() {
               for (const [index, value] of values.entries()) {
                 const cell = document.createElement('td');
                 cell.textContent = value;
-                cell.style.cssText = 'padding:16px 14px;color:#394b3d;text-align:right;border-bottom:1px solid #e8ede6;font-size:18px;font-weight:800;vertical-align:middle;line-height:1.5;';
+                cell.style.cssText = 'padding:16px 14px;color:#394b3d;text-align:center;border:1px solid #d5e0d2;font-size:18px;font-weight:800;vertical-align:middle;line-height:1.5;';
                 if (index === 0 && line.image) {
                   const image = document.createElement('img');
                   image.src = line.image;

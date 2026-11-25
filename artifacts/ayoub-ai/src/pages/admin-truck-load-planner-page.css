@@ -68,11 +68,11 @@
 .truck-load-utilization{display:flex;justify-content:space-between;color:#859087;font-size:10px}
 .truck-load-utilization strong{color:#527a54;font-size:10px}
 .truck-load-manifest-list{margin-top:14px;border:1px solid #edf0eb;border-radius:10px;overflow:hidden}
-.truck-load-manifest-columns,.truck-load-manifest-line{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(0,1.35fr) minmax(90px,.75fr) minmax(105px,.8fr) minmax(115px,.85fr);align-items:center;gap:10px;padding:11px 13px}
+.truck-load-manifest-columns,.truck-load-manifest-line{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(0,1.35fr) minmax(90px,.75fr) minmax(105px,.8fr) minmax(115px,.85fr);align-items:center;gap:10px;padding:11px 13px;text-align:center}
 .truck-load-manifest-columns{background:#edf4ea;color:#37593d;font-size:13px;font-weight:800;line-height:1.5}
-.truck-load-manifest-columns span:last-child,.truck-load-manifest-line b{text-align:left}
+.truck-load-manifest-columns span,.truck-load-manifest-line>*{text-align:center}
 .truck-load-manifest-line{border-top:1px solid #eef1ec;color:#394b3d;font-size:13px;font-weight:700;line-height:1.5}
-.truck-load-manifest-line strong{overflow-wrap:anywhere;color:#263d2c;font-size:14px;font-weight:800}
+.truck-load-manifest-line strong{overflow-wrap:anywhere;color:#263d2c;font-size:14px;font-weight:800;text-align:center}
 .truck-load-manifest-line span{color:#394b3d;font-weight:700}.truck-load-line-image{display:grid;place-items:center;min-height:112px}.truck-load-line-image img{width:104px;height:104px;object-fit:cover;border:1px solid #dfe8de;border-radius:10px}
 .truck-load-manifest-line b{color:#274832;font-size:13px;font-weight:800}
 .truck-load-no-items{padding:12px;color:#89948a;font-size:11px;font-weight:700;text-align:center}
