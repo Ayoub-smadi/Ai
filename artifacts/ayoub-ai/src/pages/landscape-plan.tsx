@@ -70,7 +70,6 @@ type TextNoteDrag = { id: string; pointerId: number; startClientX: number; start
 type DrawingDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; original: LandscapeDrawing };
 type AnnotationDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
 const drawingTools: Array<{ id: LandscapeDrawingTool; label: string; mode: 'freehand' | 'rectangle' }> = [
-  { id: 'boundary', label: 'حدود الأرض', mode: 'freehand' },
   { id: 'line', label: 'خطوط مستقيمة', mode: 'freehand' },
 ];
 const rectangleTools = new Set<LandscapeDrawingTool>(['building', 'entrance', 'lawn', 'parking', 'paving', 'water']);
