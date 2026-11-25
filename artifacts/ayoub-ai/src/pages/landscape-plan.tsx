@@ -819,12 +819,6 @@ export default function LandscapePlan({
 
 
 
-    {viewMode === 'plan' && (unplacedItems.length > 0 || onOpenPlantPicker) && <div className="landscape-item-library">
-      <div className="landscape-item-library-head"><span><strong>إضافة أيقونات للنباتات والعناصر</strong><small>أضف من كتالوج النباتات أو من بنود عرض السعر</small></span>{onOpenPlantPicker && <button type="button" className="landscape-open-plant-picker" onClick={onOpenPlantPicker}><Sprout size={14} />إضافة نبتة من الكتالوج</button>}</div>
-      {unplacedItems.length > 0 && <div className="landscape-item-library-list">{unplacedItems.map((item, index) => { const Icon = iconFor(item.category); return <div className="landscape-item-library-card" key={item.id}><span className="landscape-item-library-icon">{item.landscapeIcon || item.image ? <img src={item.landscapeIcon || item.image} alt="" /> : categoryStyle(item.category) === 'plant' ? <TreePlanSymbol size={25} /> : <Icon size={18} />}</span><span><strong>{item.name.split(' / ')[0]}</strong><small>{item.category}{item.scientificName ? ` · ${item.scientificName}` : ''}</small></span><button type="button" onClick={() => addItemToCanvas(item, items.length + index)} aria-label={`إضافة ${item.name} إلى المخطط`}>إضافة</button></div>; })}</div>}
-    </div>}
-
-
     {viewMode === 'plan' && <div className="landscape-settings-list">
       <h3>إعدادات موحّدة للأيقونات</h3>
       <p className="landscape-global-help">يطبّق الحجم الموحد على جميع الأيقونات الحالية، وتُضاف العناصر الجديدة بالحجم نفسه. يمكنك تعديل أي عنصر منفرد بعد ذلك.</p>
