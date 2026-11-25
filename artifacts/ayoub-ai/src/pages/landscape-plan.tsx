@@ -27,9 +27,9 @@ export type LandscapeAnnotation =
   | { id: string; kind: 'line'; x: number; y: number; length: number; thickness: number; angle: number; color: string }
   | { id: string; kind: 'number'; x: number; y: number; value: string; size: number; color: string };
 export type LandscapePoint = { x: number; y: number };
-export type LandscapeDrawingTool = 'boundary' | 'building' | 'entrance' | 'path' | 'lawn' | 'parking' | 'paving' | 'water' | 'planter' | 'path-area';
+export type LandscapeDrawingTool = 'boundary' | 'line' | 'building' | 'entrance' | 'path' | 'lawn' | 'parking' | 'paving' | 'water' | 'planter' | 'path-area';
 export type LandscapeDrawing =
-  | { id: string; kind: 'stroke'; tool: 'boundary' | 'path'; points: LandscapePoint[]; strokeWidth: number; scale?: number }
+  | { id: string; kind: 'stroke'; tool: 'boundary' | 'line' | 'path'; points: LandscapePoint[]; strokeWidth: number; scale?: number }
   | { id: string; kind: 'rectangle'; tool: 'building' | 'entrance' | 'lawn' | 'parking' | 'paving' | 'water' | 'planter' | 'path-area'; x: number; y: number; width: number; height: number; rotation: number };
 export type LandscapeQuote = {
   number: string;
@@ -71,10 +71,11 @@ type DrawingDrag = { id: string; pointerId: number; startClientX: number; startC
 type AnnotationDrag = { id: string; pointerId: number; startClientX: number; startClientY: number; startX: number; startY: number };
 const drawingTools: Array<{ id: LandscapeDrawingTool; label: string; mode: 'freehand' | 'rectangle' }> = [
   { id: 'boundary', label: 'حدود الأرض', mode: 'freehand' },
+  { id: 'line', label: 'خطوط مستقيمة', mode: 'freehand' },
 ];
 const rectangleTools = new Set<LandscapeDrawingTool>(['building', 'entrance', 'lawn', 'parking', 'paving', 'water']);
 const drawingLabels: Record<LandscapeDrawingTool, string> = {
-  boundary: 'حدود الأرض', building: 'مبنى', entrance: 'مدخل', path: 'مسار / شارع',
+  boundary: 'حدود الأرض', line: 'خط مستقيم', building: 'مبنى', entrance: 'مدخل', path: 'مسار / شارع',
   lawn: 'مسطح أخضر', parking: 'مواقف', paving: 'ساحة مرصوفة', water: 'عنصر مائي', planter: 'حوض زراعة', 'path-area': 'مسار قديم',
 };
 const shapeRadius: Record<NonNullable<LandscapeQuoteItem['landscapeShape']>, string> = {
@@ -135,8 +136,8 @@ function makeRectangle(tool: LandscapeDrawingTool, start: LandscapePoint, end: L
     rotation: 0,
   };
 }
-function makeStroke(tool: 'boundary' | 'path', points: LandscapePoint[], id: string): LandscapeDrawing {
-  return { id, kind: 'stroke', tool, points, strokeWidth: tool === 'boundary' ? 1.5 : 4, scale: 1 };
+function makeStroke(tool: 'boundary' | 'line' | 'path', points: LandscapePoint[], id: string): LandscapeDrawing {
+  return { id, kind: 'stroke', tool, points, strokeWidth: tool === 'boundary' ? 1.5 : tool === 'line' ? 3 : 4, scale: 1 };
 }
 
 export default function LandscapePlan({
@@ -268,12 +269,16 @@ export default function LandscapePlan({
     }
     if (current.tool === 'boundary') {
       const points = boundaryPoints.length ? [...boundaryPoints, end] : [current.start, end];
-      setPreviewDrawing(points.length > 1 ? makeStroke('path', points, 'preview') : null);
+      setPreviewDrawing(points.length > 1 ? makeStroke('boundary', points, 'preview') : null);
+      return;
+    }
+    if (current.tool === 'line') {
+      setPreviewDrawing(makeStroke('line', [current.start, end], 'preview'));
       return;
     }
     const last = current.points[current.points.length - 1];
     if (Math.hypot(end.x - last.x, end.y - last.y) >= 0.45) current.points = [...current.points, end];
-    setPreviewDrawing(makeStroke(current.tool as 'boundary' | 'path', current.points, 'preview'));
+    setPreviewDrawing(makeStroke(current.tool as 'boundary' | 'line' | 'path', current.points, 'preview'));
   };
   const endDrawing = (event: PointerEvent<HTMLDivElement>) => {
     const current = drawSession.current;
@@ -287,7 +292,11 @@ export default function LandscapePlan({
       const last = points[points.length - 1];
       if (Math.hypot(end.x - last.x, end.y - last.y) > 0.25) points.push(end);
       setBoundaryPoints(points);
-      setPreviewDrawing(points.length > 1 ? makeStroke('path', points, 'preview') : null);
+      setPreviewDrawing(points.length > 1 ? makeStroke('boundary', points, 'preview') : null);
+    } else if (current.tool === 'line') {
+      if (Math.hypot(end.x - current.start.x, end.y - current.start.y) > 0.25) {
+        drawing = makeStroke('line', [current.start, end], `drawing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
+      }
     } else {
       const points = [...current.points];
       const last = points[points.length - 1];

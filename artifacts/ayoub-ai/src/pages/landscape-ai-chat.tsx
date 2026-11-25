@@ -17,7 +17,7 @@ type AiOperation =
   | { type: 'place_item'; itemId: string; positions: LandscapePoint[]; size?: number }
   | { type: 'add_plant'; plantId: string; quantity: number; positions: LandscapePoint[]; size?: number }
   | { type: 'remove_item'; itemId: string }
-  | { type: 'add_rectangle'; tool: Exclude<LandscapeDrawingTool, 'boundary' | 'path'>; x: number; y: number; width: number; height: number; rotation: number }
+  | { type: 'add_rectangle'; tool: Exclude<LandscapeDrawingTool, 'boundary' | 'path' | 'line'>; x: number; y: number; width: number; height: number; rotation: number }
   | { type: 'add_stroke'; tool: 'boundary' | 'path'; points: LandscapePoint[]; strokeWidth: number }
   | { type: 'add_text'; text: string; x: number; y: number; fontSize: number }
   | { type: 'edit_text'; noteId: string; text?: string; x?: number; y?: number; fontSize?: number }
