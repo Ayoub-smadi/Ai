@@ -1,0 +1,11 @@
+{
+  "buildCommand": "BASE_PATH=/ PORT=5173 pnpm run build",
+  "outputDirectory": "dist/public",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
