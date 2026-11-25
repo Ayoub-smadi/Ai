@@ -1113,9 +1113,9 @@ function quoteHistoryMonthKey(record: SavedQuote): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 function quoteHistoryMonthLabel(monthKey: string): string {
-  if (monthKey === 'unknown') return 'بدون تاريخ';
-  const [year, month] = monthKey.split('-').map(Number);
-  return new Intl.DateTimeFormat('ar-JO', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
+  if (monthKey === 'unknown') return 'عروض بدون تاريخ';
+  const [year, month] = monthKey.split('-');
+  return `عروض شهر ${month} / ${year}`;
 }
 function groupQuoteHistoryByMonth(records: SavedQuote[]): Array<{ key: string; label: string; records: SavedQuote[] }> {
   const groups = new Map<string, SavedQuote[]>();
