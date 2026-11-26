@@ -349,7 +349,10 @@ function FounderBiographyTicker() {
   }, [deleting, visibleWords, words.length]);
 
   return <section className="founder-bio-ticker" dir="rtl" lang="ar" aria-label="نبذة عن المهندس ثامر القادري">
-    <FounderBiographyText biography={biography} words={words} visibleWords={visibleWords} />
+    <div className="founder-bio-layout">
+      <img className="founder-bio-photo" src="/founder/tamer-alqadri-avatar.png" alt="المهندس ثامر القادري" loading="lazy" />
+      <FounderBiographyText biography={biography} words={words} visibleWords={visibleWords} />
+    </div>
   </section>;
 }
 
