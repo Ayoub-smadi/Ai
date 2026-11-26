@@ -259,7 +259,7 @@ export async function generateAgentTestReply(input: {
     .join("\n\n");
 
   const completion = await client.chat.completions.create({
-    model: process.env.OPENAI_MODEL || "gpt-5-mini",
+    model: process.env.OPENAI_MODEL || "gpt-6-luna",
     max_completion_tokens: 8192,
     messages: [
       {

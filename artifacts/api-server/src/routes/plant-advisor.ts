@@ -127,7 +127,7 @@ router.post("/plant-advisor/analyze-soil", async (req, res): Promise<void> => {
   try {
     const openai = new OpenAI({ apiKey, baseURL: process.env.PLANT_ADVISOR_BASE_URL || undefined, timeout: 45_000, maxRetries: 1 });
     const completion = await openai.chat.completions.create({
-      model: process.env.PLANT_ADVISOR_MODEL || "gpt-6-luna",
+      model: process.env.OPENAI_MODEL || process.env.PLANT_ADVISOR_MODEL || "gpt-6-luna",
       max_completion_tokens: 1600,
       response_format: {
         type: "json_schema",
@@ -209,7 +209,7 @@ router.post("/plant-advisor/analyze-plant", async (req, res): Promise<void> => {
   activeAnalyses += 1;
   try {
     const completion = await new OpenAI({ apiKey, baseURL: process.env.PLANT_ADVISOR_BASE_URL || undefined, timeout: 45_000, maxRetries: 1 }).chat.completions.create({
-      model: process.env.PLANT_ADVISOR_MODEL || "gpt-6-luna",
+      model: process.env.OPENAI_MODEL || process.env.PLANT_ADVISOR_MODEL || "gpt-6-luna",
       max_completion_tokens: 1200,
       response_format: { type: "json_schema", json_schema: { name: "plant_health_water_advice", strict: true, schema: {
         type: "object", additionalProperties: false,

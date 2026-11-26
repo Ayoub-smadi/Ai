@@ -60,7 +60,7 @@ There is currently no automated test script or test suite in the workspace.
 | `CLERK_SECRET_KEY` | API authentication | Server-only. Never prefix with `VITE_`. |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Browser sign-in | Same Clerk instance as the API keys. |
 | `OPENAI_API_KEY` | AI test responses and agent activation | Server-only. Without it, AI requests return an explicit unavailable error. |
-| `OPENAI_MODEL` | Optional AI model selection | Defaults to `gpt-5-mini`. |
+| `OPENAI_MODEL` | Shared AI model selection | Defaults to `gpt-6-luna` and takes priority over feature-specific model settings. |
 | `VITE_CLERK_PROXY_URL` | Optional production Clerk proxy | Set only when configuring a Clerk proxy for the deployed domain. |
 
 In Replit, store private values in Secrets and set browser-safe publishable keys as shared environment variables. This project currently uses an external Clerk configuration; do not assume the development and production keys or users are interchangeable.
