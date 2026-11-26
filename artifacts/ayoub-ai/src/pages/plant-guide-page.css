@@ -22,3 +22,33 @@
 .irrigation-ai-cell{display:grid;justify-items:center;gap:5px;min-width:86px}.irrigation-photo-picker{position:relative;display:grid;place-items:center;width:54px;height:54px;border:1px dashed #2e3a4e66;border-radius:8px;background:#f3f5f7;color:#536074;overflow:hidden;cursor:pointer}.irrigation-photo-picker img{width:100%;height:100%;object-fit:cover}.irrigation-photo-picker input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.irrigation-analyze-button{min-height:25px;padding:0 7px;border:1px solid #02061835;border-radius:5px;background:#fff;color:#020618;font-size:8px;font-weight:700;cursor:pointer}.irrigation-analyze-button:disabled{opacity:.45;cursor:not-allowed}.irrigation-diagnosis{color:#52647d!important;font-size:8px!important;white-space:nowrap}.irrigation-table td:has(.irrigation-ai-cell){padding:8px 5px}
 
 .irrigation-table .irrigation-time{color:#2e3a4e;font-weight:700;font-size:8px!important}
+
+
+/* Evidence-first bilingual plant records */
+.plant-documentation-status{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin-top:7px;padding:5px 8px;border:1px solid #1c273922;border-radius:100px;background:#f0f2f4;color:#505b6c;font-size:8px;font-weight:700;line-height:1.4}
+.plant-documentation-status.status-verified{border-color:#537d5a55;background:#e6f0e5;color:#315c3c}
+.plant-documentation-status.status-partial{border-color:#b88d3e66;background:#faf0d8;color:#735a21}
+.plant-documentation-status.status-ambiguous,.plant-documentation-status.status-not_found{border-color:#a75c5066;background:#f8e9e7;color:#8a4136}
+.plant-card-name-en{display:block;margin:5px 0 2px;color:#536176;font-size:9px;line-height:1.5;overflow-wrap:anywhere}
+.plant-detail-name-en{margin:7px 0 0;color:#536176;font-size:15px;line-height:1.5}
+.plant-identity-note{padding:10px 12px;border-inline-start:3px solid #a9863c;background:#f8f1df;color:#67542c;font-size:10px;line-height:1.7}
+.plant-evidence-descriptions .plant-evidence-language-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.plant-evidence-language-grid article{min-width:0;padding:20px;border:1px solid #1d263518;border-radius:11px;background:#fff}
+.plant-evidence-language-grid h3{margin:0 0 10px;color:#1e2736;font-size:14px}
+.plant-evidence-language-grid p{margin:0;color:#4e5663;font-size:11px;line-height:2;white-space:pre-line;overflow-wrap:anywhere}
+.plant-unknown-value{color:#77808c;font-size:10px;line-height:1.8}
+.plant-inline-citation{margin-inline:2px;color:#315c3c;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.plant-evidence-classifications ul{display:grid;gap:7px;margin:0;padding:0;list-style:none}
+.plant-evidence-classifications li{padding:11px 13px;border:1px solid #1d263518;border-radius:8px;background:#fff;color:#434d5c;font-size:10px;line-height:1.7}
+.plant-evidence-region-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plant-evidence-region-group{padding:13px;border:1px solid #ffffff26;border-radius:9px;background:#ffffff08}
+.plant-evidence-region-group h3{margin:0 0 9px;color:#e6dfa9;font-size:11px}
+.plant-evidence-region-group ul{display:grid;gap:7px;margin:0;padding:0;list-style:none}
+.plant-evidence-region-group li{display:flex;align-items:center;gap:7px;color:#ffffffd1;font-size:9px;line-height:1.6}
+.plant-evidence-region-group li a{color:#f1e9b6;font:9px var(--app-font-mono);text-decoration:underline}
+.plant-evidence-region-group .plant-unknown-value{color:#ffffff9e}
+.plant-detail-sources a small{display:block;margin-top:3px;color:#6d7685;font-size:8px;line-height:1.6}
+.plant-detail-sources a span{min-width:0}
+.plant-detail-sources .plant-image-source-link{margin-top:8px}
+.plant-passport-card-copy .plant-documentation-status{margin-top:5px}
+@media(max-width:760px){.plant-evidence-descriptions .plant-evidence-language-grid,.plant-evidence-region-columns{grid-template-columns:1fr}.plant-evidence-language-grid article{padding:15px}.plant-evidence-region-group{padding:11px}}

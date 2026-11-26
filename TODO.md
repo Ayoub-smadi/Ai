@@ -38,3 +38,14 @@
 - [x] Replace the previous CSS/isometric illustration with a real Three.js WebGL scene using perspective camera, real depth, lighting, shadows, ground, garden boundary, and 3D geometry for trees, water, lawn, paths, lights, and pergola.
 - [x] Add a dedicated `ابدأ المشي داخل الحديقة` mode with pointer-lock mouse look, WASD/arrow movement, sprint with Shift, bounded movement, ESC exit, and an on-screen Arabic usage hint.
 - [x] Keep the scene editable: AI concept prompt, add/remove landscape elements, per-element scale and rotation controls, automatic local persistence, and export action.
+
+
+## تدقيق وتوثيق دليل النباتات — 611 سجلًا
+- [ ] تدقيق جميع النباتات الـ611، مع الحفاظ على معرّف كل سجل وتصنيفاته، وعدم اختلاق هوية أو معلومات لصنف ملتبس.
+- [ ] توفير الاسم بالعربية، والاسم بالإنجليزية، والاسم العلمي لكل سجل عندما تدعمه المراجع؛ وإظهار غير الموثق بدل التخمين.
+- [ ] كتابة وصف بالعربية يتضمن طرق الزراعة والعناية والموطن/المناطق المناسبة والأمراض أو الآفات المعروفة وطرق الوقاية منها، وكتابة Description in English بمحتوى مكافئ؛ لا يُعرض ادعاء زراعي بلا سند.
+- [ ] إبقاء التصنيفات سطرًا لكل تصنيف بصيغة «رئيسي | فرعي»، وإظهار المناطق فقط حيث تؤيدها مصادر موثوقة، لا قائمة عامة مشتركة.
+- [ ] إرفاق مراجع قابلة للفتح للمعلومات؛ تشمل ويكيبيديا للتحقق من الاسم/التصنيف، ومصادر زراعية موثوقة لمعلومات الزراعة والآفات.
+- [ ] عدم عرض صورة على أنها للصنف المحدد إلا إذا تأكد التطابق؛ إظهار المصدر والرخصة، وإخفاء الصور غير المؤكدة مع إتاحة استبدالها من محرر الأدمن برفع صورة.
+- [ ] مزامنة تعديلات المحرر والصور عبر تخزين Neon الموجود عند تهيئة اتصال قاعدة البيانات؛ عدم الادعاء باستمرارية التخزين إذا لم يكن الاتصال متاحًا.
+- [ ] إزالة النصوص العامة أو التوصيات المشتركة غير المرتبطة بمصدر عن النبات؛ الحقول غير الموثقة تبقى ظاهرة كحالة تحقق، لا كمعلومة أو اقتراح.

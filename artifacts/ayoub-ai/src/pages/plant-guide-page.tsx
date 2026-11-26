@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight, Bell, BellRing, BookOpen, CalendarDays, ChevronLeft, Droplets, ImagePlus, Leaf, MapPin, QrCode, Search, ShieldCheck, Sparkles, Sprout, Sun, Download, X, Trash2, Plus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { ArrowLeft, ArrowRight, BookOpen, ChevronLeft, Download, Leaf, MapPin, QrCode, Search, ShieldCheck, Sprout, X } from 'lucide-react';
 import { Link, useRoute } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
-import { getPlantGuideRecords, getPlantGuideSourceCount, PLANT_GUIDE_STORAGE_KEY, PLANT_GUIDE_UPDATED_EVENT, type PlantGuidePhoto as PlantPhoto } from '@/data/plant-guide-content';
-import { getPlantCareProfile } from '@/data/plant-guide-data';
-import { getCurrentAccount, readUserData, saveUserData } from '@/lib/user-account';
+import {
+  getPlantGuideRecords,
+  getPlantGuideSourceCount,
+  PLANT_GUIDE_STORAGE_KEY,
+  PLANT_GUIDE_UPDATED_EVENT,
+  type PlantGuideRecord,
+  type PlantGuidePhoto,
+  type PlantGuideReference,
+  type PlantGuideRegion,
+} from '@/data/plant-guide-content';
 import './plant-guide-page.css';
 
 const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
@@ -13,21 +20,42 @@ const plantUrl = (id: string) => pageUrl(`/plants/${encodeURIComponent(id)}`);
 const normalize = (value: string) => value.normalize('NFKD').replace(/[\u064B-\u065F\u0670\u0640]/g, '').toLocaleLowerCase();
 const safeFilename = (value: string) => value.normalize('NFKC').replace(/[^\p{L}\p{N}-]+/gu, '-').replace(/^-|-$/g, '') || 'plant';
 
-type GuidePlant = {
-  id: string; nameAr: string; nameEn: string; scientificName: string; descriptionAr: string; descriptionEn: string; image?: PlantPhoto | null;
-  categoryId: string; categoryAr: string; categoryEn: string;
-  source: 'plant'; classifications: { mainCategoryAr: string; subcategoryAr: string }[]; markets: string[]; notes: string[]; imageIsRepresentative: boolean; imageNeedsReview?: boolean;
-};
+type GuidePlant = Pick<PlantGuideRecord,
+  'id' | 'nameAr' | 'nameEn' | 'scientificName' | 'descriptionAr' | 'descriptionEn' | 'classifications' | 'image' |
+  'imageIsRepresentative' | 'imageNeedsReview' | 'reviewReason' | 'identityStatus' | 'documentationStatus' | 'identityNote' |
+  'nativeDistribution' | 'cultivationRegions' | 'references' | 'imageStatus'>;
 
-const mapGuidePlant = (plant: ReturnType<typeof getPlantGuideRecords>[number]): GuidePlant => {
-  const primary = plant.classifications[0];
-  return {
-    id: plant.id, nameAr: plant.nameAr, nameEn: plant.nameEn || '', scientificName: plant.scientificName || '', image: plant.image,
-    categoryId: primary?.mainCategoryAr || 'catalog', categoryAr: primary?.mainCategoryAr || 'نباتات القادري', categoryEn: '',
-    descriptionAr: plant.descriptionAr || plant.notes.join(' '), descriptionEn: plant.descriptionEn || '', source: 'plant' as const,
-    classifications: plant.classifications, markets: plant.markets, notes: plant.notes,
-    imageIsRepresentative: plant.imageIsRepresentative, imageNeedsReview: plant.imageNeedsReview,
+const mapGuidePlant = (plant: PlantGuideRecord): GuidePlant => {
+  const references = plant.references || [];
+  const referenceIds = new Set(references.map((reference) => reference.id));
+  const hasCitedText = (text?: string) => {
+    if (!text?.trim()) return false;
+    const citedIds = [...text.matchAll(/\[(\d+)\]/g)].map((match) => match[1]);
+    return citedIds.length > 0 && citedIds.every((id) => referenceIds.has(id));
   };
+  const identityVerified = plant.identityStatus === 'verified';
+  const supportedRegions = (regions: PlantGuideRegion[] = []) => regions.filter((region) =>
+    region.place.trim() && region.sourceIds.length > 0 && region.sourceIds.every((id) => referenceIds.has(id)));
+  return ({
+  id: plant.id,
+  nameAr: plant.nameAr,
+  nameEn: identityVerified ? plant.nameEn || '' : '',
+  scientificName: identityVerified ? plant.scientificName || '' : '',
+  descriptionAr: hasCitedText(plant.descriptionAr) ? plant.descriptionAr || '' : '',
+  descriptionEn: hasCitedText(plant.descriptionEn) ? plant.descriptionEn || '' : '',
+  classifications: plant.classifications,
+  image: plant.image,
+  imageIsRepresentative: plant.imageIsRepresentative,
+  imageNeedsReview: plant.imageNeedsReview,
+  reviewReason: plant.reviewReason,
+  identityStatus: plant.identityStatus || 'not_reviewed',
+  documentationStatus: plant.documentationStatus || 'not_reviewed',
+  identityNote: plant.identityNote || '',
+  nativeDistribution: supportedRegions(plant.nativeDistribution),
+  cultivationRegions: supportedRegions(plant.cultivationRegions),
+  references,
+  imageStatus: plant.imageStatus || 'not_reviewed',
+  });
 };
 
 function useCurrentPlants() {
@@ -42,62 +70,46 @@ function useCurrentPlants() {
   return plants;
 }
 
-
-export type IrrigationEntry = { id: string; name: string; ageYears: number; count: number; soil: 'normal' | 'sandy' | 'clay'; exposure: 'sun' | 'shade'; weather: 'normal' | 'hot' | 'cool'; intervalDays: number; nextWatering: string; wateringTime: string; wateringWindow: string; waterLiters: number; note: string; updatedAt: string; photoDataUrl?: string; diagnosis?: { summaryAr: string; observationsAr: string[]; stressLevel: string; waterAdjustmentPercent: number; wateringAdviceAr: string; caveatAr: string } };
-export type IrrigationPlan = { plants: IrrigationEntry[]; notificationsEnabled: boolean; updatedAt: string };
-const IRRIGATION_PLAN_KEY = 'qadri-irrigation-plan-v2';
-const dateOnly = (date: Date) => date.toISOString().slice(0, 10);
-const daysFromToday = (days: number) => { const date = new Date(); date.setHours(12, 0, 0, 0); date.setDate(date.getDate() + days); return dateOnly(date); };
-const daysUntil = (date: string) => Math.ceil((new Date(`${date}T12:00:00`).getTime() - new Date(`${dateOnly(new Date())}T12:00:00`).getTime()) / 86400000);
-const formatWaterDate = (date: string) => new Intl.DateTimeFormat('ar-JO', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`));
-const smartWateringTime = (weather: IrrigationEntry['weather'], exposure: IrrigationEntry['exposure']) => weather === 'hot' ? (exposure === 'sun' ? '05:30' : '06:00') : weather === 'cool' ? '07:30' : '06:30';
-const smartWateringWindow = (weather: IrrigationEntry['weather']) => weather === 'hot' ? 'الصباح الباكر قبل ذروة الحر' : weather === 'cool' ? 'الصباح بعد انحسار البرودة' : 'الصباح قبل اشتداد الشمس';
-const isWateringTimeDue = (item: IrrigationEntry) => { const remaining = daysUntil(item.nextWatering); if (remaining < 0) return true; if (remaining > 0) return false; const [hours, minutes] = (item.wateringTime || '06:30').split(':').map(Number); const now = new Date(); return now.getHours() > hours || (now.getHours() === hours && now.getMinutes() >= minutes); };
-
-function buildIrrigationRecommendation(name: string, ageYears: number, soil: IrrigationEntry['soil'], exposure: IrrigationEntry['exposure'], weather: IrrigationEntry['weather'], count: number) {
-  const match = getPlantGuideRecords().find((plant) => normalize(`${plant.nameAr} ${plant.nameEn || ''} ${plant.scientificName || ''}`).includes(normalize(name.trim())));
-  const profile = match ? getPlantCareProfile(match.id, match.classifications[0]?.mainCategoryAr || '') : null;
-  const profileId = profile?.id || '';
-  let intervalDays = ageYears <= 1 ? 2 : ageYears <= 3 ? 4 : 7;
-  if (/cactus|succulent|lavender|rosemary|agave|aloe|drought|dryland/i.test(profileId)) intervalDays += 3;
-  if (weather === 'hot') intervalDays -= 1;
-  if (weather === 'cool') intervalDays += 2;
-  if (soil === 'sandy') intervalDays -= 1;
-  if (soil === 'clay') intervalDays += 1;
-  if (exposure === 'shade') intervalDays += 1;
-  intervalDays = Math.max(1, Math.min(14, intervalDays));
-  const litersPerPlant = ageYears <= 1 ? 4 : ageYears <= 3 ? 9 : 18;
-  const waterLiters = Math.max(2, Math.round(litersPerPlant * Math.max(1, count)));
-  const note = ageYears <= 1 ? 'شتلة صغيرة: افحص رطوبة أول 5 سم قبل كل رية.' : weather === 'hot' ? 'حرارة مرتفعة: افحص التربة قبل الموعد وقدّم الري صباحًا.' : soil === 'clay' ? 'تربة ثقيلة: لا تروِ إذا بقيت رطبة لتجنب اختناق الجذور.' : 'افحص التربة قبل الري؛ الجدول نقطة بداية وليس بديلًا عن الملاحظة.';
-  return { intervalDays, waterLiters, note, match };
+function statusLabel(status: GuidePlant['documentationStatus']): string {
+  switch (status) {
+    case 'verified': return 'موثق بالمراجع';
+    case 'partial': return 'توثيق جزئي';
+    case 'ambiguous': return 'هوية ملتبسة';
+    case 'not_found': return 'تعذر إثبات الهوية';
+    default: return 'غير موثق بعد';
+  }
 }
 
-export function IrrigationPlannerCard() {
-  const account = getCurrentAccount();
-  const emptyPlan = { plants: [], notificationsEnabled: false, updatedAt: new Date().toISOString() } satisfies IrrigationPlan;
-  const [plan, setPlan] = useState<IrrigationPlan>(() => account ? readUserData<IrrigationPlan>(IRRIGATION_PLAN_KEY, emptyPlan, account) : emptyPlan);
-  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-  const [name, setName] = useState(''); const [ageYears, setAgeYears] = useState('2'); const [count, setCount] = useState('1'); const [soil, setSoil] = useState<IrrigationEntry['soil']>('normal'); const [exposure, setExposure] = useState<IrrigationEntry['exposure']>('sun'); const [weather, setWeather] = useState<IrrigationEntry['weather']>('normal'); const [notice, setNotice] = useState('');
-  const refreshPlan = () => { const current = getCurrentAccount(); if (current) setPlan(readUserData<IrrigationPlan>(IRRIGATION_PLAN_KEY, emptyPlan, current)); };
-  useEffect(() => { refreshPlan(); const refresh = () => refreshPlan(); window.addEventListener('qadri-account-updated', refresh); window.addEventListener('storage', refresh); return () => { window.removeEventListener('qadri-account-updated', refresh); window.removeEventListener('storage', refresh); }; }, []);
-  useEffect(() => { const check = () => { if (!account || !plan.notificationsEnabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') return; const due = plan.plants.filter(isWateringTimeDue); if (!due.length) return; const stampKey = `qadri-irrigation-notified:${account.id}:${dateOnly(new Date())}`; if (!localStorage.getItem(stampKey)) { new Notification('موعد ري النباتات', { body: `حان وقت السقاية في ${due[0].wateringWindow || 'الصباح'}: ${due.map((item) => `${item.name} (${item.wateringTime || '06:30'})`).join('، ')}` }); localStorage.setItem(stampKey, '1'); } }; check(); const timer = window.setInterval(check, 60_000); return () => window.clearInterval(timer); }, [account, plan]);
-  if (!account) return <section className="irrigation-login-note"><Droplets size={19} /><div><strong>خطة الري الذكية</strong><p>سجّل الدخول حتى تحفظ أشجارك ومواعيد السقاية في بروفايلك.</p></div><Link href="/sign-in?next=%2Fplants" className="plant-guide-home-button">تسجيل الدخول <ArrowLeft size={15} /></Link></section>;
-  const savePlan = (plants: IrrigationEntry[], notificationsEnabled = plan.notificationsEnabled) => { const next = { plants, notificationsEnabled, updatedAt: new Date().toISOString() }; saveUserData(IRRIGATION_PLAN_KEY, next, account); setPlan(next); };
-  const addPlant = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const cleanName = name.trim(); const age = Math.max(0, Number(ageYears) || 0); const plantCount = Math.max(1, Number(count) || 1); if (cleanName.length < 2) { setNotice('اكتب اسم الشجرة أو النبات أولًا.'); return; } const recommendation = buildIrrigationRecommendation(cleanName, age, soil, exposure, weather, plantCount); const item: IrrigationEntry = { id: `irrigation-${Date.now()}`, name: cleanName, ageYears: age, count: plantCount, soil, exposure, weather, intervalDays: recommendation.intervalDays, nextWatering: daysFromToday(recommendation.intervalDays), wateringTime: smartWateringTime(weather, exposure), wateringWindow: smartWateringWindow(weather), waterLiters: recommendation.waterLiters, note: recommendation.note, updatedAt: new Date().toISOString() }; savePlan([...plan.plants, item]); setName(''); setNotice(recommendation.match ? `تم التعرف على ${recommendation.match.nameAr} وبناء جدول مناسب لعمرها ووقت السقاية.` : 'تم إنشاء جدول مبدئي؛ افحص التربة قبل السقاية.'); };
-  const enableNotifications = async () => { if (typeof Notification === 'undefined') { setNotice('المتصفح لا يدعم الإشعارات، لكن التنبيهات ستبقى ظاهرة داخل البروفايل.'); return; } const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission; if (permission === 'granted') { savePlan(plan.plants, true); setNotice('تم تفعيل إشعارات موعد السقاية عند فتح الموقع.'); } else setNotice('لم يتم السماح بالإشعارات؛ ستبقى المواعيد محفوظة داخل البروفايل.'); };
-  const removePlant = (id: string) => savePlan(plan.plants.filter((item) => item.id !== id));
-  const updatePlant = (id: string, patch: Partial<IrrigationEntry>) => savePlan(plan.plants.map((item) => item.id === id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item));
-  const attachPhoto = (id: string, file: File) => { if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { setNotice('ارفع صورة JPG أو PNG أو WebP فقط.'); return; } const reader = new FileReader(); reader.onload = () => updatePlant(id, { photoDataUrl: String(reader.result), diagnosis: undefined }); reader.readAsDataURL(file); };
-  const analyzePlant = async (item: IrrigationEntry) => { if (!item.photoDataUrl) { setNotice('ارفع صورة النبات أولًا ثم اضغط تحليل AI.'); return; } setAnalyzingId(item.id); setNotice('يجري تحليل صورة النبات بحذر…'); try { const response = await fetch('/api/plant-advisor/analyze-plant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plantName: item.name, ageYears: item.ageYears, currentLiters: item.waterLiters, imageDataUrl: item.photoDataUrl }) }); const data = await response.json() as { summaryAr?: string; observationsAr?: string[]; stressLevel?: string; waterAdjustmentPercent?: number; wateringAdviceAr?: string; caveatAr?: string; error?: string }; if (!response.ok || !data.summaryAr || typeof data.waterAdjustmentPercent !== 'number') throw new Error(data.error || 'AI_REQUEST_FAILED'); const adjustment = Math.max(-50, Math.min(30, data.waterAdjustmentPercent)); const adjustedLiters = Math.max(2, Math.round(item.waterLiters * (1 + adjustment / 100))); updatePlant(item.id, { waterLiters: adjustedLiters, diagnosis: { summaryAr: data.summaryAr, observationsAr: data.observationsAr || [], stressLevel: data.stressLevel || 'غير واضح', waterAdjustmentPercent: adjustment, wateringAdviceAr: data.wateringAdviceAr || '', caveatAr: data.caveatAr || '' } }); setNotice(`اكتمل التحليل. تم ${adjustment < 0 ? 'خفض' : adjustment > 0 ? 'رفع' : 'تثبيت'} كمية الماء ${Math.abs(adjustment)}%.`); } catch (error) { setNotice(error instanceof Error && error.message === 'AI_NOT_CONFIGURED' ? 'تحليل AI غير مفعّل على الخادم حاليًا.' : 'تعذر تحليل الصورة الآن؛ اترك الجدول كما هو وافحص التربة يدويًا.'); } finally { setAnalyzingId(null); } };
-  const sortedPlants = [...plan.plants].sort((a, b) => a.nextWatering.localeCompare(b.nextWatering));
-  return <section className="irrigation-planner" dir="rtl"><div className="irrigation-planner-head"><div><span className="plant-guide-kicker"><Sparkles size={14} /> مساعد السقاية الذكي</span><h2>جدول ري أشجارك</h2><p>اكتب الأشجار وأعمارها، وسنقترح موعد الري وكمية مبدئية تتغير مع الحر والتربة ومكان الزراعة.</p></div><button type="button" className={`irrigation-notification-button ${plan.notificationsEnabled ? 'active' : ''}`} onClick={enableNotifications}>{plan.notificationsEnabled ? <BellRing size={16} /> : <Bell size={16} />}{plan.notificationsEnabled ? 'الإشعارات مفعّلة' : 'فعّل التنبيهات'}</button></div><form className="irrigation-plant-form" onSubmit={addPlant}><label>اسم الشجرة أو النبات<input list="irrigation-plant-options" value={name} onChange={(event) => setName(event.target.value)} placeholder="مثال: زيتون، ليمون، جولد ستار" required /><datalist id="irrigation-plant-options">{getPlantGuideRecords().slice(0, 1200).map((plant) => <option key={plant.id} value={plant.nameAr}>{plant.scientificName}</option>)}</datalist></label><label>العمر بالسنوات<input type="number" min="0" step="0.5" value={ageYears} onChange={(event) => setAgeYears(event.target.value)} /></label><label>العدد<input type="number" min="1" step="1" value={count} onChange={(event) => setCount(event.target.value)} /></label><label>التربة<select value={soil} onChange={(event) => setSoil(event.target.value as IrrigationEntry['soil'])}><option value="normal">متوسطة</option><option value="sandy">رملية</option><option value="clay">طينية</option></select></label><label>التعرّض<select value={exposure} onChange={(event) => setExposure(event.target.value as IrrigationEntry['exposure'])}><option value="sun">شمس</option><option value="shade">ظل جزئي</option></select></label><label>الطقس الآن<select value={weather} onChange={(event) => setWeather(event.target.value as IrrigationEntry['weather'])}><option value="normal">معتدل</option><option value="hot">حار</option><option value="cool">بارد</option></select></label><button className="plant-guide-home-button irrigation-add-button" type="submit"><Plus size={15} /> أضف للجدول</button></form>{notice && <p className="irrigation-notice" role="status">{notice}</p>}<div className="irrigation-table-wrap">{sortedPlants.length ? <table className="irrigation-table"><thead><tr><th>النبات</th><th>العمر/العدد</th><th>الصورة والتشخيص</th><th>الموعد القادم</th><th>الكمية المقترحة</th><th>الملاحظة الذكية</th><th /></tr></thead><tbody>{sortedPlants.map((item) => { const remaining = daysUntil(item.nextWatering); return <tr key={item.id}><td><strong>{item.name}</strong><small>{item.intervalDays} أيام بين الريات</small></td><td>{item.ageYears} سنة · {item.count} شجرة</td><td><div className="irrigation-ai-cell"><label className="irrigation-photo-picker">{item.photoDataUrl ? <img src={item.photoDataUrl} alt={`صورة ${item.name}`} /> : <ImagePlus size={17} />}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) attachPhoto(item.id, file); event.target.value = ''; }} /></label><button type="button" className="irrigation-analyze-button" onClick={() => void analyzePlant(item)} disabled={!item.photoDataUrl || analyzingId === item.id}>{analyzingId === item.id ? 'جارٍ التحليل…' : 'تحليل AI'}</button>{item.diagnosis && <small className="irrigation-diagnosis">{item.diagnosis.stressLevel} · {item.diagnosis.waterAdjustmentPercent > 0 ? '+' : ''}{item.diagnosis.waterAdjustmentPercent}% ماء</small>}</div></td><td><strong className={remaining <= 0 ? 'irrigation-due' : ''}>{remaining <= 0 ? 'اليوم' : `بعد ${remaining} أيام`}</strong><small>{formatWaterDate(item.nextWatering)}</small><small className="irrigation-time">{item.wateringTime || '06:30'} · {item.wateringWindow || 'الصباح قبل اشتداد الشمس'}</small></td><td><strong>{item.waterLiters} لتر تقريبًا</strong>{item.diagnosis && <small>بعد تحليل الصورة</small>}</td><td>{item.diagnosis ? item.diagnosis.wateringAdviceAr : item.note}</td><td><button type="button" className="irrigation-remove" onClick={() => removePlant(item.id)} aria-label={`حذف ${item.name}`}><Trash2 size={15} /></button></td></tr>; })}</tbody></table> : <div className="irrigation-empty"><Droplets size={24} /><strong>أضف أول شجرة إلى جدولك</strong><span>سيظهر هنا موعد السقاية والتنبيه الخاص بها.</span></div>}</div></section>;
+function StatusBadge({ status }: { status: GuidePlant['documentationStatus'] }) {
+  return <span className={`plant-documentation-status status-${status || 'not_reviewed'}`}>{statusLabel(status)}</span>;
+}
+
+function renderCitedText(text: string, references: PlantGuideReference[]) {
+  const referenceById = new Map(references.map((reference) => [reference.id, reference]));
+  return text.split(/(\[\d+\])/g).map((part, index) => {
+    const match = part.match(/^\[(\d+)\]$/);
+    const reference = match ? referenceById.get(match[1]) : undefined;
+    return reference
+      ? <a className="plant-inline-citation" href={reference.url} target="_blank" rel="noreferrer" key={`${reference.id}-${index}`}>{part}</a>
+      : <span key={index}>{part}</span>;
+  });
+}
+
+function RegionList({ title, regions, references }: { title: string; regions: PlantGuideRegion[]; references: PlantGuideReference[] }) {
+  const referenceById = new Map(references.map((reference) => [reference.id, reference]));
+  return <section className="plant-evidence-region-group"><h3>{title}</h3>{regions.length ? <ul>{regions.map((region, index) => <li key={`${region.place}-${index}`}><strong>{region.place}</strong>{region.sourceIds.map((sourceId) => {
+    const reference = referenceById.get(sourceId);
+    return reference ? <a key={sourceId} href={reference.url} target="_blank" rel="noreferrer">[{sourceId}]</a> : null;
+  })}</li>)}</ul> : <p className="plant-unknown-value">لا توجد مناطق مثبتة في المراجع المتاحة لهذا السجل.</p>}</section>;
 }
 
 function PlantImage({ plant, accent, className = '', categoryLabel, showCategory = true }: { plant: GuidePlant; accent: string; className?: string; categoryLabel?: string; showCategory?: boolean }) {
   const [failed, setFailed] = useState(false);
   return <div className={`plant-guide-image ${className}`} style={{ '--plant-accent': accent } as CSSProperties}>
-    {plant.image?.imageUrl && !failed ? <img src={plant.image.imageUrl} alt={plant.nameAr} loading="lazy" onError={() => setFailed(true)} /> : <div className="plant-guide-image-fallback"><Leaf size={42} strokeWidth={1.25} /><span>{plant.imageNeedsReview ? 'الصورة قيد المراجعة' : 'لا تتوفر صورة معتمدة'}</span></div>}
-    {showCategory && <span className="plant-guide-image-category">{categoryLabel || plant.classifications[0]?.subcategoryAr || plant.categoryAr}</span>}
+    {plant.image?.imageUrl && !failed
+      ? <img src={plant.image.imageUrl} alt={plant.nameAr} loading="lazy" onError={() => setFailed(true)} />
+      : <div className="plant-guide-image-fallback"><Leaf size={42} strokeWidth={1.25} /><span>{plant.imageNeedsReview ? 'الصورة غير موثقة بعد' : 'لا توجد صورة معتمدة'}</span></div>}
+    {showCategory && <span className="plant-guide-image-category">{categoryLabel || plant.classifications[0]?.subcategoryAr || 'تصنيف غير متاح'}</span>}
   </div>;
 }
 
@@ -109,14 +121,14 @@ export function PlantGuideHomeFeature({ lang }: { lang: 'ar' | 'en' }) {
   return <section className="plant-guide-home-section" aria-labelledby="plant-guide-home-title" dir={isArabic ? 'rtl' : 'ltr'}>
     <div className="plant-guide-home-shell">
       <div className="plant-guide-home-copy">
-        <span className="plant-guide-kicker"><Sparkles size={14} /> {isArabic ? 'دليل نباتات القادري' : 'Qadri plant guide'}</span>
-        <h2 id="plant-guide-home-title">{isArabic ? 'كل نبتة لها حكاية…' : 'Every plant has a story…'}<br /><span>{isArabic ? 'امسح وافتح بطاقتها.' : 'Scan to open its listing.'}</span></h2>
-        <p>{isArabic ? 'كتالوج مصوّر لأسماء النباتات وتصنيفاتها كما وردت في ملف القادري. اختر النبتة أو امسح الرمز لفتح صفحتها ومصدر صورتها.' : 'Browse an illustrated catalogue of the plant names and classifications provided in Qadri’s file. Open a plant to view its details and photo source.'}</p>
-        <div className="plant-guide-region-chips" aria-label={isArabic ? 'مناطق الدليل' : 'Guide regions'}>
-          {(isArabic ? ['الأردن', 'فلسطين', 'مصر', 'السعودية', 'قطر'] : ['Jordan', 'Palestine', 'Egypt', 'Saudi Arabia', 'Qatar']).map((country) => <span key={country}><MapPin size={12} />{country}</span>)}
+        <span className="plant-guide-kicker"><Sprout size={14} /> {isArabic ? 'دليل نباتات القادري' : 'Qadri plant guide'}</span>
+        <h2 id="plant-guide-home-title">{isArabic ? 'معلومات نباتية موثقة.' : 'Evidence-led plant information.'}<br /><span>{isArabic ? 'لكل سجل مراجعه.' : 'Sources for every record.'}</span></h2>
+        <p>{isArabic ? 'افتح بطاقة النبات لمراجعة اسمه وتصنيفه ومعلومات الزراعة والمناطق التي تؤيدها المراجع. الحقول التي لا تتوفر لها أدلة تبقى معلّمة بأنها غير موثقة.' : 'Open a plant record to review its names, classification, sourced cultivation details, and documented regions. Unsupported fields remain clearly marked as undocumented.'}</p>
+        <div className="plant-guide-region-chips" aria-label={isArabic ? 'حالة المناطق' : 'Regional evidence status'}>
+          <span><MapPin size={12} />{isArabic ? 'المناطق تُذكر لكل نبات بمصدر' : 'Regions cited per plant'}</span>
         </div>
         <Link className="plant-guide-home-button" href="/plants">{isArabic ? 'تصفّح دليل النباتات' : 'Browse the plant guide'} {isArabic ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}</Link>
-        <small>{isArabic ? 'القائمة مرجعية ولا تؤكد توفر كل صنف تجاريًا.' : 'Reference list only; it does not confirm stock availability.'}</small>
+        <small>{isArabic ? 'لا تُعرض توصيات عامة بديلًا عن معلومات موثقة.' : 'General recommendations are not used as a substitute for verified information.'}</small>
       </div>
       <div className="plant-guide-home-qr-stage">
         <div className="plant-guide-home-orbit plant-guide-home-orbit-one" />
@@ -139,9 +151,7 @@ export function PlantGuidePage() {
   const [subcategory, setSubcategory] = useState('all');
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
-    plants.forEach((plant) => {
-      [...new Set(plant.classifications.map((item) => item.mainCategoryAr))].forEach((name) => counts.set(name, (counts.get(name) || 0) + 1));
-    });
+    plants.forEach((plant) => [...new Set(plant.classifications.map((item) => item.mainCategoryAr))].forEach((name) => counts.set(name, (counts.get(name) || 0) + 1)));
     return [...counts].map(([name, count]) => ({ name, count }));
   }, [plants]);
   const subcategories = useMemo(() => [...new Set(plants.flatMap((plant) => plant.classifications
@@ -153,29 +163,28 @@ export function PlantGuidePage() {
       const matchesClassification = plant.classifications.some((item) =>
         (mainCategory === 'all' || item.mainCategoryAr === mainCategory) &&
         (subcategory === 'all' || item.subcategoryAr === subcategory));
-      const searchable = `${plant.nameAr} ${plant.classifications.map((item) => `${item.mainCategoryAr} ${item.subcategoryAr}`).join(' ')} ${plant.markets.join(' ')}`;
+      const searchable = `${plant.nameAr} ${plant.nameEn || ''} ${plant.scientificName || ''} ${plant.classifications.map((item) => `${item.mainCategoryAr} ${item.subcategoryAr}`).join(' ')}`;
       return matchesClassification && (!q || normalize(searchable).includes(q));
     });
   }, [plants, search, mainCategory, subcategory]);
 
   return <main className="plant-guide-page" dir="rtl" lang="ar">
-    <IrrigationPlannerCard />
     <section className="plant-guide-list-hero">
       <div className="plant-guide-list-hero-inner">
         <div className="plant-guide-list-copy">
           <div className="plant-guide-kicker"><BookOpen size={14} /> دليل القادري للنباتات</div>
-          <h1>دليل النباتات.<br /><span>من ملف القادري.</span></h1>
-          <p>كتالوج مرجعي للأشجار المثمرة والزينة والشجيرات والنباتات الداخلية والأعشاب وغيرها، مرتب حسب الأقسام الواردة في ملف دليل النباتات.</p>
-          <div className="plant-guide-list-stats"><span><strong>{plants.length}</strong> اسمًا فريدًا</span><span><strong>{getPlantGuideSourceCount()}</strong> إدراجًا عبر الأقسام</span><span><MapPin size={14} /> الأردن · فلسطين · مصر · السعودية · قطر</span></div>
+          <h1>دليل النباتات.<br /><span>بمراجع واضحة.</span></h1>
+          <p>سجل نباتي ثنائي اللغة. تعرض كل بطاقة حالة التوثيق ومصادر الادعاءات؛ لا تُستبدل المعلومات الناقصة بتوصيات عامة أو تخمينات.</p>
+          <div className="plant-guide-list-stats"><span><strong>{plants.length}</strong> سجلًا نباتيًا</span><span><strong>{getPlantGuideSourceCount()}</strong> إدراجًا مصدرًا في القائمة الأصلية</span><span><ShieldCheck size={14} />المناطق موثقة لكل سجل</span></div>
         </div>
-        <div className="plant-guide-list-hero-art" aria-hidden="true"><div className="guide-art-disc"><Leaf size={80} strokeWidth={0.9} /></div><span className="guide-art-label guide-art-label-top">FIELD NOTES / 01</span><span className="guide-art-label guide-art-label-bottom">GROW WITH KNOWLEDGE</span><i className="guide-art-ring guide-art-ring-one" /><i className="guide-art-ring guide-art-ring-two" /></div>
+        <div className="plant-guide-list-hero-art" aria-hidden="true"><div className="guide-art-disc"><Leaf size={80} strokeWidth={0.9} /></div><span className="guide-art-label guide-art-label-top">FIELD NOTES / 01</span><span className="guide-art-label guide-art-label-bottom">SOURCE EVERY CLAIM</span><i className="guide-art-ring guide-art-ring-one" /><i className="guide-art-ring guide-art-ring-two" /></div>
       </div>
     </section>
 
     <section className="plant-guide-catalog-wrap">
       <div className="plant-guide-catalog-head">
-        <div><span className="plant-guide-kicker">كتالوج النباتات</span><h2>اكتشف نبتتك</h2><p>تُجمع الأسماء المتكررة في بطاقة واحدة مع الاحتفاظ بكل تصنيفاتها. الصور المتكررة أو غير المؤكدة مخفية لحين مراجعتها.</p></div>
-        <label className="plant-guide-search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث بالاسم أو القسم…" aria-label="ابحث في النباتات" /><span>{filtered.length}</span>{search && <button type="button" onClick={() => setSearch('')} aria-label="مسح البحث"><X size={14} /></button>}</label>
+        <div><span className="plant-guide-kicker">كتالوج النباتات</span><h2>اكتشف نبتتك</h2><p>الأسماء الإنجليزية والعلمية والتصنيفات الأصلية قابلة للبحث؛ افتح السجل لمراجعة الأدلة والمراجع.</p></div>
+        <label className="plant-guide-search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث بالاسم أو التصنيف…" aria-label="ابحث في النباتات" /><span>{filtered.length}</span>{search && <button type="button" onClick={() => setSearch('')} aria-label="مسح البحث"><X size={14} /></button>}</label>
       </div>
       <div className="plant-guide-category-pills"><button className={mainCategory === 'all' ? 'active' : ''} onClick={() => { setMainCategory('all'); setSubcategory('all'); }}>كل النباتات <span>{plants.length}</span></button>{categories.map((item) => <button key={item.name} className={mainCategory === item.name ? 'active' : ''} onClick={() => { setMainCategory(item.name); setSubcategory('all'); }}>{item.name}<span>{item.count}</span></button>)}</div>
       <label className="plant-guide-subcategory"><span>القسم الفرعي</span><select value={subcategory} onChange={(event) => setSubcategory(event.target.value)}><option value="all">كل الأقسام الفرعية</option>{subcategories.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
@@ -185,12 +194,12 @@ export function PlantGuidePage() {
         return <div className="plant-guide-card-frame" key={plant.id} style={{ '--plant-accent': accent } as CSSProperties}>
           <Link className="plant-guide-card" href={`/plants/${encodeURIComponent(plant.id)}`}>
             <PlantImage plant={plant} accent={accent} categoryLabel={primaryClassification?.subcategoryAr} />
-            <div className="plant-guide-card-copy"><span className="plant-guide-card-category">{primaryClassification?.mainCategoryAr || 'نباتات القادري'}</span><h3>{plant.nameAr}</h3><em>{primaryClassification?.subcategoryAr || 'تصنيف من ملف القادري'}</em><span className="plant-guide-card-bottom">افتح بطاقة النبات <ChevronLeft size={15} /></span></div>
+            <div className="plant-guide-card-copy"><span className="plant-guide-card-category">{primaryClassification?.mainCategoryAr || 'تصنيف من القائمة الأصلية'}</span><h3>{plant.nameAr}</h3>{plant.nameEn && <span className="plant-card-name-en" dir="ltr">{plant.nameEn}</span>}<em>{plant.scientificName || 'الاسم العلمي غير موثق بعد'}</em><StatusBadge status={plant.documentationStatus} /><span className="plant-guide-card-bottom">افتح سجل النبات <ChevronLeft size={15} /></span></div>
           </Link>
-          {plant.image?.sourceUrl ? <a className="plant-guide-image-credit" href={plant.image.sourceUrl} target="_blank" rel="noreferrer">{plant.imageIsRepresentative ? 'صورة تمثيلية' : 'مصدر الصورة'} · {plant.image.license || 'Wikimedia Commons'}{plant.image.credit ? ` · ${plant.image.credit}` : ''}</a> : <span className="plant-guide-image-credit">لا تتوفر صورة مناسبة مرخصة</span>}
+          {plant.image?.sourceUrl ? <a className="plant-guide-image-credit" href={plant.image.sourceUrl} target="_blank" rel="noreferrer">{plant.image.license || 'مصدر الصورة'}{plant.image.credit ? ` · ${plant.image.credit}` : ''}</a> : <span className="plant-guide-image-credit">لا توجد صورة معتمدة لهذا السجل</span>}
         </div>;
       })}</div> : <div className="plant-guide-empty"><Leaf size={26} /><h3>لم نعثر على نبتة بهذا الاسم</h3><p>جرّب البحث باسم أو قسم فرعي مختلف، أو أزل الفلاتر.</p><button onClick={() => { setSearch(''); setMainCategory('all'); setSubcategory('all'); }}>إظهار كل النباتات</button></div>}
-      <p className="plant-guide-climate-note"><ShieldCheck size={16} /> القائمة مرجعية ولا تؤكد توفر كل صنف تجاريًا أو ملاءمته لكل موقع. الصور من Wikimedia Commons، وقد تمثل النوع النباتي لا الصنف التجاري حرفيًا؛ أُشير إلى الصور التمثيلية في البطاقة. تحقّق من اسم الصنف والاسم العلمي والملاءمة المناخية مع المشتل قبل اعتماده.</p>
+      <p className="plant-guide-climate-note"><ShieldCheck size={16} />التصنيفات من القائمة الأصلية. لا تُعرض المناطق أو نصائح العناية إلا إذا كانت مرتبطة بمراجع واضحة داخل سجل النبات. الصور غير المتحققة مخفية.</p>
     </section>
   </main>;
 }
@@ -202,12 +211,11 @@ export function PlantDetailPage() {
   const cardRef = useRef<HTMLElement | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState('');
-  if (!plant) return <main className="plant-guide-page" dir="rtl" lang="ar"><section className="plant-guide-not-found"><div className="plant-guide-not-found-icon"><Leaf size={30} /></div><span className="plant-guide-kicker">QADRI / PLANT FILE</span><h1>لم نعثر على هذه النبتة</h1><p>قد تكون النبتة أزيلت من قائمة المشتل أو أن رابط QR قديم.</p><Link className="plant-guide-home-button" href="/plants"><ArrowRight size={16} /> العودة إلى دليل النباتات</Link></section></main>;
+  if (!plant) return <main className="plant-guide-page" dir="rtl" lang="ar"><section className="plant-guide-not-found"><div className="plant-guide-not-found-icon"><Leaf size={30} /></div><span className="plant-guide-kicker">QADRI / PLANT FILE</span><h1>لم نعثر على هذا السجل</h1><p>قد يكون الرابط قديمًا أو أن السجل غير موجود في القائمة.</p><Link className="plant-guide-home-button" href="/plants"><ArrowRight size={16} /> العودة إلى دليل النباتات</Link></section></main>;
 
-  const profile = getPlantCareProfile(plant.id, plant.categoryId);
+  const references = plant.references || [];
   const accent = accentFor();
   const qrUrl = plantUrl(plant.id);
-
   const downloadCard = async () => {
     if (!cardRef.current || downloading) return;
     setDownloading(true);
@@ -235,25 +243,23 @@ export function PlantDetailPage() {
   return <main className="plant-guide-page plant-detail-page" dir="rtl" lang="ar" style={{ '--plant-accent': accent } as CSSProperties}>
     <div className="plant-detail-topbar"><Link href="/plants"><ArrowRight size={16} /> العودة إلى دليل النباتات</Link><span>PLANT PASSPORT</span></div>
     <section className="plant-detail-hero">
-      <div className="plant-detail-hero-copy"><span className="plant-guide-kicker"><Sprout size={14} /> بطاقة تعريف نباتية</span><h1>{plant.nameAr}</h1><em>{plant.scientificName || 'الاسم العلمي غير مذكور في الملف'}</em><p>{plant.descriptionAr || plant.notes.join(' · ') || profile.summaryAr}</p><div className="plant-detail-hero-actions"><button className="plant-guide-download-button" onClick={downloadCard} disabled={downloading}><Download size={16} />{downloading ? 'يتم تجهيز البطاقة…' : 'تنزيل بطاقة PDF'}</button><a className="plant-guide-secondary-button" href={qrUrl} target="_blank" rel="noreferrer"><QrCode size={15} /> رابط صفحة النبتة</a></div>{downloadError && <p className="plant-guide-download-error" role="alert">{downloadError}</p>}</div>
+      <div className="plant-detail-hero-copy"><span className="plant-guide-kicker"><Sprout size={14} /> بطاقة تعريف نباتية</span><h1>{plant.nameAr}</h1>{plant.nameEn && <p className="plant-detail-name-en" dir="ltr">{plant.nameEn}</p>}<em>{plant.scientificName || 'الاسم العلمي غير موثق بعد'}</em><StatusBadge status={plant.documentationStatus} />{plant.identityNote && <p className="plant-identity-note">{plant.identityNote}</p>}<div className="plant-detail-hero-actions"><button className="plant-guide-download-button" onClick={downloadCard} disabled={downloading}><Download size={16} />{downloading ? 'يتم تجهيز البطاقة…' : 'تنزيل بطاقة PDF'}</button><a className="plant-guide-secondary-button" href={qrUrl} target="_blank" rel="noreferrer"><QrCode size={15} /> رابط صفحة النبات</a></div>{downloadError && <p className="plant-guide-download-error" role="alert">{downloadError}</p>}</div>
       <PlantImage plant={plant} accent={accent} className="plant-detail-main-image" showCategory={false} />
     </section>
 
-    <section className="plant-detail-section"><div className="plant-detail-section-heading"><span className="plant-guide-kicker"><Sprout size={14} /> إرشادات عامة مؤقتة</span><h2>العناية التفصيلية للصنف غير موثقة</h2></div><div className="plant-care-story"><div className="plant-care-story-mark"><Leaf size={27} /></div><p>{profile.careAr}</p></div></section>
+    <section className="plant-detail-section plant-evidence-descriptions"><div className="plant-detail-section-heading"><span className="plant-guide-kicker"><BookOpen size={14} /> محتوى مدعوم بالمراجع</span><h2>الوصف والعناية</h2><p>تُعرض فقط المعلومات التي ترتبط بمصدر في قائمة المراجع أدناه.</p></div><div className="plant-evidence-language-grid"><article><h3>الوصف بالعربية</h3><p>{plant.descriptionAr ? renderCitedText(plant.descriptionAr, references) : <span className="plant-unknown-value">لا توجد معلومات عربية موثقة لهذا الحقل بعد.</span>}</p></article><article dir="ltr"><h3>Description in English</h3><p>{plant.descriptionEn ? renderCitedText(plant.descriptionEn, references) : <span className="plant-unknown-value">No verified English description is available for this record yet.</span>}</p></article></div></section>
 
-    <section className="plant-detail-section plant-water-section"><div className="plant-detail-section-heading"><span className="plant-guide-kicker"><Droplets size={14} /> ملاحظة ري عامة</span><h2>افحص التربة قبل الري</h2><p>هذه إرشادات توقيت، وليست كمية ثابتة. افحص رطوبة التربة وعدّل الري مع الحر والمطر والتصريف.</p></div><div className="plant-water-grid"><article><span>01 / أول سنة</span><h3>شتلة جديدة</h3><p>{profile.waterSeedlingAr}</p></article><article><span>02 / من سنة إلى 3</span><h3>نبتة نامية</h3><p>{profile.waterYoungAr}</p></article><article><span>03 / بعد التأسيس</span><h3>نبتة بالغة</h3><p>{profile.waterMatureAr}</p></article></div></section>
+    <section className="plant-detail-section plant-evidence-classifications"><div className="plant-detail-section-heading"><span className="plant-guide-kicker">التصنيفات</span><h2>التصنيف المسجل</h2></div>{plant.classifications.length ? <ul>{plant.classifications.map((item, index) => <li key={`${item.mainCategoryAr}-${item.subcategoryAr}-${index}`}>{item.mainCategoryAr} | {item.subcategoryAr}</li>)}</ul> : <p className="plant-unknown-value">لا يوجد تصنيف مسجل لهذا النبات.</p>}</section>
 
-    <section className="plant-detail-section plant-pests-section"><div className="plant-detail-section-heading"><span className="plant-guide-kicker"><ShieldCheck size={14} /> الوقاية أولًا</span><h2>أمثلة عامة وليست تشخيصًا</h2><p>ابدأ بالملاحظة والعزل والتنظيف وتحسين الري والتهوية. لا تستخدم مبيدًا إلا بعد التأكد من التشخيص وقراءة ملصق المنتج.</p></div><div className="plant-pest-grid">{profile.pests.map((pest) => <article key={pest.nameAr}><span className="plant-pest-index">FIELD NOTE / {String(profile.pests.indexOf(pest) + 1).padStart(2, '0')}</span><h3>{pest.nameAr}</h3><p><strong>علامات:</strong> {pest.signsAr}</p><p><strong>الوقاية:</strong> {pest.preventionAr}</p><p><strong>التعامل:</strong> {pest.treatmentAr}</p></article>)}</div></section>
+    <section className="plant-detail-region-section"><div><span className="plant-guide-kicker"><MapPin size={14} /> التوزيع والمناطق</span><h2>مناطق موثقة</h2><p>لا تعني مناطق الانتشار الطبيعي بالضرورة أن النبات ملائم للزراعة التجارية فيها.</p></div><div className="plant-evidence-region-columns"><RegionList title="الموطن أو الانتشار الطبيعي" regions={plant.nativeDistribution || []} references={references} /><RegionList title="مناطق زراعة موثقة" regions={plant.cultivationRegions || []} references={references} /></div></section>
 
+    <section className="plant-detail-sources"><span className="plant-guide-kicker"><BookOpen size={14} /> المراجع</span>{references.length ? <div>{references.map((reference) => <a href={reference.url} target="_blank" rel="noreferrer" key={reference.id}><span><strong>[{reference.id}] {reference.title}</strong><small>{reference.sourceType} · {reference.supports.join('، ')}</small></span><ArrowLeft size={13} /></a>)}</div> : <p className="plant-unknown-value">لا توجد مراجع مسجلة لهذا السجل حتى الآن.</p>}{plant.image?.sourceUrl && <a className="plant-image-source-link" href={plant.image.sourceUrl} target="_blank" rel="noreferrer">مصدر الصورة · {plant.image.license || 'الرخصة غير موضحة'}{plant.image.credit ? ` · ${plant.image.credit}` : ''}<ArrowLeft size={13} /></a>}</section>
 
-
-    <section className="plant-detail-sources"><span className="plant-guide-kicker"><BookOpen size={14} /> مصدر الصورة ومزيد من القراءة</span><div>{plant.image?.sourceUrl && <a href={plant.image.sourceUrl} target="_blank" rel="noreferrer" key="commons-photo">{plant.imageIsRepresentative ? 'صورة تمثيلية من فئة قريبة' : 'مصدر صورة النبات'} · Wikimedia Commons · {plant.image.license}{plant.image.credit ? ` · ${plant.image.credit}` : ''}<ArrowLeft size={13} /></a>}{profile.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>{source.title}<ArrowLeft size={13} /></a>)}</div><small>تفاصيل الاسم والعناية مستمدة من ملف دليل النباتات المرفق؛ راجع الاسم العلمي والتوفر الفعلي مع المشتل قبل الاعتماد.</small></section>
-
-    <section className="plant-card-download-section"><div className="plant-detail-section-heading"><span className="plant-guide-kicker"><QrCode size={14} /> بطاقة تحفظها أو تشاركها</span><h2>بطاقة تعريف نبتتك</h2><p>رمز QR أدناه يفتح صفحة هذه النبتة مباشرة. نزّلها بصيغة PDF واحتفظ بها قرب النبتة أو شاركها مع من يرعاها.</p></div>
+    <section className="plant-card-download-section"><div className="plant-detail-section-heading"><span className="plant-guide-kicker"><QrCode size={14} /> بطاقة قابلة للمشاركة</span><h2>بطاقة تعريف النبات</h2><p>تحتوي البطاقة على الاسم والمعلومات المدعومة المتاحة في هذا السجل.</p></div>
       <article ref={cardRef} className="plant-passport-card" style={{ '--plant-accent': accent } as CSSProperties}>
         <div className="plant-passport-card-decor"><span className="passport-decor-leaf"><Leaf size={98} strokeWidth={0.75} /></span><span className="passport-decor-number">Q / {plant.id.slice(-5)}</span></div>
-        <div className="plant-passport-card-copy"><span className="plant-passport-brand">القادري الزراعي الذكي <i>·</i> QADRI BOTANICAL FILE</span><h3>{plant.nameAr}</h3><em>{plant.scientificName || 'الاسم العلمي غير مذكور في الملف'}</em><p>{plant.descriptionAr || plant.notes.join(' · ') || profile.summaryAr}</p><small>بيانات تعريفية من الملف؛ إرشادات العناية العامة مؤقتة وغير متخصصة.</small></div>
-        <div className="plant-passport-qr"><div className="plant-passport-qr-frame"><QRCodeSVG value={qrUrl} size={150} level="H" includeMargin title={`رمز QR لصفحة ${plant.nameAr}`} /></div><strong>امسح لفتح صفحة النبتة</strong><span dir="ltr">{new URL(qrUrl).host}</span></div>
+        <div className="plant-passport-card-copy"><span className="plant-passport-brand">القادري الزراعي الذكي <i>·</i> QADRI BOTANICAL FILE</span><h3>{plant.nameAr}</h3>{plant.nameEn && <span dir="ltr">{plant.nameEn}</span>}<em>{plant.scientificName || 'الاسم العلمي غير موثق بعد'}</em><StatusBadge status={plant.documentationStatus} /><p>{plant.descriptionAr || 'لا توجد معلومات موثقة لهذا السجل بعد.'}</p></div>
+        <div className="plant-passport-qr"><div className="plant-passport-qr-frame"><QRCodeSVG value={qrUrl} size={150} level="H" includeMargin title={`رمز QR لصفحة ${plant.nameAr}`} /></div><strong>امسح لفتح صفحة النبات</strong><span dir="ltr">{new URL(qrUrl).host}</span></div>
       </article>
     </section>
     <footer className="plant-detail-bottom"><Link href="/plants"><ArrowRight size={15} /> كل النباتات</Link><Link href="/quotes">طلب عرض سعر لهذه النبتة <ChevronLeft size={15} /></Link></footer>
