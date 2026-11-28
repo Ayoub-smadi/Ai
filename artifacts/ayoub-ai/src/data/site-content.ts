@@ -35,6 +35,14 @@ const defaultProducts: StoreProduct[] = ((backup as BackupShape).siteData?.agriS
 }));
 export const STORE_PRODUCTS_STORAGE_KEY = 'qadri-store-products-v1';
 export const PORTFOLIO_PROJECTS_STORAGE_KEY = 'qadri-portfolio-projects-v1';
+const STORE_IMAGE_ORIGIN = 'https://www.alqadrioffers.online';
+
+export function resolveStoreProductImage(image: string | undefined): string {
+  const value = (image || '').trim();
+  if (!value || /^(https?:|data:|blob:)/i.test(value)) return value;
+  if (value.startsWith('/api/images/')) return `${STORE_IMAGE_ORIGIN}${value}`;
+  return value;
+}
 
 function readList<T>(key: string, fallback: T[]): T[] {
   try {

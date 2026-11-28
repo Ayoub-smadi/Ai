@@ -1,6 +1,7 @@
 import { Link } from 'wouter';
 import { ArrowLeft, Minus, Plus, ShoppingBag, ShoppingCart, Trash2 } from 'lucide-react';
 import { useStoreCart } from '@/hooks/use-store-cart';
+import { resolveStoreProductImage } from '@/data/site-content';
 
 const money = (amount: number) => `${amount.toFixed(2)} د.أ`;
 
@@ -19,7 +20,7 @@ export default function StoreCartPage() {
     {items.length ? <div className="store-flow-layout">
       <section className="store-cart-list" aria-label="منتجات السلة">
         {items.map((item) => <article className="store-cart-item" key={item.productId}>
-          {item.image ? <img src={item.image} alt={item.name} /> : <div className="store-cart-image-placeholder"><ShoppingBag size={24} /></div>}
+          {item.image ? <img src={resolveStoreProductImage(item.image)} alt={item.name} /> : <div className="store-cart-image-placeholder"><ShoppingBag size={24} /></div>}
           <div className="store-cart-item-info">
             <h2>{item.name}</h2>
             <p>{item.price !== undefined ? money(item.price) : 'يُحدَّد السعر عند تأكيد الطلب'}</p>
