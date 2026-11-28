@@ -65,3 +65,6 @@
 - [x] Store-card action reads «إضافة إلى السلة»; items without variants add immediately without redirect, while products with variants open their detail page for selection.
 - [x] Variant choices are buttons; choosing a color/size updates its configured image, specifications, and price, and keeps the cart count/link available.
 - [x] Store admin can enter an image URL and specifications per variant; no variant data is invented for products without configured options.
+
+## Plant guide green palette
+- [x] Remove the yellow accents from the “دليل نباتات القادري” feature on the homepage and the `/plants` guide hero; use green tones consistent with the site while preserving readable contrast.
