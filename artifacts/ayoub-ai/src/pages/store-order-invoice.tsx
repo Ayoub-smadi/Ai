@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { FileDown, Save, X } from 'lucide-react';
-import type { StoreOrder, StoreOrderInvoice } from '@/data/store-orders';
+import { getStoreOrders, type StoreOrder, type StoreOrderInvoice } from '@/data/store-orders';
 import './store-order-invoice.css';
 
 const makeInvoice = (order: StoreOrder): StoreOrderInvoice => ({
@@ -21,7 +21,12 @@ export default function StoreOrderInvoice({ order, onClose, onSave }: { order: S
   const [notice, setNotice] = useState('');
   const sheetRef = useRef<HTMLElement>(null);
   const total = invoice.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-  const orderDateTime = new Intl.DateTimeFormat('ar-JO', { dateStyle: 'medium', timeStyle: 'short', hourCycle: 'h23' }).format(new Date(order.createdAt));
+  const formatOrderDateTime = (createdAt: string) => new Intl.DateTimeFormat('ar-JO', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date(createdAt));
+  const orderDateTime = formatOrderDateTime(order.createdAt);
+  const matchingOrders = getStoreOrders().filter((candidate) => candidate.id !== order.id && formatOrderDateTime(candidate.createdAt) === orderDateTime);
+  const customerName = order.customerName.trim() || invoice.customerName.trim() || 'عميل';
+  const hasSameCustomerAtSameTime = matchingOrders.some((candidate) => candidate.customerName.trim() === customerName);
+  const orderNumber = matchingOrders.length ? `${orderDateTime} — ${customerName}${hasSameCustomerAtSameTime ? ` (${order.id.slice(-4)})` : ''}` : orderDateTime;
   const patch = (values: Partial<StoreOrderInvoice>) => setInvoice((current) => ({ ...current, ...values }));
   const updateLine = (index: number, values: Partial<StoreOrderInvoice['items'][number]>) => patch({ items: invoice.items.map((item, current) => current === index ? { ...item, ...values } : item) });
   const save = () => { onSave(invoice); setNotice('تم حفظ الفاتورة ويمكنك فتحها وتعديلها لاحقًا.'); };
@@ -58,7 +63,7 @@ export default function StoreOrderInvoice({ order, onClose, onSave }: { order: S
       <div className="store-order-invoice-badges"><span>نوع الفاتورة: مبيعات اونلاين</span><span>طريقة الدفع: عند استلام الطلب</span></div>
       <section className="store-order-invoice-customer"><p><b>الزبون:</b> {invoice.customerName || '—'}</p><p><b>الهاتف:</b> {invoice.phone || '—'}</p><p><b>المنطقة:</b> {invoice.region || '—'}</p><p><b>العنوان:</b> {invoice.address || '—'}</p></section>
       <table><thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>{invoice.items.map((item, index) => <tr key={`${index}-${item.name}`}><td>{item.name}</td><td>{item.quantity}</td><td>{item.price.toFixed(3)} د.أ</td><td>{(item.quantity * item.price).toFixed(3)} د.أ</td></tr>)}</tbody></table>
-      <strong className="store-order-invoice-sheet-total">المجموع: {total.toFixed(3)} د.أ</strong><small className="store-order-invoice-reference">رقم الطلب: {orderDateTime}</small>
+      <strong className="store-order-invoice-sheet-total">المجموع: {total.toFixed(3)} د.أ</strong><small className="store-order-invoice-reference">رقم الطلب: {orderNumber}</small>
     </article></div>
   </section></div>;
 }
