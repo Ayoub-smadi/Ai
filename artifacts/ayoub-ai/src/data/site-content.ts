@@ -5,6 +5,8 @@ export type StoreProductVariant = {
   size?: string;
   color?: string;
   price: number | string;
+  image?: string;
+  descriptionAr?: string;
 };
 
 export type StoreProduct = {

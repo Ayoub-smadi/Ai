@@ -60,3 +60,8 @@
 - [x] From `/admin/store-orders`, create or reopen an invoice for an order with invoice type «مبيعات» and payment method «أونلاين».
 - [x] Edit invoice number/date, customer and delivery details, item names, quantities and unit prices; persist edits with the order so the invoice can be reopened later.
 - [x] Preview the sales invoice and download it as a PDF.
+
+## Store add-to-cart and option selection
+- [x] Store-card action reads «إضافة إلى السلة»; items without variants add immediately without redirect, while products with variants open their detail page for selection.
+- [x] Variant choices are buttons; choosing a color/size updates its configured image, specifications, and price, and keeps the cart count/link available.
+- [x] Store admin can enter an image URL and specifications per variant; no variant data is invented for products without configured options.
