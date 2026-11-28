@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useRoute } from "wouter";
 import { ArrowLeft, ArrowRight, CalendarDays, Images, MapPin, ShoppingCart, X } from "lucide-react";
 import { useStoreCart } from "@/hooks/use-store-cart";
-import { getPortfolioProjects, getStoreProducts, resolveStoreProductImage, type PortfolioProject, type StoreProduct } from "../data/site-content";
+import { getPortfolioProjects, getStoreProducts, resolveStoreProductImage, type PortfolioProject, type StoreProduct, type StoreProductVariant } from "../data/site-content";
 import "./store-image-size.css";
+import "./store-product-detail.css";
 import "./public-store-category-groups.css";
 import "./project-showcase-gallery.css";
 
@@ -22,7 +23,7 @@ function useSiteContent<T>(read: () => T) {
 
 export function StorePage() {
   const products = useSiteContent<StoreProduct[]>(getStoreProducts);
-  const { items: cartItems, addProduct } = useStoreCart();
+  const { items: cartItems } = useStoreCart();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const categories = useMemo(() => Array.from(new Set(products.map((product) => textOrEmpty(product.category)).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ar")), [products]);
@@ -49,7 +50,36 @@ export function StorePage() {
   }, [visibleProducts, categories]);
   return <main className="public-store-page" dir="rtl" lang="ar"><header className="public-store-page__header"><p className="public-store-page__eyebrow">المتجر الزراعي</p><h1>منتجاتنا</h1><p>تصفّح المنتجات المتاحة في المتجر وابحث عنها حسب الاسم أو الوصف أو الفئة.</p><Link className="public-store-page__cart-link" href="/cart"><ShoppingCart size={17} />السلة <span>{cartItems.reduce((sum, item) => sum + item.quantity, 0)}</span></Link></header>
     {products.length > 0 ? <section className="public-store-page__catalog" aria-label="كتالوج المنتجات"><div className="public-store-page__filters"><label><span>بحث</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن منتج..." aria-label="ابحث في المنتجات" /></label><label><span>الفئة</span><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="تصفية حسب الفئة"><option value="all">كل الفئات</option>{categories.map((item) => <option key={item} value={item}>{categoryNames[item] || item}</option>)}</select></label></div>
-      {visibleProducts.length > 0 ? <div className="public-store-page__category-groups">{visibleGroups.map((group, index) => <section className="public-store-page__category-section" key={group.key} aria-labelledby={`store-category-${index}`}><header className="public-store-page__category-heading"><h2 id={`store-category-${index}`}>{group.name}</h2><span>{group.products.length} منتج</span></header><div className="public-store-page__grid">{group.products.map((product) => { const name = textOrEmpty(product.nameAr) || textOrEmpty(product.nameEn) || "منتج"; const description = textOrEmpty(product.descriptionAr) || textOrEmpty(product.descriptionEn); const image = resolveStoreProductImage(textOrEmpty(product.image)); const hasPrice = product.price !== "" && product.price !== undefined && product.price !== null; return <article className="public-store-page__product" key={product.id}>{image ? <img className="public-store-page__image" src={image} alt={name} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}<div className="public-store-page__product-body"><h3>{name}</h3>{description ? <p className="public-store-page__description">{description}</p> : null}{hasPrice ? <p className="public-store-page__price">{product.price} <span>د.أ</span></p> : null}<button className="public-store-page__add-button" type="button" onClick={() => addProduct(product)}><ShoppingCart size={15} />أضف إلى السلة</button></div></article>; })}</div></section>)}</div> : <p className="public-store-page__empty" role="status">لا توجد منتجات تطابق البحث أو الفئة المحددة.</p>}</section> : <section className="public-store-page__empty-state" role="status"><h2>المخزون فارغ حاليًا</h2><p>أضف منتجات من لوحة الإدارة لعرضها هنا.</p></section>}
+      {visibleProducts.length > 0 ? <div className="public-store-page__category-groups">{visibleGroups.map((group, index) => <section className="public-store-page__category-section" key={group.key} aria-labelledby={`store-category-${index}`}><header className="public-store-page__category-heading"><h2 id={`store-category-${index}`}>{group.name}</h2><span>{group.products.length} منتج</span></header><div className="public-store-page__grid">{group.products.map((product) => { const name = textOrEmpty(product.nameAr) || textOrEmpty(product.nameEn) || "منتج"; const description = textOrEmpty(product.descriptionAr) || textOrEmpty(product.descriptionEn); const image = resolveStoreProductImage(textOrEmpty(product.image)); const hasPrice = product.price !== "" && product.price !== undefined && product.price !== null; return <Link className="public-store-page__product" href={`/store/${encodeURIComponent(product.id)}`} key={product.id}>{image ? <img className="public-store-page__image" src={image} alt={name} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}<div className="public-store-page__product-body"><h3>{name}</h3>{description ? <p className="public-store-page__description">{description}</p> : null}{hasPrice ? <p className="public-store-page__price">{product.price} <span>د.أ</span></p> : null}<span className="public-store-page__add-button"><ShoppingCart size={15} />عرض التفاصيل</span></div></Link>; })}</div></section>)}</div> : <p className="public-store-page__empty" role="status">لا توجد منتجات تطابق البحث أو الفئة المحددة.</p>}</section> : <section className="public-store-page__empty-state" role="status"><h2>المخزون فارغ حاليًا</h2><p>أضف منتجات من لوحة الإدارة لعرضها هنا.</p></section>}
+  </main>;
+}
+
+
+export function StoreProductDetailPage() {
+  const [, params] = useRoute<{ productId: string }>('/store/:productId');
+  const products = useSiteContent<StoreProduct[]>(getStoreProducts);
+  const product = products.find((item) => item.id === params?.productId);
+  const { addProduct } = useStoreCart();
+  const [variantId, setVariantId] = useState('');
+  useEffect(() => { setVariantId(product?.variants?.[0]?.id || ''); }, [product?.id]);
+  if (!product) return <main className="store-product-detail" dir="rtl" lang="ar"><Link href="/store" className="store-product-detail__back"><ArrowRight size={16} />العودة إلى المتجر</Link><h1>المنتج غير موجود</h1><p>قد يكون المنتج قد أُزيل من المخزون.</p></main>;
+  const variants = (product.variants || []).filter((variant) => variant.id);
+  const selected = variants.find((variant) => variant.id === variantId);
+  const price = selected?.price ?? product.price;
+  const image = resolveStoreProductImage(textOrEmpty(product.image));
+  const optionLabel = (variant: StoreProductVariant) => [variant.size, variant.color].map(textOrEmpty).filter(Boolean).join(' — ') || 'خيار';
+  const hasPrice = price !== '' && price !== undefined && price !== null;
+  return <main className="store-product-detail" dir="rtl" lang="ar">
+    <Link href="/store" className="store-product-detail__back"><ArrowRight size={16} />العودة إلى المتجر</Link>
+    <article className="store-product-detail__panel">
+      <div className="store-product-detail__visual">{image ? <img src={image} alt={textOrEmpty(product.nameAr) || 'صورة المنتج'} onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <div className="store-product-detail__placeholder">لا توجد صورة</div>}</div>
+      <div className="store-product-detail__content"><span className="store-product-detail__category">{categoryNames[product.category] || product.category || 'منتج زراعي'}</span><h1>{textOrEmpty(product.nameAr) || textOrEmpty(product.nameEn) || 'منتج'}</h1>{product.descriptionAr && <p className="store-product-detail__description">{product.descriptionAr}</p>}
+        {variants.length > 0 && <label className="store-product-detail__option"><span>اختر الحجم واللون</span><select value={variantId} onChange={(event) => setVariantId(event.target.value)}>{variants.map((variant) => <option key={variant.id} value={variant.id}>{optionLabel(variant)}{variant.price !== '' ? ` — ${variant.price} د.أ` : ''}</option>)}</select></label>}
+        {variants.length === 0 && <p className="store-product-detail__no-options">لا توجد خيارات مضافة لهذا المنتج حاليًا.</p>}
+        <p className="store-product-detail__price">{hasPrice ? <>{price} <small>د.أ</small></> : 'السعر عند التأكيد'}</p>
+        <button type="button" className="btn store-product-detail__add" disabled={variants.length > 0 && !selected} onClick={() => addProduct(product, selected)}><ShoppingCart size={17} />أضف إلى السلة</button>
+      </div>
+    </article>
   </main>;
 }
 

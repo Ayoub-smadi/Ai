@@ -52,7 +52,7 @@ import { createAdminDocumentId, dateBasedDocumentNumber, localDateString, migrat
 import OrderAlertControl, { activateOrderAlertsFromUserGesture } from '@/components/order-alert-control';
 import { getQuoteRequests, saveQuoteRequests } from '@/data/quote-requests';
 import LandscapePlan, { type LandscapeAnnotation, type LandscapeCustomStamp, type LandscapeCustomTool, type LandscapeDrawing, type LandscapeGlobalShape, type LandscapeTextNote, type LandscapeQuoteItem } from '@/pages/landscape-plan';
-import { ProjectsPage, StorePage } from '@/pages/public-showcase-pages';
+import { ProjectsPage, StorePage, StoreProductDetailPage } from '@/pages/public-showcase-pages';
 import StoreCartPage from '@/pages/store-cart-page';
 import StoreCheckoutPage from '@/pages/store-checkout-page';
 import AboutUsPage from '@/pages/about-us-page';
@@ -421,6 +421,7 @@ function PublicPlantTreatmentRoute() { const { lang } = useLang(); return <><Pub
 function PublicLandscapeEditorRoute() { return <AccountGate><PublicPageNav /><LandscapeEditorPage /></AccountGate>; }
 function PublicProjectsRoute() { return <><PublicPageNav /><ProjectsPage /></>; }
 function PublicStoreRoute() { return <><PublicPageNav /><StorePage /></>; }
+function PublicStoreProductRoute() { return <><PublicPageNav /><StoreProductDetailPage /></>; }
 function PublicPlantGuideRoute() { return <AccountGate><PublicPageNav /><PlantGuidePage /></AccountGate>; }
 function PublicPlantDetailRoute() { return <AccountGate><PublicPageNav /><PlantDetailPage /></AccountGate>; }
 function Protected({ children }: { children: ReactNode }) {
@@ -1597,6 +1598,7 @@ function PublicPreviewRouter() {
     <Route path="/quotes" component={QuoteCatalogPage} />
     <Route path="/about" component={AboutUsPage} />
     <Route path="/projects" component={PublicProjectsRoute} />
+    <Route path="/store/:productId" component={PublicStoreProductRoute} />
     <Route path="/store" component={PublicStoreRoute} />
     <Route path="/cart" component={StoreCartPage} />
     <Route path="/checkout" component={StoreCheckoutPage} />
@@ -1638,6 +1640,7 @@ function Router() {
     <Route path="/chat" component={AiChatPage} />
     <Route path="/quotes" component={QuoteCatalogPage} />
     <Route path="/projects" component={PublicProjectsRoute} />
+    <Route path="/store/:productId" component={PublicStoreProductRoute} />
     <Route path="/store" component={PublicStoreRoute} />
     <Route path="/cart" component={StoreCartPage} />
     <Route path="/checkout" component={StoreCheckoutPage} />

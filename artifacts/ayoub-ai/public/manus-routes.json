@@ -21,6 +21,10 @@
       "title": "Projects & Work"
     },
     {
+      "path": "/store/:productId",
+      "title": "تفاصيل المنتج"
+    },
+    {
       "path": "/store",
       "title": "Store"
     },

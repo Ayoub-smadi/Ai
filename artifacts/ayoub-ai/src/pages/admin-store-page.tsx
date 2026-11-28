@@ -1,12 +1,12 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { ArrowRight, ImagePlus, Pencil, Plus, Save, Search, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'wouter';
-import { getStoreProducts, saveStoreProducts, STORE_PRODUCTS_STORAGE_KEY, resolveStoreProductImage, type StoreProduct } from '@/data/site-content';
+import { getStoreProducts, saveStoreProducts, STORE_PRODUCTS_STORAGE_KEY, resolveStoreProductImage, type StoreProduct, type StoreProductVariant } from '@/data/site-content';
 import { moveAdminEntityToTrash } from '@/lib/admin-document-storage';
 import './admin-store-image-upload.css';
 import './store-image-size.css';
 
-const blankProduct = (): StoreProduct => ({ id: '', nameAr: '', nameEn: '', image: '', descriptionAr: '', descriptionEn: '', category: '', price: '' });
+const blankProduct = (): StoreProduct => ({ id: '', nameAr: '', nameEn: '', image: '', descriptionAr: '', descriptionEn: '', category: '', price: '', variants: [] });
 const categoryLabels: Record<string, string> = { irrigation: 'شبكات الري', 'garden-decor': 'ديكور الحديقة', pots: 'أحواض وأصص', tools: 'أدوات زراعية', fertilizers: 'أسمدة ومحسنات تربة', pesticides: 'مبيدات ومعالجات', seeds: 'بذور', 'seedling-supplies': 'مستلزمات المشاتل' };
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_STORED_IMAGE_BYTES = 480 * 1024;
@@ -67,6 +67,9 @@ export default function AdminStorePage() {
   const [uploading, setUploading] = useState(false);
   const imageInput = useRef<HTMLInputElement>(null);
   const updateDraft = (patch: Partial<StoreProduct>) => setDraft((current) => current ? { ...current, ...patch } : current);
+  const updateVariant = (index: number, patch: Partial<StoreProductVariant>) => updateDraft({ variants: (draft?.variants || []).map((variant, currentIndex) => currentIndex === index ? { ...variant, ...patch } : variant) });
+  const addVariant = () => updateDraft({ variants: [...(draft?.variants || []), { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, size: '', color: '', price: draft?.price ?? '' }] });
+  const removeVariant = (index: number) => updateDraft({ variants: (draft?.variants || []).filter((_, currentIndex) => currentIndex !== index) });
   const visible = products.filter((product) => `${product.nameAr} ${product.nameEn} ${product.category}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const openNewProduct = () => { setDraft(blankProduct()); setError(''); };
   const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -89,7 +92,9 @@ export default function AdminStorePage() {
   const save = (event: FormEvent) => {
     event.preventDefault();
     if (!draft?.nameAr.trim()) { setError('يرجى إدخال اسم المنتج بالعربية.'); return; }
-    const normalized = { ...draft, price: draft.price === '' ? '' : Number(draft.price) };
+    if ((draft.variants || []).some((variant) => !(variant.size || '').trim() && !(variant.color || '').trim())) { setError('أدخل حجمًا أو لونًا لكل خيار.'); return; }
+    if ((draft.variants || []).some((variant) => variant.price === '' || !Number.isFinite(Number(variant.price)) || Number(variant.price) < 0)) { setError('أدخل سعرًا صحيحًا لكل خيار.'); return; }
+    const normalized = { ...draft, price: draft.price === '' ? '' : Number(draft.price), variants: (draft.variants || []).map((variant) => ({ ...variant, price: variant.price === '' ? '' : Number(variant.price) })) };
     const next = draft.id ? products.map((product) => product.id === draft.id ? normalized : product) : [{ ...normalized, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...products];
     try {
       saveStoreProducts(next);
@@ -109,6 +114,7 @@ export default function AdminStorePage() {
       <label>اسم المنتج بالعربية *<input required value={draft.nameAr} onChange={(event) => updateDraft({ nameAr: event.target.value })} /></label>
       <div className="content-admin-form-row"><label>الاسم بالإنجليزية<input dir="ltr" value={draft.nameEn} onChange={(event) => updateDraft({ nameEn: event.target.value })} /></label><label>الفئة<select value={draft.category} onChange={(event) => updateDraft({ category: event.target.value })}><option value="">اختر الفئة</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
       <div className="content-admin-form-row"><label>السعر (د.أ)<input type="number" min="0" step="0.01" value={draft.price} onChange={(event) => updateDraft({ price: event.target.value === '' ? '' : Number(event.target.value) })} /></label><div className="content-admin-image-field"><span>صورة المنتج</span><input ref={imageInput} className="content-admin-image-input" type="file" accept="image/*" onChange={uploadImage} aria-label="رفع صورة المنتج من الجهاز" /><div className={`content-admin-image-preview ${draft.image ? 'has-image' : ''}`}>{draft.image ? <img src={resolveStoreProductImage(draft.image)} alt={`معاينة ${draft.nameAr || 'صورة المنتج'}`} /> : <div><ImagePlus size={22} /><small>لا توجد صورة</small></div>}</div><div className="content-admin-image-actions"><button type="button" className="btn secondary small" onClick={() => imageInput.current?.click()} disabled={uploading}><Upload size={13} />{uploading ? 'جاري تجهيز الصورة…' : draft.image ? 'تغيير الصورة' : 'رفع صورة من الجهاز'}</button>{draft.image && <button type="button" className="btn danger small" onClick={() => updateDraft({ image: '' })} disabled={uploading}><Trash2 size={13} />إزالة الصورة</button>}</div><small className="content-admin-image-hint">JPG أو PNG أو أي صيغة صورة. الحد الأقصى 8 ميغابايت؛ تُضغط الصورة تلقائيًا قبل الحفظ.</small></div></div>
+      <section className="admin-store-variants"><div className="admin-store-variants__heading"><strong>خيارات المنتج وأسعارها</strong><button type="button" className="btn secondary small" onClick={addVariant}><Plus size={14} />إضافة خيار</button></div><p>أدخل كل تركيبة متاحة من الحجم واللون وسعرها الحقيقي. لا تُضاف خيارات تلقائيًا.</p>{(draft.variants || []).map((variant, index) => <div className="admin-store-variant-row" key={variant.id}><label>الحجم<input value={variant.size || ''} onChange={(event) => updateVariant(index, { size: event.target.value })} placeholder="مثال: 1 لتر" /></label><label>اللون<input value={variant.color || ''} onChange={(event) => updateVariant(index, { color: event.target.value })} placeholder="مثال: أخضر" /></label><label>السعر (د.أ)<input type="number" min="0" step="0.01" value={variant.price} onChange={(event) => updateVariant(index, { price: event.target.value === '' ? '' : Number(event.target.value) })} /></label><button type="button" className="btn danger small" onClick={() => removeVariant(index)} aria-label="حذف الخيار"><Trash2 size={14} /></button></div>)}</section>
       <label>وصف المنتج بالعربية<textarea rows={3} value={draft.descriptionAr} onChange={(event) => updateDraft({ descriptionAr: event.target.value })} /></label><label>وصف المنتج بالإنجليزية<textarea rows={3} dir="ltr" value={draft.descriptionEn} onChange={(event) => updateDraft({ descriptionEn: event.target.value })} /></label>{error && <p className="admin-error" role="alert">{error}</p>}<footer><button type="button" className="btn secondary" onClick={() => !uploading && setDraft(null)}>إلغاء</button><button className="btn" type="submit" disabled={uploading}><Save size={15} />حفظ المنتج</button></footer></form></div>}
   </main>;
 }

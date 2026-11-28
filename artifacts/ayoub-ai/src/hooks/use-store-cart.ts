@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { addProductToCart, getStoreCart, removeCartItem, saveStoreCart, updateCartItemQuantity, type StoreCartItem } from '@/data/store-cart';
-import type { StoreProduct } from '@/data/site-content';
+import { addProductToCart, getStoreCart, getStoreCartItemKey, removeCartItem, saveStoreCart, updateCartItemQuantity, type StoreCartItem } from '@/data/store-cart';
+import type { StoreProduct, StoreProductVariant } from '@/data/site-content';
 
 const CART_STORAGE_KEY = 'qadri-store-cart-v1';
 
@@ -24,10 +24,10 @@ export function useStoreCart() {
     setItems(next);
     saveStoreCart(next);
   };
-  const addProduct = (product: StoreProduct) => persist(addProductToCart(getStoreCart(), product));
-  const setQuantity = (productId: string, quantity: number) => persist(updateCartItemQuantity(getStoreCart(), productId, quantity));
-  const removeProduct = (productId: string) => persist(removeCartItem(getStoreCart(), productId));
+  const addProduct = (product: StoreProduct, variant?: StoreProductVariant) => persist(addProductToCart(getStoreCart(), product, variant));
+  const setQuantity = (itemKey: string, quantity: number) => persist(updateCartItemQuantity(getStoreCart(), itemKey, quantity));
+  const removeProduct = (itemKey: string) => persist(removeCartItem(getStoreCart(), itemKey));
   const clear = () => persist([]);
 
-  return { items, addProduct, setQuantity, removeProduct, clear };
+  return { items, addProduct, setQuantity, removeProduct, getItemKey: getStoreCartItemKey, clear };
 }

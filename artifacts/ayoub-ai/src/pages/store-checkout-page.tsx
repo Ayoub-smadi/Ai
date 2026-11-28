@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, CheckCircle2, MapPin, ShoppingCart } from 'lucide-react';
 import { submitStoreOrder, type StoreOrder } from '@/data/store-orders';
-import { saveStoreCart } from '@/data/store-cart';
+import { getStoreCartItemKey, saveStoreCart } from '@/data/store-cart';
 import { useStoreCart } from '@/hooks/use-store-cart';
 
 const money = (amount: number) => `${amount.toFixed(2)} د.أ`;
@@ -66,7 +66,7 @@ export default function StoreCheckoutPage() {
 
       <aside className="store-checkout-summary">
         <h2>مراجعة المنتجات</h2>
-        <div className="store-checkout-items">{items.map((item) => <div key={item.productId}><span>{item.name} × {item.quantity}</span><strong>{item.price !== undefined ? money(item.price * item.quantity) : 'السعر عند التأكيد'}</strong></div>)}</div>
+        <div className="store-checkout-items">{items.map((item) => <div key={getStoreCartItemKey(item)}><span>{item.name} × {item.quantity}</span><strong>{item.price !== undefined ? money(item.price * item.quantity) : 'السعر عند التأكيد'}</strong></div>)}</div>
         <div className="store-checkout-total"><span>المجموع</span><strong>{missingPrices ? 'يُحدَّد عند التأكيد' : money(total)}</strong></div>
         {missingPrices && <p className="store-checkout-privacy">بعض المنتجات بلا سعر مُدخل؛ ستؤكد الإدارة السعر معك قبل التجهيز.</p>}
         <Link className="store-flow-back" href="/cart">العودة إلى السلة</Link>

@@ -1,5 +1,12 @@
 import backup from './alqadri-backup.json';
 
+export type StoreProductVariant = {
+  id: string;
+  size?: string;
+  color?: string;
+  price: number | string;
+};
+
 export type StoreProduct = {
   id: string;
   nameAr: string;
@@ -9,6 +16,7 @@ export type StoreProduct = {
   descriptionEn: string;
   category: string;
   price: number | string;
+  variants?: StoreProductVariant[];
 };
 
 export type PortfolioProject = {

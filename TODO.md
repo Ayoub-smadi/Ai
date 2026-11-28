@@ -49,3 +49,9 @@
 - [ ] عدم عرض صورة على أنها للصنف المحدد إلا إذا تأكد التطابق؛ إظهار المصدر والرخصة، وإخفاء الصور غير المؤكدة مع إتاحة استبدالها من محرر الأدمن برفع صورة.
 - [ ] مزامنة تعديلات المحرر والصور عبر تخزين Neon الموجود عند تهيئة اتصال قاعدة البيانات؛ عدم الادعاء باستمرارية التخزين إذا لم يكن الاتصال متاحًا.
 - [ ] إزالة النصوص العامة أو التوصيات المشتركة غير المرتبطة بمصدر عن النبات؛ الحقول غير الموثقة تبقى ظاهرة كحالة تحقق، لا كمعلومة أو اقتراح.
+
+
+## Store product detail pages and selectable variants
+- [x] Clicking a listed store product opens its own `/store/:productId` page and product tiles remain limited to inventory entries.
+- [x] Product detail supports size/color variant selection and updates the displayed price from the selected variant; no variant data is invented for existing products.
+- [x] Store management can create and edit variant rows with size, color, and a required valid price; the chosen variant and price persist as a separate cart line through checkout and the order record.
