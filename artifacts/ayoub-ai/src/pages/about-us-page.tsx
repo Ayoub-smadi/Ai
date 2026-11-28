@@ -38,7 +38,7 @@ const branches = ['فرع جرش – الرشايدة', 'فرع جرش – ال�
 
 export default function AboutUsPage() {
   return <main className="about-page" dir="rtl" lang="ar">
-    <header className="about-page-topbar"><Link href="/" className="about-site-brand"><img src="/chatbot.png" alt="" /><span><strong>مشاتل القادري الزراعية</strong><small>جرش · منذ 1967</small></span></Link><nav aria-label="التنقل"><Link href="/">الرئيسية</Link><Link href="/projects">مشاريعنا وأعمالنا</Link><Link href="/store">المتجر</Link></nav></header>
+    <header className="about-page-topbar"><Link href="/" className="about-site-brand"><img src="/chatbot.png" alt="" /><span><strong>مشاتل القادري الزراعية</strong><small>جرش · منذ 1967</small></span></Link><nav aria-label="التنقل"><Link href="/">الرئيسية</Link><Link href="/projects">مشاريعنا</Link><Link href="/store">المتجر</Link></nav></header>
     <section className="about-hero" style={{ backgroundImage: "linear-gradient(90deg, rgba(2,6,24,.14), rgba(2,6,24,.84)), url('/about/nursery-cover.jpg')" }}>
       <div className="about-hero-content"><span className="about-kicker"><span /> منذ عام 1967 · جرش، الأردن</span><h1>مشاتل القادري<br /><em>الزراعية</em></h1><p>من جرش، نزرع منذ ستة عقود.</p><div className="about-hero-tags"><span>أشتال الزيتون</span><span>الأشجار المثمرة والحرجية</span><span>نباتات الزينة</span><span>مواد زراعية</span></div><a className="about-scroll-link" href="#about-story">اكتشف حكايتنا <ArrowDown size={16} /></a></div>
       <div className="about-hero-index"><strong>1967</strong><span>بداية الحكاية</span></div>

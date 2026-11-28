@@ -195,6 +195,10 @@
     {
       "path": "/landscape-3d",
       "title": "سكيب 3D"
+    },
+    {
+      "path": "/irrigation-plan",
+      "title": "Irrigation plan"
     }
   ]
 }
