@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, CheckCircle2, MapPin, ShoppingCart } from 'lucide-react';
-import { submitStoreOrder, type StoreOrder } from '@/data/store-orders';
+import { formatStoreOrderNumber, submitStoreOrder, type StoreOrder } from '@/data/store-orders';
 import { getStoreCartItemKey, saveStoreCart } from '@/data/store-cart';
 import { useStoreCart } from '@/hooks/use-store-cart';
 
@@ -38,7 +38,7 @@ export default function StoreCheckoutPage() {
       <span className="store-flow-eyebrow">تم استلام طلبك</span>
       <h1>شكرًا لطلبك، {submittedOrder.customerName}</h1>
       <p>تم إرسال طلبك إلى سجل طلبات المتجر. سيتواصل معك فريقنا على الرقم المدخل لتأكيد التفاصيل والتوصيل.</p>
-      <div className="store-order-reference"><span>رقم الطلب</span><strong dir="ltr">{submittedOrder.id}</strong><small>الحالة: جديد</small></div>
+      <div className="store-order-reference"><span>رقم الطلب</span><strong dir="auto">{formatStoreOrderNumber(submittedOrder)}</strong><small>الحالة: جديد</small></div>
       <Link className="btn store-flow-primary" href="/store">العودة إلى المتجر <ArrowLeft size={16} /></Link>
     </section>
   </main>;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CheckCircle2, Clock3, FileText, LayoutDashboard, MapPin, Package, Phone, ShoppingBag, Truck } from 'lucide-react';
 import { Link } from 'wouter';
-import { getStoreOrders, saveStoreOrderInvoice, updateStoreOrderStatus, type StoreOrder, type StoreOrderInvoice, type StoreOrderStatus } from '@/data/store-orders';
+import { formatStoreOrderNumber, getStoreOrders, saveStoreOrderInvoice, updateStoreOrderStatus, type StoreOrder, type StoreOrderInvoice, type StoreOrderStatus } from '@/data/store-orders';
 import StoreOrderInvoiceEditor from './store-order-invoice';
 
 const statusLabels: Record<StoreOrderStatus, string> = {
@@ -76,7 +76,7 @@ export default function AdminStoreOrdersPage() {
           <select id={`store-order-status-${order.id}`} value={order.status || 'new'} onChange={(event) => setStatus(order, event.target.value as StoreOrderStatus)}>
             {(Object.entries(statusLabels) as [StoreOrderStatus, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <small>رقم الطلب: <b dir="ltr">{order.id}</b></small>
+          <small>رقم الطلب: <b dir="auto">{formatStoreOrderNumber(order, orders)}</b></small>
           <button className="btn secondary small" type="button" onClick={() => setInvoiceOrder(order)}><FileText size={14} />{order.invoice ? 'فتح الفاتورة' : 'إنشاء فاتورة'}</button>
         </div>
       </article>)}</div> : <div className="store-orders-empty"><div><ShoppingBag size={29} /></div><h3>لا توجد طلبات متجر بعد</h3><p>عند إرسال طلب شراء من المتجر سيظهر هنا مع بيانات العميل وموقع التوصيل.</p><Link className="btn" href="/store">فتح المتجر <ArrowRight size={14} /></Link></div>}
