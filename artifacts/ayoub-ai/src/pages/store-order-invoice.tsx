@@ -6,8 +6,8 @@ import './store-order-invoice.css';
 const makeInvoice = (order: StoreOrder): StoreOrderInvoice => ({
   number: `SALE-${order.id.slice(-8).toUpperCase()}`,
   date: new Date().toISOString().slice(0, 10),
-  type: 'مبيعات',
-  paymentMethod: 'أونلاين',
+  type: 'مبيعات اونلاين',
+  paymentMethod: 'عند استلام الطلب',
   customerName: order.customerName || '',
   phone: order.phone || '',
   region: order.region || '',
@@ -16,7 +16,7 @@ const makeInvoice = (order: StoreOrder): StoreOrderInvoice => ({
 });
 
 export default function StoreOrderInvoice({ order, onClose, onSave }: { order: StoreOrder; onClose: () => void; onSave: (invoice: StoreOrderInvoice) => void }) {
-  const [invoice, setInvoice] = useState<StoreOrderInvoice>(() => order.invoice || makeInvoice(order));
+  const [invoice, setInvoice] = useState<StoreOrderInvoice>(() => ({ ...(order.invoice || makeInvoice(order)), type: 'مبيعات اونلاين', paymentMethod: 'عند استلام الطلب' }));
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const sheetRef = useRef<HTMLElement>(null);
@@ -29,6 +29,7 @@ export default function StoreOrderInvoice({ order, onClose, onSave }: { order: S
     setBusy(true);
     try {
       await document.fonts?.ready;
+      await Promise.all(Array.from(sheetRef.current.querySelectorAll('img')).map((image) => image.decode().catch(() => undefined)));
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
       const canvas = await html2canvas(sheetRef.current, { scale: 2, backgroundColor: '#fff', logging: false });
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
@@ -46,17 +47,17 @@ export default function StoreOrderInvoice({ order, onClose, onSave }: { order: S
       <label>رقم الفاتورة<input value={invoice.number} onChange={(event) => patch({ number: event.target.value })} /></label><label>تاريخ الفاتورة<input type="date" value={invoice.date} onChange={(event) => patch({ date: event.target.value })} /></label>
       <label>الزبون<input value={invoice.customerName} onChange={(event) => patch({ customerName: event.target.value })} /></label><label>رقم الهاتف<input dir="ltr" value={invoice.phone} onChange={(event) => patch({ phone: event.target.value })} /></label>
       <label>المنطقة<input value={invoice.region} onChange={(event) => patch({ region: event.target.value })} /></label><label>العنوان<input value={invoice.address} onChange={(event) => patch({ address: event.target.value })} /></label>
-      <strong className="store-order-invoice-fixed">نوع الفاتورة: مبيعات <span>طريقة الدفع: أونلاين</span></strong>
+      <strong className="store-order-invoice-fixed">نوع الفاتورة: مبيعات اونلاين <span>طريقة الدفع: عند استلام الطلب</span></strong>
       <h3>بنود الفاتورة</h3>{invoice.items.map((item, index) => <div className="store-order-invoice-line-edit" key={`${index}-${item.name}`}><label>الصنف<input value={item.name} onChange={(event) => updateLine(index, { name: event.target.value })} /></label><label>الكمية<input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateLine(index, { quantity: Math.max(1, Number(event.target.value) || 1) })} /></label><label>سعر الوحدة (د.أ)<input type="number" min="0" step="0.001" value={item.price} onChange={(event) => updateLine(index, { price: Math.max(0, Number(event.target.value) || 0) })} /></label></div>)}
       <p className="store-order-invoice-total">الإجمالي: <b>{total.toFixed(3)} د.أ</b></p>{notice && <p role="status" className="store-order-invoice-notice">{notice}</p>}
       <footer><button className="btn secondary" type="submit"><Save size={14} />حفظ التعديلات</button><button className="btn" type="button" onClick={() => void downloadPdf()} disabled={busy}><FileDown size={15} />{busy ? 'جارٍ إنشاء PDF…' : 'تنزيل PDF'}</button></footer>
     </form>
     <article className="store-order-invoice-sheet" ref={sheetRef}>
-      <header><div><span>مؤسسة القادري الزراعية</span><h1>فاتورة مبيعات</h1></div><div><b>{invoice.number}</b><small>{invoice.date}</small></div></header>
-      <div className="store-order-invoice-badges"><span>نوع الفاتورة: مبيعات</span><span>طريقة الدفع: أونلاين</span></div>
+      <header><div className="store-order-invoice-brand"><img src="/alqadri-logo.png" alt="" /><div><span>مؤسسة القادري الزراعية</span><h1>فاتورة مبيعات اونلاين</h1></div></div><div><b>{invoice.number}</b><small>{invoice.date}</small></div></header>
+      <div className="store-order-invoice-badges"><span>نوع الفاتورة: مبيعات اونلاين</span><span>طريقة الدفع: عند استلام الطلب</span></div>
       <section className="store-order-invoice-customer"><p><b>الزبون:</b> {invoice.customerName || '—'}</p><p><b>الهاتف:</b> {invoice.phone || '—'}</p><p><b>المنطقة:</b> {invoice.region || '—'}</p><p><b>العنوان:</b> {invoice.address || '—'}</p></section>
       <table><thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>{invoice.items.map((item, index) => <tr key={`${index}-${item.name}`}><td>{item.name}</td><td>{item.quantity}</td><td>{item.price.toFixed(3)} د.أ</td><td>{(item.quantity * item.price).toFixed(3)} د.أ</td></tr>)}</tbody></table>
-      <strong className="store-order-invoice-sheet-total">المجموع: {total.toFixed(3)} د.أ</strong><small className="store-order-invoice-reference">مرجع طلب المتجر: {order.id}</small>
+      <strong className="store-order-invoice-sheet-total">المجموع: {total.toFixed(3)} د.أ</strong>
     </article></div>
   </section></div>;
 }

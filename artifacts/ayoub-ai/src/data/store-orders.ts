@@ -4,8 +4,8 @@ export type StoreOrderStatus = 'new' | 'processing' | 'shipped' | 'completed';
 export type StoreOrderInvoice = {
   number: string;
   date: string;
-  type: 'مبيعات';
-  paymentMethod: 'أونلاين';
+  type: 'مبيعات اونلاين';
+  paymentMethod: 'عند استلام الطلب';
   customerName: string;
   phone: string;
   region: string;
