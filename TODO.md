@@ -67,4 +67,4 @@
 - [x] Store admin can enter an image URL and specifications per variant; no variant data is invented for products without configured options.
 
 ## Plant guide green palette
-- [x] Remove the yellow accents from the “دليل نباتات القادري” feature on the homepage and the `/plants` guide hero; use green tones consistent with the site while preserving readable contrast.
+- [x] Remove the yellow accents from the “دليل نباتات القادري” feature on the homepage and the `/plants` guide hero; use white accents while preserving readable contrast.
