@@ -52,8 +52,8 @@ export default function StoreOrderInvoice({ order, onClose, onSave }: { order: S
       <p className="store-order-invoice-total">الإجمالي: <b>{total.toFixed(3)} د.أ</b></p>{notice && <p role="status" className="store-order-invoice-notice">{notice}</p>}
       <footer><button className="btn secondary" type="submit"><Save size={14} />حفظ التعديلات</button><button className="btn" type="button" onClick={() => void downloadPdf()} disabled={busy}><FileDown size={15} />{busy ? 'جارٍ إنشاء PDF…' : 'تنزيل PDF'}</button></footer>
     </form>
-    <article className="store-order-invoice-sheet" ref={sheetRef}>
-      <header><div className="store-order-invoice-brand"><img src="/alqadri-logo.png" alt="" /><div><span>مؤسسة القادري الزراعية</span><h1>فاتورة مبيعات اونلاين</h1></div></div><div><b>{invoice.number}</b><small>{invoice.date}</small></div></header>
+    <article className="store-order-invoice-sheet" ref={sheetRef} dir="rtl" lang="ar">
+      <header><div className="store-order-invoice-brand"><img src="/alqadri-logo.png" alt="" /><div><h1>متجر القادري</h1></div></div><div><b>{invoice.number}</b><small>{invoice.date}</small></div></header>
       <div className="store-order-invoice-badges"><span>نوع الفاتورة: مبيعات اونلاين</span><span>طريقة الدفع: عند استلام الطلب</span></div>
       <section className="store-order-invoice-customer"><p><b>الزبون:</b> {invoice.customerName || '—'}</p><p><b>الهاتف:</b> {invoice.phone || '—'}</p><p><b>المنطقة:</b> {invoice.region || '—'}</p><p><b>العنوان:</b> {invoice.address || '—'}</p></section>
       <table><thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>{invoice.items.map((item, index) => <tr key={`${index}-${item.name}`}><td>{item.name}</td><td>{item.quantity}</td><td>{item.price.toFixed(3)} د.أ</td><td>{(item.quantity * item.price).toFixed(3)} د.أ</td></tr>)}</tbody></table>
