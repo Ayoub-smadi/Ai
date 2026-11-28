@@ -1,6 +1,17 @@
 import type { StoreCartItem } from './store-cart';
 
 export type StoreOrderStatus = 'new' | 'processing' | 'shipped' | 'completed';
+export type StoreOrderInvoice = {
+  number: string;
+  date: string;
+  type: 'مبيعات';
+  paymentMethod: 'أونلاين';
+  customerName: string;
+  phone: string;
+  region: string;
+  address: string;
+  items: { name: string; quantity: number; price: number }[];
+};
 export type StoreOrder = {
   id: string;
   createdAt: string;
@@ -11,6 +22,7 @@ export type StoreOrder = {
   items: StoreCartItem[];
   total?: number;
   status: StoreOrderStatus;
+  invoice?: StoreOrderInvoice;
 };
 
 const STORAGE_KEY = 'qadri-store-orders-v1';
@@ -42,4 +54,8 @@ export function submitStoreOrder(input: Omit<StoreOrder, 'id' | 'createdAt' | 's
 
 export function updateStoreOrderStatus(id: string, status: StoreOrderStatus) {
   save(getStoreOrders().map((order) => order.id === id ? { ...order, status } : order));
+}
+
+export function saveStoreOrderInvoice(id: string, invoice: StoreOrderInvoice) {
+  save(getStoreOrders().map((order) => order.id === id ? { ...order, invoice } : order));
 }
