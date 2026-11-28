@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, Images, MapPin, ShoppingCart, X } 
 import { useStoreCart } from "@/hooks/use-store-cart";
 import { getPortfolioProjects, getStoreProducts, resolveStoreProductImage, type PortfolioProject, type StoreProduct } from "../data/site-content";
 import "./store-image-size.css";
+import "./public-store-category-groups.css";
 import "./project-showcase-gallery.css";
 
 const textOrEmpty = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
@@ -33,9 +34,22 @@ export function StorePage() {
       return matchesCategory && (!query || searchable.includes(query));
     });
   }, [search, category, products]);
+  const visibleGroups = useMemo(() => {
+    const grouped = new Map<string, StoreProduct[]>();
+    for (const product of visibleProducts) {
+      const key = textOrEmpty(product.category) || "uncategorized";
+      grouped.set(key, [...(grouped.get(key) || []), product]);
+    }
+    const order = [...categories.filter((item) => grouped.has(item)), ...(grouped.has("uncategorized") ? ["uncategorized"] : [])];
+    return order.map((key) => ({
+      key,
+      name: key === "uncategorized" ? "منتجات أخرى" : categoryNames[key] || key,
+      products: grouped.get(key) || [],
+    }));
+  }, [visibleProducts, categories]);
   return <main className="public-store-page" dir="rtl" lang="ar"><header className="public-store-page__header"><p className="public-store-page__eyebrow">المتجر الزراعي</p><h1>منتجاتنا</h1><p>تصفّح المنتجات المتاحة في المتجر وابحث عنها حسب الاسم أو الوصف أو الفئة.</p><Link className="public-store-page__cart-link" href="/cart"><ShoppingCart size={17} />السلة <span>{cartItems.reduce((sum, item) => sum + item.quantity, 0)}</span></Link></header>
     {products.length > 0 ? <section className="public-store-page__catalog" aria-label="كتالوج المنتجات"><div className="public-store-page__filters"><label><span>بحث</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن منتج..." aria-label="ابحث في المنتجات" /></label><label><span>الفئة</span><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="تصفية حسب الفئة"><option value="all">كل الفئات</option>{categories.map((item) => <option key={item} value={item}>{categoryNames[item] || item}</option>)}</select></label></div>
-      {visibleProducts.length > 0 ? <div className="public-store-page__grid">{visibleProducts.map((product) => { const name = textOrEmpty(product.nameAr) || textOrEmpty(product.nameEn) || "منتج"; const description = textOrEmpty(product.descriptionAr) || textOrEmpty(product.descriptionEn); const image = resolveStoreProductImage(textOrEmpty(product.image)); const hasPrice = product.price !== "" && product.price !== undefined && product.price !== null; return <article className="public-store-page__product" key={product.id}>{image ? <img className="public-store-page__image" src={image} alt={name} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}<div className="public-store-page__product-body">{textOrEmpty(product.category) ? <p className="public-store-page__category">{categoryNames[textOrEmpty(product.category)] || textOrEmpty(product.category)}</p> : null}<h2>{name}</h2>{description ? <p className="public-store-page__description">{description}</p> : null}{hasPrice ? <p className="public-store-page__price">{product.price} <span>د.أ</span></p> : null}<button className="public-store-page__add-button" type="button" onClick={() => addProduct(product)}><ShoppingCart size={15} />أضف إلى السلة</button></div></article>; })}</div> : <p className="public-store-page__empty" role="status">لا توجد منتجات تطابق البحث أو الفئة المحددة.</p>}</section> : <section className="public-store-page__empty-state" role="status"><h2>المخزون فارغ حاليًا</h2><p>أضف منتجات من لوحة الإدارة لعرضها هنا.</p></section>}
+      {visibleProducts.length > 0 ? <div className="public-store-page__category-groups">{visibleGroups.map((group, index) => <section className="public-store-page__category-section" key={group.key} aria-labelledby={`store-category-${index}`}><header className="public-store-page__category-heading"><h2 id={`store-category-${index}`}>{group.name}</h2><span>{group.products.length} منتج</span></header><div className="public-store-page__grid">{group.products.map((product) => { const name = textOrEmpty(product.nameAr) || textOrEmpty(product.nameEn) || "منتج"; const description = textOrEmpty(product.descriptionAr) || textOrEmpty(product.descriptionEn); const image = resolveStoreProductImage(textOrEmpty(product.image)); const hasPrice = product.price !== "" && product.price !== undefined && product.price !== null; return <article className="public-store-page__product" key={product.id}>{image ? <img className="public-store-page__image" src={image} alt={name} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}<div className="public-store-page__product-body"><h3>{name}</h3>{description ? <p className="public-store-page__description">{description}</p> : null}{hasPrice ? <p className="public-store-page__price">{product.price} <span>د.أ</span></p> : null}<button className="public-store-page__add-button" type="button" onClick={() => addProduct(product)}><ShoppingCart size={15} />أضف إلى السلة</button></div></article>; })}</div></section>)}</div> : <p className="public-store-page__empty" role="status">لا توجد منتجات تطابق البحث أو الفئة المحددة.</p>}</section> : <section className="public-store-page__empty-state" role="status"><h2>المخزون فارغ حاليًا</h2><p>أضف منتجات من لوحة الإدارة لعرضها هنا.</p></section>}
   </main>;
 }
 
